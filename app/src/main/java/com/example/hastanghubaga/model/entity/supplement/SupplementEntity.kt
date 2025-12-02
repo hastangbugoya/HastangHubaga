@@ -1,0 +1,19 @@
+package com.example.hastanghubaga.model.entity.supplement
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "supplements")
+data class SupplementEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
+    val name: String,
+    val brand: String?,
+    val notes: String? = null,
+
+    val recommendedServingSize: Double,    // e.g., 2 capsules
+    val recommendedDoseUnit: SupplementDoseUnit,
+    val servingsPerDay: Int,
+
+    val offsetMinutes: List<Int> = emptyList()
+)
