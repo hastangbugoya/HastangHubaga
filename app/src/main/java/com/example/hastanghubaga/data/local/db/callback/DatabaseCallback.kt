@@ -38,46 +38,219 @@ class DatabaseCallback @Inject constructor(
         // 1) INGREDIENTS (40+ realistic items)
         // ---------------------------------------------
         val ingredients = listOf(
-            IngredientEntity("Vitamin C", IngredientUnit.MG, 90.0, IngredientUnit.MG, 2000.0, IngredientUnit.MG, "Vitamin"),
-            IngredientEntity("Vitamin D3", IngredientUnit.IU, 800.0, IngredientUnit.IU, 4000.0, IngredientUnit.IU, "Vitamin"),
-            IngredientEntity("Magnesium Glycinate", IngredientUnit.MG, 400.0, IngredientUnit.MG, null, null, "Mineral"),
-            IngredientEntity("Zinc Picolinate", IngredientUnit.MG, 11.0, IngredientUnit.MG, 40.0, IngredientUnit.MG, "Mineral"),
-            IngredientEntity("Omega-3 Fish Oil", IngredientUnit.MG, null, null, null, null, "Fatty Acid"),
-            IngredientEntity("EPA", IngredientUnit.MG, null, null, null, null, "Fatty Acid"),
-            IngredientEntity("DHA", IngredientUnit.MG, null, null, null, null, "Fatty Acid"),
-            IngredientEntity("Creatine Monohydrate", IngredientUnit.G, null, null, null, null, "Performance"),
-            IngredientEntity("Ashwagandha KSM-66", IngredientUnit.MG, null, null, null, null, "Herb"),
-            IngredientEntity("L-Theanine", IngredientUnit.MG, null, null, null, null, "Amino Acid"),
-            IngredientEntity("Caffeine", IngredientUnit.MG, null, null, null, null, "Stimulant"),
-            IngredientEntity("Rhodiola Rosea", IngredientUnit.MG, null, null, null, null, "Adaptogen"),
-            IngredientEntity("Turmeric Extract", IngredientUnit.MG, null, null, null, null, "Herb"),
-            IngredientEntity("Curcumin", IngredientUnit.MG, null, null, null, null, "Herb"),
-            IngredientEntity("Black Pepper Extract", IngredientUnit.MG, null, null, null, null, "Extract"),
-            IngredientEntity("Calcium Carbonate", IngredientUnit.MG, null, null, null, null, "Mineral"),
-            IngredientEntity("Potassium Citrate", IngredientUnit.MG, null, null, null, null, "Mineral"),
-            IngredientEntity("Iron (Ferrous Bisglycinate)", IngredientUnit.MG, null, null, null, null, "Mineral"),
-            IngredientEntity("Vitamin B12", IngredientUnit.MCG, 2.4, IngredientUnit.MCG, null, null, "Vitamin"),
-            IngredientEntity("Folate (Methylfolate)", IngredientUnit.MCG, null, null, null, null, "Vitamin"),
-            IngredientEntity("Vitamin K2 MK-7", IngredientUnit.MCG, null, null, null, null, "Vitamin"),
-            IngredientEntity("Milk Thistle Extract", IngredientUnit.MG, null, null, null, null, "Herb"),
-            IngredientEntity("NAC", IngredientUnit.MG, null, null, null, null, "Amino Acid"),
-            IngredientEntity("CoQ10", IngredientUnit.MG, null, null, null, null, "Antioxidant"),
-            IngredientEntity("Probiotic Blend", IngredientUnit.CFU, null, null, null, null, "Probiotic"),
-            IngredientEntity("Glucosamine", IngredientUnit.MG, null, null, null, null, "Joint"),
-            IngredientEntity("Chondroitin", IngredientUnit.MG, null, null, null, null, "Joint"),
-            IngredientEntity("MSM", IngredientUnit.MG, null, null, null, null, "Joint"),
-            IngredientEntity("GABA", IngredientUnit.MG, null, null, null, null, "Neurotransmitter"),
-            IngredientEntity("Melatonin", IngredientUnit.MG, null, null, null, null, "Sleep"),
-            IngredientEntity("Green Tea Extract", IngredientUnit.MG, null, null, null, null, "Extract"),
-            IngredientEntity("Alpha Lipoic Acid", IngredientUnit.MG, null, null, null, null, "Antioxidant"),
-            IngredientEntity("Bacopa Monnieri", IngredientUnit.MG, null, null, null, null, "Nootropic"),
-            IngredientEntity("Ginkgo Biloba", IngredientUnit.MG, null, null, null, null, "Nootropic"),
-            IngredientEntity("Electrolyte Blend", IngredientUnit.MG, null, null, null, null, "Hydration"),
-            IngredientEntity("Sodium", IngredientUnit.MG, null, null, null, null, "Mineral"),
-            IngredientEntity("Chloride", IngredientUnit.MG, null, null, null, null, "Mineral"),
-            IngredientEntity("Glycine", IngredientUnit.G, null, null, null, null, "Amino Acid"),
-            IngredientEntity("Beta-Alanine", IngredientUnit.G, null, null, null, null, "Performance")
+            IngredientEntity(
+                name = "Vitamin C",
+                defaultUnit = IngredientUnit.MG,
+                rdaValue = 90.0,
+                rdaUnit = IngredientUnit.MG,
+                upperLimitValue = 2000.0,
+                upperLimitUnit = IngredientUnit.MG,
+                category = "Vitamin"
+            ),
+            IngredientEntity(
+                name = "Vitamin D3",
+                defaultUnit = IngredientUnit.IU,
+                rdaValue = 800.0,
+                rdaUnit = IngredientUnit.IU,
+                upperLimitValue = 4000.0,
+                upperLimitUnit = IngredientUnit.IU,
+                category = "Vitamin"
+            ),
+            IngredientEntity(
+                name = "Magnesium Glycinate",
+                defaultUnit = IngredientUnit.MG,
+                rdaValue = 400.0,
+                rdaUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Zinc Picolinate",
+                defaultUnit = IngredientUnit.MG,
+                rdaValue = 11.0,
+                rdaUnit = IngredientUnit.MG,
+                upperLimitValue = 40.0,
+                upperLimitUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Omega-3 Fish Oil",
+                defaultUnit = IngredientUnit.MG,
+                category = "Fatty Acid"
+            ),
+            IngredientEntity(
+                name = "EPA",
+                defaultUnit = IngredientUnit.MG,
+                category = "Fatty Acid"
+            ),
+            IngredientEntity(
+                name = "DHA",
+                defaultUnit = IngredientUnit.MG,
+                category = "Fatty Acid"
+            ),
+            IngredientEntity(
+                name = "Creatine Monohydrate",
+                defaultUnit = IngredientUnit.G,
+                category = "Performance"
+            ),
+            IngredientEntity(
+                name = "Ashwagandha KSM-66",
+                defaultUnit = IngredientUnit.MG,
+                category = "Herb"
+            ),
+            IngredientEntity(
+                name = "L-Theanine",
+                defaultUnit = IngredientUnit.MG,
+                category = "Amino Acid"
+            ),
+            IngredientEntity(
+                name = "Caffeine",
+                defaultUnit = IngredientUnit.MG,
+                category = "Stimulant"
+            ),
+            IngredientEntity(
+                name = "Rhodiola Rosea",
+                defaultUnit = IngredientUnit.MG,
+                category = "Adaptogen"
+            ),
+            IngredientEntity(
+                name = "Turmeric Extract",
+                defaultUnit = IngredientUnit.MG,
+                category = "Herb"
+            ),
+            IngredientEntity(
+                name = "Curcumin",
+                defaultUnit = IngredientUnit.MG,
+                category = "Herb"
+            ),
+            IngredientEntity(
+                name = "Black Pepper Extract",
+                defaultUnit = IngredientUnit.MG,
+                category = "Extract"
+            ),
+            IngredientEntity(
+                name = "Calcium Carbonate",
+                defaultUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Potassium Citrate",
+                defaultUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Iron (Ferrous Bisglycinate)",
+                defaultUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Vitamin B12",
+                defaultUnit = IngredientUnit.MCG,
+                rdaValue = 2.4,
+                rdaUnit = IngredientUnit.MCG,
+                category = "Vitamin"
+            ),
+            IngredientEntity(
+                name = "Folate (Methylfolate)",
+                defaultUnit = IngredientUnit.MCG,
+                category = "Vitamin"
+            ),
+            IngredientEntity(
+                name = "Vitamin K2 MK-7",
+                defaultUnit = IngredientUnit.MCG,
+                category = "Vitamin"
+            ),
+            IngredientEntity(
+                name = "Milk Thistle Extract",
+                defaultUnit = IngredientUnit.MG,
+                category = "Herb"
+            ),
+            IngredientEntity(
+                name = "NAC",
+                defaultUnit = IngredientUnit.MG,
+                category = "Amino Acid"
+            ),
+            IngredientEntity(
+                name = "CoQ10",
+                defaultUnit = IngredientUnit.MG,
+                category = "Antioxidant"
+            ),
+            IngredientEntity(
+                name = "Probiotic Blend",
+                defaultUnit = IngredientUnit.CFU,
+                category = "Probiotic"
+            ),
+            IngredientEntity(
+                name = "Glucosamine",
+                defaultUnit = IngredientUnit.MG,
+                category = "Joint"
+            ),
+            IngredientEntity(
+                name = "Chondroitin",
+                defaultUnit = IngredientUnit.MG,
+                category = "Joint"
+            ),
+            IngredientEntity(
+                name = "MSM",
+                defaultUnit = IngredientUnit.MG,
+                category = "Joint"
+            ),
+            IngredientEntity(
+                name = "GABA",
+                defaultUnit = IngredientUnit.MG,
+                category = "Neurotransmitter"
+            ),
+            IngredientEntity(
+                name = "Melatonin",
+                defaultUnit = IngredientUnit.MG,
+                category = "Sleep"
+            ),
+            IngredientEntity(
+                name = "Green Tea Extract",
+                defaultUnit = IngredientUnit.MG,
+                category = "Extract"
+            ),
+            IngredientEntity(
+                name = "Alpha Lipoic Acid",
+                defaultUnit = IngredientUnit.MG,
+                category = "Antioxidant"
+            ),
+            IngredientEntity(
+                name = "Bacopa Monnieri",
+                defaultUnit = IngredientUnit.MG,
+                category = "Nootropic"
+            ),
+            IngredientEntity(
+                name = "Ginkgo Biloba",
+                defaultUnit = IngredientUnit.MG,
+                category = "Nootropic"
+            ),
+            IngredientEntity(
+                name = "Electrolyte Blend",
+                defaultUnit = IngredientUnit.MG,
+                category = "Hydration"
+            ),
+            IngredientEntity(
+                name = "Sodium",
+                defaultUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Chloride",
+                defaultUnit = IngredientUnit.MG,
+                category = "Mineral"
+            ),
+            IngredientEntity(
+                name = "Glycine",
+                defaultUnit = IngredientUnit.G,
+                category = "Amino Acid"
+            ),
+            IngredientEntity(
+                name = "Beta-Alanine",
+                defaultUnit = IngredientUnit.G,
+                category = "Performance"
+            )
         )
+
 
         val ingredientIdsList = ingredientEntityDao.insertIngredientsReturningIds(ingredients)
 

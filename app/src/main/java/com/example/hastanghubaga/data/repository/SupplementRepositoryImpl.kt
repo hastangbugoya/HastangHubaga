@@ -10,7 +10,11 @@ import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.domain.model.Ingredient
+import com.example.hastanghubaga.domain.model.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalTime
@@ -24,11 +28,11 @@ class SupplementRepositoryImpl @Inject constructor(
     private val dailyStartTimeDao: DailyStartTimeDao
 ) : SupplementRepository {
 
-    override fun getAllSupplements() =
+    override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
             .map { list -> list.map { it.toDomain() } }
 
-    override fun getAllIngredients() =
+    override fun getAllIngredients(): Flow<List<Ingredient>> =
         ingredientDao.getAllIngredientsFlow()
             .map { list -> list.map { it.toDomain() } }
 

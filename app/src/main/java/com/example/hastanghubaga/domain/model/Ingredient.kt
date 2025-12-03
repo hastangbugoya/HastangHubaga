@@ -6,8 +6,14 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 data class Ingredient(
     val id: Long,
     val name: String,
-    val amountPerServing: Double,
-    val unit: IngredientUnit,
-    val rdaValue: Double?,
-    val upperLimitValue: Double?
+
+    val defaultUnit: IngredientUnit,
+
+    val rdaValue: Double? = null,
+    val rdaUnit: IngredientUnit? = null,
+
+    val upperLimitValue: Double? = null,
+    val upperLimitUnit: IngredientUnit? = null,
+
+    val category: String? = null
 )
