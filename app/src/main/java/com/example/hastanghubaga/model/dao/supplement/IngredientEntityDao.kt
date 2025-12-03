@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.model.local.db
+package com.example.hastanghubaga.model.dao.supplement
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -10,7 +10,7 @@ import com.example.hastanghubaga.model.entity.supplement.IngredientEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface IngredientDao {
+interface IngredientEntityDao {
 
     // Insert or update a single ingredient
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -77,4 +77,8 @@ interface IngredientDao {
     // Delete all ingredients
     @Query("DELETE FROM ingredients")
     suspend fun clearAllIngredients()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIngredientsReturningIds(ingredients: List<IngredientEntity>): List<Long>
+
 }

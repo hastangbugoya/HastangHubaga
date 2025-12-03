@@ -2,6 +2,7 @@ package com.example.hastanghubaga.model.entity.supplement
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.time.DayOfWeek
 
 @Entity(tableName = "supplements")
 data class SupplementEntity(
@@ -14,6 +15,14 @@ data class SupplementEntity(
     val recommendedServingSize: Double,    // e.g., 2 capsules
     val recommendedDoseUnit: SupplementDoseUnit,
     val servingsPerDay: Int,
+    val recommendedWithFood: Boolean? = null,   // recommended to be taken with food
+    val recommendedLiquidInOz: Double? = null,  // recommended with liquid in oz
+    val recommendedTimeBetweenDailyDosesMinutes: Int? = null,
+    val avoidCaffeine: Boolean? = null, // should avoid taking with caffeine
 
-    val offsetMinutes: List<Int> = emptyList()
+    val frequencyType: FrequencyType = FrequencyType.DAILY,
+    val frequencyInterval: Int? = null,              // used when EVERY_X_DAYS
+    val weeklyDays: List<DayOfWeek>? = null,         // used when WEEKLY
+
+    val offsetMinutes: Int? = null
 )

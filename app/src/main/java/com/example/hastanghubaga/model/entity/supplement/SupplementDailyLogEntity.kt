@@ -10,7 +10,7 @@ data class SupplementDailyLogEntity(
 
     val supplementId: Long,                // Link to SupplementEntity
 
-    val date: Long,                        // Epoch day or timestamp
+    val date: String,                        // Epoch day or timestamp
     val actualServingTaken: Double,        // e.g., 0.5, 1.0, 1.25
     val doseUnit: SupplementDoseUnit,      // Store for historical accuracy
 

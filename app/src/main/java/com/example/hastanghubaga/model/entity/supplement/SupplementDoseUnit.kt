@@ -9,5 +9,6 @@ enum class SupplementDoseUnit {
     ML,
     DROP,
     SCOOP,
+    GRAM,
     OTHER
 }

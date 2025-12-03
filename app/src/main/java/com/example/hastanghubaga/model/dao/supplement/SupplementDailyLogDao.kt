@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.model.local.db
+package com.example.hastanghubaga.model.dao.supplement
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -25,11 +25,11 @@ interface SupplementDailyLogDao {
 
     // Get all logs for a specific day
     @Query("SELECT * FROM supplement_daily_log WHERE date = :date ORDER BY timestamp ASC")
-    fun getDoseLogsForDay(date: LocalDate): Flow<List<SupplementDailyLogEntity>>
+    fun getDoseLogsForDay(date: String): Flow<List<SupplementDailyLogEntity>>
 
     // Non-reactive version
     @Query("SELECT * FROM supplement_daily_log WHERE date = :date ORDER BY timestamp ASC")
-    suspend fun getDoseLogsForDayOnce(date: LocalDate): List<SupplementDailyLogEntity>
+    suspend fun getDoseLogsForDayOnce(date: String): List<SupplementDailyLogEntity>
 
     // Logs for a specific supplement
     @Query("SELECT * FROM supplement_daily_log WHERE supplementId = :supplementId ORDER BY date DESC, timestamp ASC")
@@ -41,5 +41,5 @@ interface SupplementDailyLogDao {
 
     // Delete all logs older than X days
     @Query("DELETE FROM supplement_daily_log WHERE date < :threshold")
-    suspend fun deleteLogsBefore(threshold: LocalDate)
+    suspend fun deleteLogsBefore(threshold: String)
 }
