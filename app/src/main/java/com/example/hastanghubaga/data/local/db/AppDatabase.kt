@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.local.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.hastanghubaga.data.local.converters.Converters
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao

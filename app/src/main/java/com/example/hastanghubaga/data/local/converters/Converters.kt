@@ -1,7 +1,8 @@
-package com.example.hastanghubaga.data.local.db
+package com.example.hastanghubaga.data.local.converters
 
 import androidx.room.TypeConverter
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
+import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import java.time.DayOfWeek
 
 class Converters {
@@ -20,4 +21,14 @@ class Converters {
     @TypeConverter
     fun toFrequencyType(value: String): FrequencyType =
         FrequencyType.valueOf(value)
+
+    @TypeConverter
+    fun fromUnit(unit: IngredientUnit): String? {
+        return unit.name
+    }
+
+    @TypeConverter
+    fun toUnit(value: String?): IngredientUnit? {
+        return value?.let { IngredientUnit.valueOf(it) }
+    }
 }
