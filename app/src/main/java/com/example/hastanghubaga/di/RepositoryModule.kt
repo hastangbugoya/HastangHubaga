@@ -1,10 +1,10 @@
 package com.example.hastanghubaga.di
 
-import com.example.hastanghubaga.model.dao.supplement.DailyStartTimeDao
-import com.example.hastanghubaga.model.dao.supplement.IngredientEntityDao
-import com.example.hastanghubaga.model.dao.supplement.SupplementDailyLogDao
-import com.example.hastanghubaga.model.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.model.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
+import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

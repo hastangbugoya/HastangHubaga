@@ -1,6 +1,6 @@
 package com.example.hastanghubaga.di
 
-import com.example.hastanghubaga.model.local.db.callback.ApplicationScope
+import com.example.hastanghubaga.data.local.db.callback.ApplicationScope
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
