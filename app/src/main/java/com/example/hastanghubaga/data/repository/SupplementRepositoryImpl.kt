@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import javax.inject.Inject
 
 class SupplementRepositoryImpl @Inject constructor(
@@ -30,6 +31,15 @@ class SupplementRepositoryImpl @Inject constructor(
 
     override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
+            .map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getAllSupplementsOnce(): List<Supplement> {
+        return supplementDao.getAllSupplementsOnce()
+            .map { it.toDomain() }
+    }
+
+    override fun getActiveSupplements(): Flow<List<Supplement>> =
+        supplementDao.getActiveSupplementsFlow()
             .map { list -> list.map { it.toDomain() } }
 
     override fun getAllIngredients(): Flow<List<Ingredient>> =
@@ -71,6 +81,8 @@ class SupplementRepositoryImpl @Inject constructor(
         return dailyStartTimeDao.getStartTime(date.toString())
             ?.let { LocalTime.ofSecondOfDay(it.hourZero.toLong()) }
     }
+
+    override fun isActive(supplement: Supplement): Boolean = supplement.isActive
 
     override suspend fun shouldTakeToday(supplement: Supplement, date: LocalDate): Boolean {
         return when (supplement.frequencyType) {
@@ -129,4 +141,68 @@ class SupplementRepositoryImpl @Inject constructor(
 
         return totals.values.toList()
     }
+
+    override suspend fun getNextDoseDateTime(
+        supplement: Supplement
+    ): ZonedDateTime? {
+
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        val now = ZonedDateTime.now(zone)
+
+        val offset = supplement.offsetMinutes ?: return null
+
+        // looping up to 7 days ahead
+        var date = today
+        for (i in 0 until 7) {
+
+            // First check if supplement should be taken on this date
+            val shouldTake = shouldTakeToday(supplement, date)
+            if (!shouldTake) {
+                date = date.plusDays(1)
+                continue
+            }
+
+            // Get daily hour zero
+            val hourZero = getHourZero(date) ?: return null
+
+            // Compute dose time
+            var doseDateTime = date
+                .atTime(hourZero)
+                .plusMinutes(offset.toLong())
+                .atZone(zone)
+
+            // If offset spills past midnight: date automatically adjusts
+            // (e.g. 23:00 + 120 min = next day 01:00)
+            if (i == 0 && doseDateTime.isBefore(now)) {
+                // today’s dose already passed — move to next day
+                date = date.plusDays(1)
+                continue
+            }
+
+            return doseDateTime
+        }
+
+        return null
+    }
+
+    override fun nextDoseDate(supp: SupplementEntity): LocalDate {
+        val interval = supp.frequencyInterval ?: 1
+
+        // If user has taken at least once → use sliding schedule
+        supp.lastTakenDate?.let {
+            val last = LocalDate.parse(it)
+            return last.plusDays(interval.toLong())
+        }
+
+        // If never taken but startDate exists → next due = startDate
+        supp.startDate?.let {
+            val start = LocalDate.parse(it)
+            return start
+        }
+
+        // Neither is set → cannot schedule yet
+        return LocalDate.MAX // or null
+    }
+
 }

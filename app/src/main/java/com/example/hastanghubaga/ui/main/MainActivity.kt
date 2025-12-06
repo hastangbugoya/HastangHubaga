@@ -1,4 +1,4 @@
-package com.example.hastanghubaga
+package com.example.hastanghubaga.ui.main
 
 import android.app.Application
 import android.os.Bundle
@@ -16,9 +16,6 @@ import com.example.hastanghubaga.ui.theme.HastangHubagaTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.HiltAndroidApp
 
-@HiltAndroidApp
-class HastangHubagaApp : Application()
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,12 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HastangHubagaTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                MainScreen()
             }
         }
     }

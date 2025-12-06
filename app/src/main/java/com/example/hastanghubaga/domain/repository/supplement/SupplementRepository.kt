@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import javax.inject.Inject
 
 interface SupplementRepository {
@@ -24,6 +25,10 @@ interface SupplementRepository {
     fun getAllSupplements(): Flow<List<Supplement>>
 
     fun getAllIngredients(): Flow<List<Ingredient>>
+
+    fun getActiveSupplements(): Flow<List<Supplement>>
+
+    suspend fun getAllSupplementsOnce(): List<Supplement>
 
     suspend fun logDose(
         supplementId: Long,
@@ -45,6 +50,16 @@ interface SupplementRepository {
     suspend fun setHourZero(date: LocalDate, time: LocalTime)
 
     suspend fun getHourZero(date: LocalDate): LocalTime?
+
+    // Should this supplement be considered active (user takes it)?
+    fun isActive(supplement: Supplement): Boolean
+
+    fun nextDoseDate(supp: SupplementEntity): LocalDate
+
+    // Returns the absolute next dose datetime
+    suspend fun getNextDoseDateTime(
+        supplement: Supplement
+    ): ZonedDateTime?
 }
 
 

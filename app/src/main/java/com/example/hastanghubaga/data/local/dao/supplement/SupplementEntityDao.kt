@@ -33,6 +33,13 @@ interface SupplementEntityDao {
     @Query("SELECT * FROM supplements WHERE id = :id LIMIT 1")
     suspend fun getSupplementById(id: Long): SupplementEntity?
 
+    // Get all active supplements
+    @Query("SELECT * FROM supplements WHERE isActive = 1")
+    fun getActiveSupplements(): Flow<List<SupplementEntity>>
+
+    @Query("SELECT * FROM supplements")
+    suspend fun getAllSupplementsOnce(): List<SupplementEntity>
+
     // Reactive list for UI
     @Query("SELECT * FROM supplements ORDER BY name ASC")
     fun getAllSupplementsFlow(): Flow<List<SupplementEntity>>
@@ -40,6 +47,9 @@ interface SupplementEntityDao {
     // Non-reactive list (e.g., for workers)
     @Query("SELECT * FROM supplements ORDER BY name ASC")
     suspend fun getAllSupplements(): List<SupplementEntity>
+
+    @Query("SELECT * FROM supplements WHERE isActive = 1")
+    fun getActiveSupplementsFlow(): Flow<List<SupplementEntity>>
 
     // Search (for UI autocomplete)
     @Query("SELECT * FROM supplements WHERE name LIKE '%' || :query || '%' ORDER BY name ASC")
@@ -55,4 +65,11 @@ interface SupplementEntityDao {
     @Transaction
     @Query("SELECT * FROM supplements ORDER BY name ASC")
     suspend fun getAllSupplementsWithIngredients(): List<SupplementWithIngredients>
+
+    @Query("""
+    SELECT * FROM supplements 
+    WHERE isActive = 1
+    ORDER BY offsetMinutes ASC
+""")
+    suspend fun getActiveSupplementsOrderedByOffset(): List<SupplementEntity>
 }

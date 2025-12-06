@@ -23,5 +23,6 @@ data class Supplement(
     val weeklyDays: List<DayOfWeek>?,
     val offsetMinutes: Int?,
 
-    val ingredients: List<Ingredient>
+    val ingredients: List<Ingredient>,
+    val isActive: Boolean
 )

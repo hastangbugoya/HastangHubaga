@@ -1,444 +1,322 @@
 package com.example.hastanghubaga.data.local.db.callback
 
-import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
-import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
-import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
-import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import java.time.DayOfWeek
+import androidx.room.RoomDatabase
 import javax.inject.Inject
 
-class DatabaseCallback @Inject constructor(
-    private val ingredientEntityDao: IngredientEntityDao,
-    private val supplementDao: SupplementEntityDao,
-    private val supplementIngredientDao: SupplementIngredientDao,
-    @ApplicationScope private val scope: CoroutineScope
-) : RoomDatabase.Callback() {
+/**
+ * Prepopulates the DB using raw SQL on creation.
+ * Uses table names:
+ *  - supplements
+ *  - ingredients
+ *  - supplement_ingredients
+ *  - daily_start_time
+ *
+ * Make sure AppDatabase is annotated with @TypeConverters(Converters::class).
+ */
+class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
 
-        // Populate DB on first creation
-        scope.launch {
-            insertDummyData()
-        }
-    }
+        // -------------------------------
+        // INGREDIENTS (45)
+        // -------------------------------
+        db.execSQL("""
+            INSERT INTO ingredients
+            (id, name, defaultUnit, rdaValue, rdaUnit, upperLimitValue, upperLimitUnit, category)
+            VALUES
+              (1,  'Vitamin A (Retinol)', 'MCG', 900.0, 'MCG', 3000.0, 'MCG', 'Vitamin'),
+              (2,  'Vitamin B1 (Thiamine)', 'MG', 1.2, 'MG', NULL, NULL, 'Vitamin'),
+              (3,  'Vitamin B2 (Riboflavin)', 'MG', 1.3, 'MG', NULL, NULL, 'Vitamin'),
+              (4,  'Vitamin B3 (Niacin)', 'MG', 16.0, 'MG', 35.0, 'MG', 'Vitamin'),
+              (5,  'Vitamin B5 (Pantothenic Acid)', 'MG', 5.0, 'MG', NULL, NULL, 'Vitamin'),
+              (6,  'Vitamin B6 (Pyridoxine)', 'MG', 1.3, 'MG', 100.0, 'MG', 'Vitamin'),
+              (7,  'Vitamin B7 (Biotin)', 'MCG', 30.0, 'MCG', NULL, NULL, 'Vitamin'),
+              (8,  'Vitamin B9 (Folate / Methylfolate)', 'MCG', 400.0, 'MCG', 1000.0, 'MCG', 'Vitamin'),
+              (9,  'Vitamin B12 (Cobalamin)', 'MCG', 2.4, 'MCG', NULL, NULL, 'Vitamin'),
+              (10, 'Vitamin C (Ascorbic Acid)', 'MG', 90.0, 'MG', 2000.0, 'MG', 'Vitamin'),
+              (11, 'Vitamin D3 (Cholecalciferol)', 'IU', 800.0, 'IU', 4000.0, 'IU', 'Vitamin'),
+              (12, 'Vitamin E (Tocopherol)', 'MG', 15.0, 'MG', 1000.0, 'MG', 'Vitamin'),
+              (13, 'Vitamin K2 (MK-7)', 'MCG', 120.0, 'MCG', NULL, NULL, 'Vitamin'),
+              (14, 'Calcium', 'MG', 1000.0, 'MG', 2500.0, 'MG', 'Mineral'),
+              (15, 'Iron (Ferrous Bisglycinate)', 'MG', 8.0, 'MG', 45.0, 'MG', 'Mineral'),
+              (16, 'Magnesium (Glycinate)', 'MG', 420.0, 'MG', 350.0, 'MG', 'Mineral'),
+              (17, 'Zinc (Picolinate)', 'MG', 11.0, 'MG', 40.0, 'MG', 'Mineral'),
+              (18, 'Copper', 'MG', 0.9, 'MG', 10.0, 'MG', 'Mineral'),
+              (19, 'Selenium', 'MCG', 55.0, 'MCG', 400.0, 'MCG', 'Mineral'),
+              (20, 'Iodine', 'MCG', 150.0, 'MCG', 1100.0, 'MCG', 'Mineral'),
+              (21, 'Potassium', 'MG', 4700.0, 'MG', NULL, NULL, 'Mineral'),
+              (22, 'Sodium', 'MG', NULL, NULL, NULL, NULL, 'Mineral'),
+              (23, 'Omega-3 (Fish Oil)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+              (24, 'EPA (Eicosapentaenoic Acid)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+              (25, 'DHA (Docosahexaenoic Acid)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+              (26, 'CoQ10 (Ubiquinone)', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
+              (27, 'Creatine Monohydrate', 'G', NULL, NULL, NULL, NULL, 'Performance'),
+              (28, 'L-Theanine', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
+              (29, 'Caffeine', 'MG', NULL, NULL, NULL, NULL, 'Stimulant'),
+              (30, 'Ashwagandha (KSM-66)', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+              (31, 'Rhodiola Rosea', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+              (32, 'Turmeric Extract', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+              (33, 'Curcumin', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
+              (34, 'Black Pepper Extract (Piperine)', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
+              (35, 'NAC (N-Acetyl Cysteine)', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
+              (36, 'Probiotic Blend', 'CFU', NULL, NULL, NULL, NULL, 'Probiotic'),
+              (37, 'Melatonin', 'MG', NULL, NULL, NULL, NULL, 'Sleep'),
+              (38, 'Glycine', 'G', NULL, NULL, NULL, NULL, 'Amino Acid'),
+              (39, 'Glucosamine', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+              (40, 'Chondroitin', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+              (41, 'MSM', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+              (42, 'Alpha Lipoic Acid (ALA)', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
+              (43, 'Bacopa Monnieri', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
+              (44, 'Ginkgo Biloba', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
+              (45, 'Electrolyte Blend', 'MG', NULL, NULL, NULL, NULL, 'Hydration')
+            ;
+        """)
 
-    private suspend fun insertDummyData() {
-
-        // ---------------------------------------------
-        // 1) INGREDIENTS (40+ realistic items)
-        // ---------------------------------------------
-        val ingredients = listOf(
-            IngredientEntity(
-                name = "Vitamin C",
-                defaultUnit = IngredientUnit.MG,
-                rdaValue = 90.0,
-                rdaUnit = IngredientUnit.MG,
-                upperLimitValue = 2000.0,
-                upperLimitUnit = IngredientUnit.MG,
-                category = "Vitamin"
-            ),
-            IngredientEntity(
-                name = "Vitamin D3",
-                defaultUnit = IngredientUnit.IU,
-                rdaValue = 800.0,
-                rdaUnit = IngredientUnit.IU,
-                upperLimitValue = 4000.0,
-                upperLimitUnit = IngredientUnit.IU,
-                category = "Vitamin"
-            ),
-            IngredientEntity(
-                name = "Magnesium Glycinate",
-                defaultUnit = IngredientUnit.MG,
-                rdaValue = 400.0,
-                rdaUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Zinc Picolinate",
-                defaultUnit = IngredientUnit.MG,
-                rdaValue = 11.0,
-                rdaUnit = IngredientUnit.MG,
-                upperLimitValue = 40.0,
-                upperLimitUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Omega-3 Fish Oil",
-                defaultUnit = IngredientUnit.MG,
-                category = "Fatty Acid"
-            ),
-            IngredientEntity(
-                name = "EPA",
-                defaultUnit = IngredientUnit.MG,
-                category = "Fatty Acid"
-            ),
-            IngredientEntity(
-                name = "DHA",
-                defaultUnit = IngredientUnit.MG,
-                category = "Fatty Acid"
-            ),
-            IngredientEntity(
-                name = "Creatine Monohydrate",
-                defaultUnit = IngredientUnit.G,
-                category = "Performance"
-            ),
-            IngredientEntity(
-                name = "Ashwagandha KSM-66",
-                defaultUnit = IngredientUnit.MG,
-                category = "Herb"
-            ),
-            IngredientEntity(
-                name = "L-Theanine",
-                defaultUnit = IngredientUnit.MG,
-                category = "Amino Acid"
-            ),
-            IngredientEntity(
-                name = "Caffeine",
-                defaultUnit = IngredientUnit.MG,
-                category = "Stimulant"
-            ),
-            IngredientEntity(
-                name = "Rhodiola Rosea",
-                defaultUnit = IngredientUnit.MG,
-                category = "Adaptogen"
-            ),
-            IngredientEntity(
-                name = "Turmeric Extract",
-                defaultUnit = IngredientUnit.MG,
-                category = "Herb"
-            ),
-            IngredientEntity(
-                name = "Curcumin",
-                defaultUnit = IngredientUnit.MG,
-                category = "Herb"
-            ),
-            IngredientEntity(
-                name = "Black Pepper Extract",
-                defaultUnit = IngredientUnit.MG,
-                category = "Extract"
-            ),
-            IngredientEntity(
-                name = "Calcium Carbonate",
-                defaultUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Potassium Citrate",
-                defaultUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Iron (Ferrous Bisglycinate)",
-                defaultUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Vitamin B12",
-                defaultUnit = IngredientUnit.MCG,
-                rdaValue = 2.4,
-                rdaUnit = IngredientUnit.MCG,
-                category = "Vitamin"
-            ),
-            IngredientEntity(
-                name = "Folate (Methylfolate)",
-                defaultUnit = IngredientUnit.MCG,
-                category = "Vitamin"
-            ),
-            IngredientEntity(
-                name = "Vitamin K2 MK-7",
-                defaultUnit = IngredientUnit.MCG,
-                category = "Vitamin"
-            ),
-            IngredientEntity(
-                name = "Milk Thistle Extract",
-                defaultUnit = IngredientUnit.MG,
-                category = "Herb"
-            ),
-            IngredientEntity(
-                name = "NAC",
-                defaultUnit = IngredientUnit.MG,
-                category = "Amino Acid"
-            ),
-            IngredientEntity(
-                name = "CoQ10",
-                defaultUnit = IngredientUnit.MG,
-                category = "Antioxidant"
-            ),
-            IngredientEntity(
-                name = "Probiotic Blend",
-                defaultUnit = IngredientUnit.CFU,
-                category = "Probiotic"
-            ),
-            IngredientEntity(
-                name = "Glucosamine",
-                defaultUnit = IngredientUnit.MG,
-                category = "Joint"
-            ),
-            IngredientEntity(
-                name = "Chondroitin",
-                defaultUnit = IngredientUnit.MG,
-                category = "Joint"
-            ),
-            IngredientEntity(
-                name = "MSM",
-                defaultUnit = IngredientUnit.MG,
-                category = "Joint"
-            ),
-            IngredientEntity(
-                name = "GABA",
-                defaultUnit = IngredientUnit.MG,
-                category = "Neurotransmitter"
-            ),
-            IngredientEntity(
-                name = "Melatonin",
-                defaultUnit = IngredientUnit.MG,
-                category = "Sleep"
-            ),
-            IngredientEntity(
-                name = "Green Tea Extract",
-                defaultUnit = IngredientUnit.MG,
-                category = "Extract"
-            ),
-            IngredientEntity(
-                name = "Alpha Lipoic Acid",
-                defaultUnit = IngredientUnit.MG,
-                category = "Antioxidant"
-            ),
-            IngredientEntity(
-                name = "Bacopa Monnieri",
-                defaultUnit = IngredientUnit.MG,
-                category = "Nootropic"
-            ),
-            IngredientEntity(
-                name = "Ginkgo Biloba",
-                defaultUnit = IngredientUnit.MG,
-                category = "Nootropic"
-            ),
-            IngredientEntity(
-                name = "Electrolyte Blend",
-                defaultUnit = IngredientUnit.MG,
-                category = "Hydration"
-            ),
-            IngredientEntity(
-                name = "Sodium",
-                defaultUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Chloride",
-                defaultUnit = IngredientUnit.MG,
-                category = "Mineral"
-            ),
-            IngredientEntity(
-                name = "Glycine",
-                defaultUnit = IngredientUnit.G,
-                category = "Amino Acid"
-            ),
-            IngredientEntity(
-                name = "Beta-Alanine",
-                defaultUnit = IngredientUnit.G,
-                category = "Performance"
+        // -------------------------------
+        // SUPPLEMENTS
+        // -------------------------------
+        db.execSQL("""
+            INSERT INTO supplements
+            (
+                id, name, brand, notes,
+                recommendedServingSize, recommendedDoseUnit, servingsPerDay,
+                recommendedWithFood, recommendedLiquidInOz, recommendedTimeBetweenDailyDosesMinutes,
+                avoidCaffeine,
+                frequencyType, frequencyInterval, weeklyDays, offsetMinutes,
+                isActive
             )
-        )
+            VALUES
+              -- 1: Daily Multivitamin
+              (1, 'Daily Multivitamin', 'NOW Foods', 'All-in-one daily multivitamin',
+               2.0, 'CAPSULE', 1,
+               1, 8.0, NULL,
+               0,
+               'DAILY', NULL, NULL, 30,
+               1),
 
+              -- 2: Fish Oil (daily)
+              (2, 'Fish Oil Triple Strength', 'Kirkland', 'High EPA/DHA fish oil',
+               2.0, 'SOFTGEL', 1,
+               1, 8.0, NULL,
+               0,
+               'DAILY', NULL, NULL, 45,
+               1),
 
-        val ingredientIdsList = ingredientEntityDao.insertIngredientsReturningIds(ingredients)
+              -- 3: Creatine Monohydrate
+              (3, 'Creatine Monohydrate', 'BulkSupps', 'Performance supplement',
+               5.0, 'GRAM', 1,
+               0, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, 60,
+               1),
 
-        val ingredientIds: Map<String, Long> =
-            ingredients.zip(ingredientIdsList).associate { (ingredient, id) ->
-                ingredient.name to id
-            }
+              -- 4: Magnesium Glycinate
+              (4, 'Magnesium Glycinate', 'Doctor''s Best', 'Supports sleep & recovery',
+               2.0, 'CAPSULE', 1,
+               1, 8.0, NULL,
+               1,
+               'DAILY', NULL, NULL, 120,
+               1),
 
-        // ---------------------------------------------
-        // 2) SUPPLEMENTS (12 realistic supplements)
-        // ---------------------------------------------
-        val supplements = listOf(
-            SupplementEntity(
-                name = "Daily Multivitamin",
-                brand = "NatureMade",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.TABLET,
-                servingsPerDay = 1,
-                recommendedWithFood = true,
-                frequencyType = FrequencyType.DAILY,
-                offsetMinutes = 30
-            ),
-            SupplementEntity(
-                name = "Fish Oil Triple Strength",
-                brand = "Kirkland",
-                recommendedServingSize = 2.0,
-                recommendedDoseUnit = SupplementDoseUnit.SOFTGEL,
-                servingsPerDay = 1,
-                recommendedWithFood = true,
-                recommendedLiquidInOz = 8.0,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "Creatine Monohydrate",
-                brand = "Bulk Supplements",
-                recommendedServingSize = 5.0,
-                recommendedDoseUnit = SupplementDoseUnit.GRAM,
-                servingsPerDay = 1,
-                recommendedWithFood = false,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "Magnesium Glycinate",
-                brand = "Doctor's Best",
-                recommendedServingSize = 2.0,
-                recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-                servingsPerDay = 1,
-                recommendedWithFood = true,
-                avoidCaffeine = true,
-                frequencyType = FrequencyType.DAILY,
-                offsetMinutes = 120
-            ),
-            SupplementEntity(
-                name = "Ashwagandha KSM-66",
-                brand = "NOW Foods",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-                servingsPerDay = 2,
-                recommendedTimeBetweenDailyDosesMinutes = 480,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "Zinc Picolinate",
-                brand = "Life Extension",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.TABLET,
-                servingsPerDay = 1,
-                recommendedWithFood = true,
-                frequencyType = FrequencyType.EVERY_X_DAYS,
-                frequencyInterval = 2
-            ),
-            SupplementEntity(
-                name = "Melatonin Sleep Aid",
-                brand = "Natrol",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.TABLET,
-                servingsPerDay = 1,
-                frequencyType = FrequencyType.DAILY,
-                offsetMinutes = -30
-            ),
-            SupplementEntity(
-                name = "Probiotic 40 Billion CFU",
-                brand = "Garden of Life",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-                servingsPerDay = 1,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "Joint Support Complex",
-                brand = "Schiff",
-                recommendedServingSize = 3.0,
-                recommendedDoseUnit = SupplementDoseUnit.TABLET,
-                servingsPerDay = 1,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "L-Theanine + Caffeine Focus",
-                brand = "Genius Brand",
-                recommendedServingSize = 2.0,
-                recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-                servingsPerDay = 1,
-                avoidCaffeine = false,
-                frequencyType = FrequencyType.WEEKLY,
-                weeklyDays = listOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
-            ),
-            SupplementEntity(
-                name = "Electrolyte Hydration Mix",
-                brand = "LMNT",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.SCOOP,
-                servingsPerDay = 1,
-                recommendedLiquidInOz = 16.0,
-                frequencyType = FrequencyType.DAILY
-            ),
-            SupplementEntity(
-                name = "Turmeric & Curcumin Complex",
-                brand = "Sports Research",
-                recommendedServingSize = 1.0,
-                recommendedDoseUnit = SupplementDoseUnit.SOFTGEL,
-                servingsPerDay = 1,
-                recommendedWithFood = true,
-                frequencyType = FrequencyType.DAILY
-            )
-        )
+              -- 5: Ashwagandha (twice daily)
+              (5, 'Ashwagandha KSM-66', 'NOW', 'Adaptogen for stress & sleep',
+               1.0, 'CAPSULE', 2,
+               NULL, NULL, 480,
+               0,
+               'DAILY', NULL, NULL, 20,
+               1),
 
-        val supplementIds = supplements.map { supplementDao.insertSupplement(it) }
+              -- 6: Zinc Picolinate (every 2 days)
+              (6, 'Zinc Picolinate', 'Life Extension', 'Mineral for immune support',
+               1.0, 'TABLET', 1,
+               1, NULL, NULL,
+               0,
+               'EVERY_X_DAYS', 2, NULL, 0,
+               1),
 
+              -- 7: Melatonin (night, negative offset)
+              (7, 'Melatonin 5mg', 'Natrol', 'Helps initiate sleep',
+               1.0, 'TABLET', 1,
+               0, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, -30,
+               1),
 
-        // ---------------------------------------------
-        // 3) SUPPLEMENT INGREDIENT LINKS
-        // ---------------------------------------------
-        val links = listOf(
-            // Multivitamin
-            SupplementIngredientEntity(
-                0,
-                supplementIds[0],
-                ingredientIds["Vitamin C"]!!,
-                "Vitamin C",
-                90.0,
-                "mg"
-            ),
-            SupplementIngredientEntity(0, supplementIds[0], ingredientIds["Vitamin D3"]!!, "Vitamin D3", 1000.0, "IU"),
-            SupplementIngredientEntity(0, supplementIds[0], ingredientIds["Zinc Picolinate"]!!, "Zinc", 11.0, "mg"),
+              -- 8: Probiotic 40B
+              (8, 'Probiotic 40 Billion CFU', 'Garden of Life', 'Probiotic blend',
+               1.0, 'CAPSULE', 1,
+               NULL, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, 10,
+               1),
 
-            // Fish Oil
-            SupplementIngredientEntity(0, supplementIds[1], ingredientIds["EPA"]!!, "EPA", 600.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[1], ingredientIds["DHA"]!!, "DHA", 400.0, "mg"),
+              -- 9: L-Theanine + Caffeine (M/W/F)
+              (9, 'L-Theanine + Caffeine Focus', 'Genius', 'Stack for focus',
+               2.0, 'CAPSULE', 1,
+               0, NULL, NULL,
+               0,
+               'WEEKLY', NULL, 'MONDAY,WEDNESDAY,FRIDAY', 60,
+               1),
 
-            // Creatine
-            SupplementIngredientEntity(0, supplementIds[2], ingredientIds["Creatine Monohydrate"]!!, "Creatine", 5.0, "g"),
+              -- 10: Electrolyte Mix
+              (10, 'Electrolyte Hydration Mix', 'LMNT', 'Sodium/potassium/magnesium',
+               1.0, 'SCOOP', 1,
+               0, 16.0, NULL,
+               0,
+               'DAILY', NULL, NULL, 15,
+               1),
 
-            // Magnesium Glycinate
-            SupplementIngredientEntity(0, supplementIds[3], ingredientIds["Magnesium Glycinate"]!!, "Magnesium Glycinate", 200.0, "mg"),
+              -- 11: Turmeric Curcumin
+              (11, 'Turmeric & Curcumin', 'Sports Research', 'Anti-inflammatory complex',
+               1.0, 'SOFTGEL', 1,
+               1, 8.0, NULL,
+               0,
+               'DAILY', NULL, NULL, 20,
+               1),
 
-            // Ashwagandha
-            SupplementIngredientEntity(0, supplementIds[4], ingredientIds["Ashwagandha KSM-66"]!!, "Ashwagandha", 600.0, "mg"),
+              -- 12: Vitamin D3 Weekly
+              (12, 'Vitamin D3 Weekly', 'Thorne', 'High-dose weekly D',
+               1.0, 'SOFTGEL', 1,
+               NULL, NULL, NULL,
+               0,
+               'WEEKLY', NULL, 'SUNDAY', 0,
+               1),
 
-            // Zinc
-            SupplementIngredientEntity(0, supplementIds[5], ingredientIds["Zinc Picolinate"]!!, "Zinc", 22.0, "mg"),
+              -- 13: CoQ10 (daily)
+              (13, 'CoQ10 200mg', 'Qunol', 'Ubiquinone antioxidant',
+               1.0, 'MG', 1,
+               1, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, 30,
+               1),
 
-            // Melatonin
-            SupplementIngredientEntity(0, supplementIds[6], ingredientIds["Melatonin"]!!, "Melatonin", 5.0, "mg"),
+              -- 14: Vitamin C 1000
+              (14, 'Vitamin C 1000', 'NOW', 'Immune support',
+               1.0, 'TABLET', 1,
+               1, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, 30,
+               1),
 
-            // Probiotic
-            SupplementIngredientEntity(0, supplementIds[7], ingredientIds["Probiotic Blend"]!!, "Probiotic Blend", 40_000_000_000.0, "CFU"),
+              -- 15: Calcium + Vitamin D combo (every other day)
+              (15, 'Calcium + D', 'Generic', 'Bone support combo',
+               2.0, 'TABLET', 1,
+               1, NULL, NULL,
+               0,
+               'EVERY_X_DAYS', 2, NULL, 120,
+               1),
 
-            // Joint Complex
-            SupplementIngredientEntity(0, supplementIds[8], ingredientIds["Glucosamine"]!!, "Glucosamine", 1500.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[8], ingredientIds["Chondroitin"]!!, "Chondroitin", 1200.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[8], ingredientIds["MSM"]!!, "MSM", 500.0, "mg"),
+              -- 16: Collagen Peptides (daily)
+              (16, 'Collagen Peptides', 'Vital Proteins', 'Joint/skin support',
+               1.0, 'SCOOP', 1,
+               1, 8.0, NULL,
+               0,
+               'DAILY', NULL, NULL, 10,
+               1),
 
-            // Theanine + Caffeine
-            SupplementIngredientEntity(0, supplementIds[9], ingredientIds["L-Theanine"]!!, "L-Theanine", 200.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[9], ingredientIds["Caffeine"]!!, "Caffeine", 100.0, "mg"),
+              -- 17: NAC (daily)
+              (17, 'NAC 600mg', 'Jarrow', 'Liver support',
+               1.0, 'TABLET', 1,
+               0, NULL, NULL,
+               0,
+               'DAILY', NULL, NULL, 30,
+               1),
 
-            // Electrolytes
-            SupplementIngredientEntity(0, supplementIds[10], ingredientIds["Sodium"]!!, "Sodium", 1000.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[10], ingredientIds["Potassium Citrate"]!!, "Potassium", 200.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[10], ingredientIds["Chloride"]!!, "Chloride", 1000.0, "mg"),
+              -- 18: Multivitamin (alternate high dose every 3 days)
+              (18, 'High Potency Multi (Q3)', 'BrandX', 'Every 3 days',
+               2.0, 'TABLET', 1,
+               1, NULL, NULL,
+               0,
+               'EVERY_X_DAYS', 3, NULL, 60,
+               1)
+            ;
+        """)
 
-            // Turmeric Complex
-            SupplementIngredientEntity(0, supplementIds[11], ingredientIds["Turmeric Extract"]!!, "Turmeric", 1000.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[11], ingredientIds["Curcumin"]!!, "Curcumin", 95.0, "mg"),
-            SupplementIngredientEntity(0, supplementIds[11], ingredientIds["Black Pepper Extract"]!!, "Black Pepper Extract", 5.0, "mg")
-        )
+        // -------------------------------
+        // SUPPLEMENT -> INGREDIENT LINKS
+        // -------------------------------
+        db.execSQL("""
+            INSERT INTO supplement_ingredients
+            (id, supplementId, ingredientId, displayName, amountPerServing, unit)
+            VALUES
+              -- Supplement 1 (Daily Multivitamin)
+              (1, 1, 10, 'Vitamin C (Ascorbic Acid)', 500.0, 'mg'),
+              (2, 1, 11, 'Vitamin D3 (Cholecalciferol)', 1000.0, 'IU'),
+              (3, 1, 16, 'Magnesium (Glycinate)', 75.0, 'mg'),
+              (4, 1, 17, 'Zinc (Picolinate)', 11.0, 'mg'),
+              (5, 1, 9, 'Vitamin B12 (Cobalamin)', 6.0, 'mcg'),
+              (6, 1, 8, 'Folate (Methylfolate)', 400.0, 'mcg'),
 
-        supplementIngredientDao.insertLinks(links)
+              -- Supplement 2 (Fish Oil)
+              (7, 2, 24, 'EPA', 600.0, 'mg'),
+              (8, 2, 25, 'DHA', 400.0, 'mg'),
+
+              -- Supplement 3 (Creatine)
+              (9, 3, 27, 'Creatine Monohydrate', 5.0, 'g'),
+
+              -- Supplement 4 (Magnesium Glycinate)
+              (10, 4, 16, 'Magnesium (Glycinate)', 200.0, 'mg'),
+
+              -- Supplement 5 (Ashwagandha)
+              (11, 5, 30, 'Ashwagandha (KSM-66)', 300.0, 'mg'),
+
+              -- Supplement 6 (Zinc Picolinate)
+              (12, 6, 17, 'Zinc (Picolinate)', 22.0, 'mg'),
+
+              -- Supplement 7 (Melatonin)
+              (13, 7, 37, 'Melatonin', 5.0, 'mg'),
+
+              -- Supplement 8 (Probiotic)
+              (14, 8, 36, 'Probiotic Blend (CFU)', 40000000000.0, 'CFU'),
+
+              -- Supplement 9 (Theanine + Caffeine)
+              (15, 9, 28, 'L-Theanine', 200.0, 'mg'),
+              (16, 9, 29, 'Caffeine', 100.0, 'mg'),
+
+              -- Supplement 10 (Electrolyte Mix)
+              (17, 10, 45, 'Electrolyte Blend', 2000.0, 'mg'),
+              (18, 10, 21, 'Potassium', 300.0, 'mg'),
+              (19, 10, 22, 'Sodium', 1000.0, 'mg'),
+
+              -- Supplement 11 (Turmeric)
+              (20, 11, 32, 'Turmeric Extract', 500.0, 'mg'),
+              (21, 11, 33, 'Curcumin', 95.0, 'mg'),
+              (22, 11, 34, 'Black Pepper Extract (Piperine)', 5.0, 'mg'),
+
+              -- Supplement 12 (Vitamin D weekly)
+              (23, 12, 11, 'Vitamin D3 (weekly)', 50000.0, 'IU'),
+
+              -- Supplement 13 (CoQ10)
+              (24, 13, 26, 'CoQ10 (Ubiquinone)', 200.0, 'mg'),
+
+              -- Supplement 14 (Vitamin C 1000)
+              (25, 14, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'mg'),
+
+              -- Supplement 15 (Calcium + D)
+              (26, 15, 14, 'Calcium (as Carbonate)', 500.0, 'mg'),
+              (27, 15, 11, 'Vitamin D3', 1000.0, 'IU'),
+
+              -- Supplement 16 (Collagen)
+              (28, 16, 38, 'Glycine', 3.0, 'g'),
+
+              -- Supplement 17 (NAC)
+              (29, 17, 35, 'NAC (N-Acetyl Cysteine)', 600.0, 'mg'),
+
+              -- Supplement 18 (High Potency Multi Q3)
+              (30, 18, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'mg'),
+              (31, 18, 11, 'Vitamin D3', 2000.0, 'IU'),
+              (32, 18, 16, 'Magnesium', 100.0, 'mg')
+            ;
+        """)
+
+        // -------------------------------
+        // DAILY START TIME
+        // -------------------------------
+        db.execSQL("""
+            INSERT INTO daily_start_time (date, hourZero)
+            VALUES ('${java.time.LocalDate.now().toString()}', 28800);
+        """)
     }
-
 }

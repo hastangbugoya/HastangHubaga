@@ -4,6 +4,9 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.domain.model.Ingredient
 import com.example.hastanghubaga.domain.model.Supplement
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 // Supplement
 fun SupplementEntity.toDomain(): Supplement =
@@ -26,7 +29,8 @@ fun SupplementEntity.toDomain(): Supplement =
         weeklyDays = weeklyDays,
         offsetMinutes = offsetMinutes,
 
-        ingredients = emptyList()
+        ingredients = emptyList(),
+        isActive = isActive
     )
 
 // Ingredient
@@ -40,3 +44,8 @@ fun IngredientEntity.toDomain() = Ingredient(
     upperLimitUnit = this.upperLimitUnit,
     category = this.category
 )
+
+fun LocalTime.toLocalTimeLong() = this.atDate(LocalDate.now())
+    .atZone(ZoneId.systemDefault())
+    .toInstant()
+    .toEpochMilli()

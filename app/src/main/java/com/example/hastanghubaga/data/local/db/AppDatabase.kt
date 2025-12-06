@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.local.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.hastanghubaga.data.local.converters.Converters
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -34,4 +35,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun supplementDailyLogDao(): SupplementDailyLogDao
     abstract fun dailyStartTimeDao(): DailyStartTimeDao
     abstract fun supplementIngredientDao(): SupplementIngredientDao
+
+    companion object {
+
+    }
+
 }

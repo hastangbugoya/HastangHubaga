@@ -2,6 +2,7 @@ package com.example.hastanghubaga.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
@@ -17,7 +18,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
     @Provides
     @Singleton
     fun provideDatabase(
@@ -44,5 +44,11 @@ object DatabaseModule {
     @Provides
     fun provideSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
         db.supplementDailyLogDao()
+
+    @Provides
+    @Singleton
+    fun provideDailyStartTimeDao(db: AppDatabase): DailyStartTimeDao {
+        return db.dailyStartTimeDao()
+    }
 
 }

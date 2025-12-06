@@ -3,17 +3,17 @@ package com.example.hastanghubaga.data.local.converters
 import androidx.room.TypeConverter
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import java.time.DayOfWeek
 
 class Converters {
-
     @TypeConverter
     fun fromDayOfWeekList(days: List<DayOfWeek>?): String? =
         days?.joinToString(",") { it.name }
 
     @TypeConverter
     fun toDayOfWeekList(data: String?): List<DayOfWeek>? =
-        data?.split(",")?.map { DayOfWeek.valueOf(it) }
+        data?.takeIf { it.isNotBlank() }?.split(",")?.map { DayOfWeek.valueOf(it) }
 
     @TypeConverter
     fun fromFrequencyType(type: FrequencyType): String = type.name
@@ -23,12 +23,19 @@ class Converters {
         FrequencyType.valueOf(value)
 
     @TypeConverter
-    fun fromUnit(unit: IngredientUnit): String? {
-        return unit.name
-    }
+    fun fromUnit(unit: IngredientUnit?): String? = unit?.name
 
     @TypeConverter
-    fun toUnit(value: String?): IngredientUnit? {
-        return value?.let { IngredientUnit.valueOf(it) }
-    }
+    fun toUnit(value: String?): IngredientUnit? =
+        value?.let { IngredientUnit.valueOf(it) }
+
+    // -------------------------
+    // SupplementDoseUnit converters
+    // -------------------------
+    @TypeConverter
+    fun fromDoseUnit(unit: SupplementDoseUnit?): String? = unit?.name
+
+    @TypeConverter
+    fun toDoseUnit(value: String?): SupplementDoseUnit? =
+        value?.let { SupplementDoseUnit.valueOf(it) }
 }

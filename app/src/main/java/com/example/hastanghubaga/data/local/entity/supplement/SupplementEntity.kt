@@ -23,6 +23,12 @@ data class SupplementEntity(
     val frequencyType: FrequencyType = FrequencyType.DAILY,
     val frequencyInterval: Int? = null,              // used when EVERY_X_DAYS
     val weeklyDays: List<DayOfWeek>? = null,         // used when WEEKLY
+    val offsetMinutes: Int? = null,
 
-    val offsetMinutes: Int? = null
+    val customDose: Double? = null,
+    val customDoseUnit: SupplementDoseUnit? = null,
+    val startDate: String? = null, // ISO-8601 "YYYY-MM-DD"
+    val lastTakenDate: String? = null, // ISO-8601 "YYYY-MM-DD"
+
+    val isActive: Boolean = true
 )
