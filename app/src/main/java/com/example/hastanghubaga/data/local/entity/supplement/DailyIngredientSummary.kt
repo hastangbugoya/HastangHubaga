@@ -1,6 +1,5 @@
 package com.example.hastanghubaga.data.local.entity.supplement
 
-
 data class DailyIngredientSummary(
     val name: String,            // e.g., "Vitamin C"
     var totalAmount: Double,     // accumulated mg/mcg/IU/etc. for the day
