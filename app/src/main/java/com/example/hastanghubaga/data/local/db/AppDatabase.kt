@@ -6,15 +6,21 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.hastanghubaga.data.local.converters.Converters
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
+import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
+import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.EventDefaultTimeEntity
+import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
+
 
 @Database(
     entities = [
@@ -22,7 +28,10 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredie
         SupplementEntity::class,
         SupplementDailyLogEntity::class,
         DailyStartTimeEntity::class,
-        SupplementIngredientEntity::class
+        SupplementIngredientEntity::class,
+        EventDefaultTimeEntity::class,
+        EventDailyOverrideEntity::class,
+        SupplementUserSettingsEntity::class
         // add others here later
     ],
     version = 1,
@@ -35,9 +44,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun supplementDailyLogDao(): SupplementDailyLogDao
     abstract fun dailyStartTimeDao(): DailyStartTimeDao
     abstract fun supplementIngredientDao(): SupplementIngredientDao
+    abstract fun eventTimeDao(): EventTimeDao
+    abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
 
-    companion object {
 
-    }
+    companion object
 
 }

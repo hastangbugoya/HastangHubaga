@@ -3,9 +3,11 @@ package com.example.hastanghubaga.di
 import android.content.Context
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
+import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.db.callback.DatabaseCallback
 import dagger.Module
@@ -47,8 +49,15 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDailyStartTimeDao(db: AppDatabase): DailyStartTimeDao {
-        return db.dailyStartTimeDao()
-    }
+    fun provideDailyStartTimeDao(db: AppDatabase): DailyStartTimeDao =
+        db.dailyStartTimeDao()
+
+    @Provides
+    fun provideEventTimeDao(db: AppDatabase): EventTimeDao =
+        db.eventTimeDao()
+
+    @Provides
+    fun provideSupplementUserSettingsDao(db: AppDatabase): SupplementUserSettingsDao =
+        db.supplementUserSettingsDao()
 
 }

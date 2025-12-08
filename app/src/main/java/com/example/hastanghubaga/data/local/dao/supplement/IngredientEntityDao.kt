@@ -5,8 +5,10 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -80,5 +82,14 @@ interface IngredientEntityDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIngredientsReturningIds(ingredients: List<IngredientEntity>): List<Long>
+
+//
+//    @Transaction
+//    @Query("SELECT * FROM supplements WHERE id = :id")
+//    fun observeSupplementWithSettings(id: Long): Flow<SupplementJoinedRoom>
+//
+//    @Transaction
+//    @Query("SELECT * FROM supplements WHERE id = :id")
+//    suspend fun getSupplementWithSettings(id: Long): SupplementJoinedRoom?
 
 }

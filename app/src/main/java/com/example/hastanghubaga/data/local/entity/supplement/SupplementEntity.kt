@@ -20,6 +20,7 @@ data class SupplementEntity(
     val recommendedTimeBetweenDailyDosesMinutes: Int? = null,
     val avoidCaffeine: Boolean? = null, // should avoid taking with caffeine
 
+    val doseAnchorType: DoseAnchorType = DoseAnchorType.MIDNIGHT,
     val frequencyType: FrequencyType = FrequencyType.DAILY,
     val frequencyInterval: Int? = null,              // used when EVERY_X_DAYS
     val weeklyDays: List<DayOfWeek>? = null,         // used when WEEKLY

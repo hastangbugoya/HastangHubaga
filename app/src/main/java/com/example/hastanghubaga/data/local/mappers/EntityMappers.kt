@@ -2,6 +2,9 @@ package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
+import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
+import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
 import com.example.hastanghubaga.domain.model.Ingredient
 import com.example.hastanghubaga.domain.model.Supplement
 import java.time.LocalDate
@@ -28,9 +31,11 @@ fun SupplementEntity.toDomain(): Supplement =
         frequencyInterval = frequencyInterval,
         weeklyDays = weeklyDays,
         offsetMinutes = offsetMinutes,
-
+        lastTakenDate = lastTakenDate,
         ingredients = emptyList(),
-        isActive = isActive
+        isActive = isActive,
+        doseAnchorType = doseAnchorType,
+        startDate = startDate
     )
 
 // Ingredient
@@ -49,3 +54,4 @@ fun LocalTime.toLocalTimeLong() = this.atDate(LocalDate.now())
     .atZone(ZoneId.systemDefault())
     .toInstant()
     .toEpochMilli()
+

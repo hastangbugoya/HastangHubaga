@@ -1,10 +1,12 @@
 package com.example.hastanghubaga.data.local.converters
 
 import androidx.room.TypeConverter
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import java.time.DayOfWeek
+import java.time.LocalTime
 
 class Converters {
     @TypeConverter
@@ -38,4 +40,19 @@ class Converters {
     @TypeConverter
     fun toDoseUnit(value: String?): SupplementDoseUnit? =
         value?.let { SupplementDoseUnit.valueOf(it) }
+
+    @TypeConverter
+    fun fromLocalTime(time: LocalTime?): Int? =
+        time?.toSecondOfDay()
+
+    @TypeConverter
+    fun toLocalTime(seconds: Int?): LocalTime? =
+        seconds?.let { LocalTime.ofSecondOfDay(it.toLong()) }
+
+    @TypeConverter
+    fun toString(type: DoseAnchorType): String = type.name
+
+    @TypeConverter
+    fun fromString(value: String): DoseAnchorType =
+        DoseAnchorType.valueOf(value)
 }

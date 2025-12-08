@@ -1,9 +1,11 @@
 package com.example.hastanghubaga.di
 
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
+import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import dagger.Module
@@ -22,13 +24,17 @@ object RepositoryModule {
         supplementDao: SupplementEntityDao,
         ingredientEntityDao: IngredientEntityDao,
         supplementDailyLogDao: SupplementDailyLogDao,
-        dailyStartTimeDao: DailyStartTimeDao
+        dailyStartTimeDao: DailyStartTimeDao,
+        eventTimeDao: EventTimeDao,
+        supplementUserSettingsDao: SupplementUserSettingsDao
     ): SupplementRepository {
         return SupplementRepositoryImpl(
             supplementDao,
             ingredientEntityDao,
             supplementDailyLogDao,
-            dailyStartTimeDao
+            dailyStartTimeDao,
+            eventTimeDao,
+            supplementUserSettingsDao
         )
     }
 }

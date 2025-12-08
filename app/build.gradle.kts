@@ -1,11 +1,9 @@
-import org.gradle.kotlin.dsl.androidTestImplementation
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -19,7 +17,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Hilt Test Runner
+        testInstrumentationRunner = "com.example.hastanghubaga.HiltTestRunner"
     }
 
     buildTypes {
@@ -31,78 +30,100 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
+    kotlinOptions { jvmTarget = "11" }
+
+    buildFeatures { compose = true }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.12"
     }
-    buildFeatures {
-        compose = true
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    sourceSets {
+        getByName("androidTest").manifest.srcFile("src/androidTest/AndroidManifest.xml")
     }
 }
 
 dependencies {
 
+    // Kotlin + Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+
+    // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.hilt.common)
-    implementation(libs.androidx.compose.runtime)
+    implementation("androidx.compose.material:material-icons-extended")
 
-    // ===============================
-    // Unit tests (JUnit4 only)
-    // ===============================
-    testImplementation("junit:junit:4.13.2")
-
-    // ===============================
-    // Android instrumented tests
-    // ===============================
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.test:runner:1.6.1")
-    androidTestImplementation("androidx.test:core:1.5.0")
-
-
-    // Compose UI test support
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-
-    // Room testing (instrumented)
-    androidTestImplementation("androidx.room:room-testing:2.6.1")
-
-    // Debug
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Hilt
-    implementation("com.google.dagger:hilt-android:2.52")
-    kapt("com.google.dagger:hilt-android-compiler:2.52")
-
+    // Navigation + Hilt
+    implementation("androidx.navigation:navigation-compose:2.8.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-
-    // WorkManager
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0")
-
-    // Material
-    implementation("androidx.compose.material3:material3:1.2.1")
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
-    implementation("androidx.compose.material3:material3-window-size-class")
-
-    // Glance
-    implementation("androidx.glance:glance-appwidget:1.0.0")
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-paging:2.6.1")
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
+
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.51")
+    kapt("com.google.dagger:hilt-compiler:2.51")
+
+    debugImplementation("com.google.dagger:hilt-android-testing:2.51")
+    kaptDebug("com.google.dagger:hilt-compiler:2.51")
+
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51")
+    kaptAndroidTest("com.google.dagger:hilt-compiler:2.51")
+
+    // Glance Widgets
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+
+    // Local Unit Tests
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("com.google.truth:truth:1.1.3")
+
+    // Android Test (IMPORTANT: Hilt-compatible versions)
+    androidTestImplementation("androidx.test:core:1.4.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.3")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+    androidTestImplementation("androidx.test:runner:1.4.0")
+    androidTestImplementation("androidx.test:rules:1.4.0")
+
+    // Compose UI test (must downgrade to match AndroidX Test 1.4)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.1")
+
+    androidTestImplementation("com.google.truth:truth:1.1.3")
 }
+
+configurations.all {
+    resolutionStrategy {
+        force(
+            "androidx.test:core:1.4.0",
+            "androidx.test:runner:1.4.0",
+            "androidx.test:rules:1.4.0",
+            "androidx.test.ext:junit:1.1.3",
+            "androidx.test.espresso:espresso-core:3.4.0"
+        )
+    }
+}
+

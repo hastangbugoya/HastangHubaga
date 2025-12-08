@@ -8,7 +8,7 @@ import androidx.core.content.ContextCompat
 class SupplementAlertReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
 
-        val name = intent.getStringExtra("supplement_name") ?: "Your supplement"
+        intent.getStringExtra("supplement_name") ?: "Your supplement"
 
         val serviceIntent = Intent(context, SupplementAlertService::class.java).apply {
             putExtras(intent.extras!!)

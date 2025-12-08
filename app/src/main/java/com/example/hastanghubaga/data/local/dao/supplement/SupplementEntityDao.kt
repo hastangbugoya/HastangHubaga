@@ -9,6 +9,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithIngredients
+import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -72,4 +73,19 @@ interface SupplementEntityDao {
     ORDER BY offsetMinutes ASC
 """)
     suspend fun getActiveSupplementsOrderedByOffset(): List<SupplementEntity>
+
+    // ---------------------------------------------------
+    // Relations: Supplement + SupplementUserSettings
+    // ---------------------------------------------------
+
+    @Query("SELECT * FROM supplements WHERE id = :id")
+    fun observeSupplementById(id: Long): Flow<SupplementEntity>
+
+    @Transaction
+    @Query("SELECT * FROM supplements WHERE id = :id")
+    fun observeSupplementWithSettings(id: Long): Flow<SupplementJoinedRoom?>
+
+    @Transaction
+    @Query("SELECT * FROM supplements WHERE id = :id")
+    suspend fun getSupplementWithSettings(id: Long): SupplementJoinedRoom?
 }

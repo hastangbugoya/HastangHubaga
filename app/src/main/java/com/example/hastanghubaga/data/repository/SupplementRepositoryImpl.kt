@@ -1,20 +1,32 @@
 package com.example.hastanghubaga.data.repository
 
+import androidx.room.util.joinIntoString
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
+import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
+import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
+import com.example.hastanghubaga.data.local.entity.supplement.EventDefaultTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
+import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
+import com.example.hastanghubaga.data.local.models.toDomainSafe
 import com.example.hastanghubaga.domain.model.Ingredient
 import com.example.hastanghubaga.domain.model.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalTime
@@ -26,7 +38,9 @@ class SupplementRepositoryImpl @Inject constructor(
     private val supplementDao: SupplementEntityDao,
     private val ingredientDao: IngredientEntityDao,
     private val supplementDailyLogDao: SupplementDailyLogDao,
-    private val dailyStartTimeDao: DailyStartTimeDao
+    private val dailyStartTimeDao: DailyStartTimeDao,
+    private val eventTimeDao: EventTimeDao,
+    private val supplementUserSettingsDao: SupplementUserSettingsDao
 ) : SupplementRepository {
 
     override fun getAllSupplements(): Flow<List<Supplement>> =
@@ -84,20 +98,35 @@ class SupplementRepositoryImpl @Inject constructor(
 
     override fun isActive(supplement: Supplement): Boolean = supplement.isActive
 
-    override suspend fun shouldTakeToday(supplement: Supplement, date: LocalDate): Boolean {
+    override suspend fun shouldTakeToday(
+        supplement: Supplement,
+        date: LocalDate
+    ): Boolean {
+
         return when (supplement.frequencyType) {
+
             FrequencyType.DAILY -> true
 
-            FrequencyType.EVERY_X_DAYS ->
-                supplement.frequencyInterval?.let { interval ->
-                    val epoch = date.toEpochDay().toInt()
-                    epoch % interval == 0
-                } ?: true
+            FrequencyType.EVERY_X_DAYS -> {
+                val interval = supplement.frequencyInterval ?: return false
+
+                val last = supplement.lastTakenDate?.let { LocalDate.parse(it) }
+                val start = supplement.startDate?.let { LocalDate.parse(it) }
+
+                val dueDate = when {
+                    last != null -> last.plusDays(interval.toLong())
+                    start != null -> start
+                    else -> return false
+                }
+
+                date == dueDate
+            }
 
             FrequencyType.WEEKLY ->
                 supplement.weeklyDays?.contains(date.dayOfWeek) ?: false
         }
     }
+
 
     override suspend fun getPredictedNextDoseTime(
         supplement: Supplement,
@@ -150,34 +179,26 @@ class SupplementRepositoryImpl @Inject constructor(
         val today = LocalDate.now(zone)
         val now = ZonedDateTime.now(zone)
 
-        val offset = supplement.offsetMinutes ?: return null
+        val anchor = supplement.doseAnchorType
+        val offset = supplement.offsetMinutes ?: 0
 
-        // looping up to 7 days ahead
-        var date = today
         for (i in 0 until 7) {
+            val date = today.plusDays(i.toLong())
 
-            // First check if supplement should be taken on this date
-            val shouldTake = shouldTakeToday(supplement, date)
-            if (!shouldTake) {
-                date = date.plusDays(1)
+            // Should take on this day?
+            if (!shouldTakeToday(supplement, date))
                 continue
-            }
 
-            // Get daily hour zero
-            val hourZero = getHourZero(date) ?: return null
+            val baseTime = getEventTime(anchor, date)
+                ?: continue
 
-            // Compute dose time
             var doseDateTime = date
-                .atTime(hourZero)
+                .atTime(baseTime)
                 .plusMinutes(offset.toLong())
                 .atZone(zone)
 
-            // If offset spills past midnight: date automatically adjusts
-            // (e.g. 23:00 + 120 min = next day 01:00)
             if (i == 0 && doseDateTime.isBefore(now)) {
-                // today’s dose already passed — move to next day
-                date = date.plusDays(1)
-                continue
+                continue // today's time passed → try tomorrow
             }
 
             return doseDateTime
@@ -185,6 +206,14 @@ class SupplementRepositoryImpl @Inject constructor(
 
         return null
     }
+
+
+//    override suspend fun getAnchorTime(
+//        anchor: DoseAnchorType,
+//        date: LocalDate
+//    ): LocalTime? {
+//        TODO("Not yet implemented")
+//    }
 
     override fun nextDoseDate(supp: SupplementEntity): LocalDate {
         val interval = supp.frequencyInterval ?: 1
@@ -203,6 +232,82 @@ class SupplementRepositoryImpl @Inject constructor(
 
         // Neither is set → cannot schedule yet
         return LocalDate.MAX // or null
+    }
+
+    override suspend fun setDefaultEventTime(anchor: DoseAnchorType, time: LocalTime) {
+        eventTimeDao.upsertDefault(
+            EventDefaultTimeEntity(
+                anchor = anchor,
+                timeSeconds = time.toSecondOfDay()
+            )
+        )
+    }
+
+    override suspend fun getEventTime(
+        anchor: DoseAnchorType,
+        date: LocalDate
+    ): LocalTime? {
+        if (anchor == DoseAnchorType.ANYTIME)
+            return null
+
+        // 1. Daily override exists?
+        eventTimeDao.getOverride(date.toString(), anchor)?.let { override ->
+            return LocalTime.ofSecondOfDay(override.timeSeconds.toLong())
+        }
+
+        // 2. Default time exists?
+        eventTimeDao.getDefault(anchor)?.let { def ->
+            return LocalTime.ofSecondOfDay(def.timeSeconds.toLong())
+        }
+
+        // 3. MIDNIGHT fallback
+        return if (anchor == DoseAnchorType.MIDNIGHT) LocalTime.MIDNIGHT else null
+    }
+
+    override suspend fun overrideEventTime(
+        date: LocalDate,
+        anchor: DoseAnchorType,
+        time: LocalTime
+    ) {
+        eventTimeDao.upsertOverride(
+            EventDailyOverrideEntity(
+                date = date.toString(),
+                anchor = anchor,
+                timeSeconds = time.toSecondOfDay()
+            )
+        )
+    }
+
+    override suspend fun removeEventOverride(date: LocalDate, anchor: DoseAnchorType) {
+        eventTimeDao.removeOverride(date.toString(), anchor)
+    }
+
+//    override suspend fun getSupplementWithUserSettings(id: Long): SupplementWithSettings {
+//        val base = supplementDao.getSupplementById(id)
+//        val settings = supplementUserSettingsDao.getSettings(id)
+//
+//        return SupplementWithSettings(base!!, settings)
+//    }
+
+    override fun observeSupplementWithUserSettings(id: Long): Flow<SupplementWithSettings?> =
+        supplementDao.observeSupplementWithSettings(id)
+            .map { join -> join.toDomainSafe() }
+
+    override suspend fun getSupplementWithUserSettings(id: Long): SupplementWithSettings? =
+        supplementDao.getSupplementWithSettings(id)?.toDomainSafe()
+
+    override suspend fun updateUserPreferredDose(
+        supplementId: Long,
+        dose: Double,
+        unit: SupplementDoseUnit
+    ) {
+        supplementUserSettingsDao.upsert(
+            SupplementUserSettingsEntity(
+                supplementId = supplementId,
+                preferredServingSize = dose,
+                preferredUnit = unit
+            )
+        )
     }
 
 }

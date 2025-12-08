@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.domain.model.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.runBlocking
@@ -23,6 +24,10 @@ class SupplementAlertScheduler(
             repo.getAllSupplementsOnce()
                 .filter { repo.isActive(it) }
                 .forEach { supplement ->
+
+                    if (supplement.doseAnchorType == DoseAnchorType.ANYTIME) {
+                        return@forEach
+                    }
 
                     val nextDose = repo.getNextDoseDateTime(supplement)
 
