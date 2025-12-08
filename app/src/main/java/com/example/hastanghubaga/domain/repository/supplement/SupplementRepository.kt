@@ -4,7 +4,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.entity.supplement.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
@@ -18,10 +18,17 @@ import com.example.hastanghubaga.domain.model.Supplement
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
 
+/**
+ * Repository interface for managing ${CLASS_NAME}.
+ *
+ * Responsibilities:
+ * - TODO: Add responsibilities
+ *
+ * Implementations:
+ * - TODO: Add implementation notes
+ */
 interface SupplementRepository {
 
     fun getAllSupplements(): Flow<List<Supplement>>

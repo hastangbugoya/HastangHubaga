@@ -7,7 +7,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
-import com.example.hastanghubaga.data.local.entity.supplement.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
@@ -33,6 +33,94 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
+/**
+ * Concrete implementation of [SupplementRepository] responsible for coordinating all
+ * supplement-related persistence, scheduling logic, dosage logs, ingredient aggregation,
+ * and user-customizable supplement settings.
+ *
+ * ## Purpose
+ * This repository acts as the *single source of truth* for supplement data. It merges:
+ *
+ * - Room DAOs (`SupplementEntityDao`, `IngredientEntityDao`, etc.)
+ * - User customization (`SupplementUserSettingsDao`)
+ * - Timing systems (event anchors, overrides, hour-zero rules)
+ * - Dose logging and historical intake
+ * - Daily nutrient aggregation (e.g., mg of Vitamin C consumed today)
+ *
+ * Higher-level features such as:
+ * - Today screen
+ * - Next-dose prediction
+ * - Ingredient tracking
+ * - Personalized supplement schedules
+ *
+ * all rely on this repository.
+ *
+ * ## Major Responsibilities
+ *
+ * ### 1. Supplement Management
+ * - Fetch all supplements (active or inactive)
+ * - Merge settings via [SupplementWithSettings]
+ * - Provide domain models instead of Room entities
+ *
+ * ### 2. Ingredient System
+ * - Return ingredient lists
+ * - Compute per-day totals via [DailyIngredientSummary]
+ *
+ * ### 3. Dose Logging
+ * - Insert historical dose entries with timestamps
+ * - Query logs per day
+ * - Support accuracy for analytics and prediction
+ *
+ * ### 4. Scheduling & Timing Logic
+ * - Frequency types: DAILY, WEEKLY, EVERY_X_DAYS
+ * - Dose anchor types (MIDNIGHT, BREAKFAST, CAFFEINE, etc.)
+ * - Per-day "hour zero" override
+ * - Per-event override + global defaults
+ * - Predict next dose date/time
+ *
+ * ### 5. User Customization
+ * - Store preferred serving size, units, and active state
+ * - Override bottle-label recommendations
+ * - Support dynamic customization per supplement
+ *
+ * ## Relationships
+ * This repository depends on multiple DAOs:
+ *
+ * - [SupplementEntityDao] — core supplement records
+ * - [IngredientEntityDao] — ingredient master table
+ * - [SupplementDailyLogDao] — logs for daily actual intake
+ * - [DailyStartTimeDao] — per-day "starting hour" anchor
+ * - [EventTimeDao] — default & daily override event timing
+ * - [SupplementUserSettingsDao] — per-supplement user preferences
+ *
+ * All public methods return:
+ * - Domain models (`Supplement`, `Ingredient`, `DailyIngredientSummary`)
+ * - `Flow<T>` for observable values
+ * - Suspend functions for database updates
+ *
+ * ## Usage
+ * Typically injected through Hilt:
+ *
+ * ```kotlin
+ * @Inject lateinit var repository: SupplementRepository
+ * ```
+ *
+ * and consumed by:
+ *
+ * - ViewModels
+ * - Use cases
+ * - Widgets
+ * - The daily schedule engine
+ *
+ * ## Threading
+ * All DB operations run inside Room’s dispatcher. Some lightweight transformations
+ * occur on the calling coroutine context.
+ *
+ * ## Implementation Notes
+ * - Does *not* expose Room entities to upper layers.
+ * - All mapping to domain is handled via extension functions (`toDomain`, `toDomainSafe`).
+ * - Frequency and event logic must remain consistent across viewmodels and UIs.
+ */
 
 class SupplementRepositoryImpl @Inject constructor(
     private val supplementDao: SupplementEntityDao,
@@ -206,14 +294,6 @@ class SupplementRepositoryImpl @Inject constructor(
 
         return null
     }
-
-
-//    override suspend fun getAnchorTime(
-//        anchor: DoseAnchorType,
-//        date: LocalDate
-//    ): LocalTime? {
-//        TODO("Not yet implemented")
-//    }
 
     override fun nextDoseDate(supp: SupplementEntity): LocalDate {
         val interval = supp.frequencyInterval ?: 1
