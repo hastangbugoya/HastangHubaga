@@ -1,16 +1,16 @@
 package com.example.hastanghubaga.data.repository
 
-import com.example.hastanghubaga.data.local.dao.activity.ActivityDao
+import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toEntity
-import com.example.hastanghubaga.domain.model.Activity
+import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class ActivityRepositoryImpl @Inject constructor(
-    private val dao: ActivityDao
+    private val dao: ActivityEntityDao
 ) : ActivityRepository {
 
     override fun observeAll(): Flow<List<Activity>> =

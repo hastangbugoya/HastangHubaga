@@ -2,7 +2,9 @@ package com.example.hastanghubaga.data.local.entity.meal
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "meal_nutrition")
 data class MealNutritionEntity(
 

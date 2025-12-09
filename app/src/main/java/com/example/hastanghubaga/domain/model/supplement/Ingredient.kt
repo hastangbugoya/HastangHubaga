@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.supplement
 
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 

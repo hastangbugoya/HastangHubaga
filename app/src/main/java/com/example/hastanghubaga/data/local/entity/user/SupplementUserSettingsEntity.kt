@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.local.entity.user
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import kotlinx.serialization.Serializable
 
 /**
  * Stores user-specific overrides for an existing supplement.
@@ -40,6 +41,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
  * - This is not a 1:1 relation; each supplement may have at most one settings row.
  * - `supplementId` must reference an existing supplement.
  */
+@Serializable
 @Entity(tableName = "supplement_user_settings")
 data class SupplementUserSettingsEntity(
     @PrimaryKey(autoGenerate = true)

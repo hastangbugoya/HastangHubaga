@@ -2,6 +2,7 @@ package com.example.hastanghubaga.data.local.entity.supplement
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /**
  * Defines the default time-of-day for each dose anchor used throughout the app.
@@ -34,6 +35,7 @@ import androidx.room.PrimaryKey
  * [EventDailyOverrideEntity], and the scheduler automatically prefers the
  * override for that date.
  */
+@Serializable
 @Entity(tableName = "event_default_times")
 data class EventDefaultTimeEntity(
     @PrimaryKey

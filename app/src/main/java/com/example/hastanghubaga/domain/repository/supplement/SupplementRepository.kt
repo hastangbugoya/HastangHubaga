@@ -4,7 +4,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.domain.model.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
@@ -13,8 +13,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLog
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
-import com.example.hastanghubaga.domain.model.Ingredient
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Ingredient
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalTime

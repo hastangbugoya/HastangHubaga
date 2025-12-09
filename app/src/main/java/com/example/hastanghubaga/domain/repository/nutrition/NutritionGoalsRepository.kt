@@ -1,8 +1,8 @@
 package com.example.hastanghubaga.domain.repository.nutrition
 
 
-import com.example.hastanghubaga.data.local.entity.nutrition.NutritionGoalType
-import com.example.hastanghubaga.domain.model.NutritionGoal
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 import kotlinx.coroutines.flow.Flow
 
 interface NutritionGoalsRepository {

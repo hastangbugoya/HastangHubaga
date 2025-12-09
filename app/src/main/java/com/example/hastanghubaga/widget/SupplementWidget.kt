@@ -10,7 +10,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.Column
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate

@@ -8,7 +8,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest

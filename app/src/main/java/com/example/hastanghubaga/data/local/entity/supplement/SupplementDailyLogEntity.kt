@@ -2,6 +2,7 @@ package com.example.hastanghubaga.data.local.entity.supplement
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /**
  * Represents a historical record of a user's supplement intake for a specific day.
@@ -42,6 +43,7 @@ import androidx.room.PrimaryKey
  * @see SupplementEntity
  * @see SupplementDoseUnit
  */
+@Serializable
 @Entity(tableName = "supplement_daily_log")
 data class SupplementDailyLogEntity(
     @PrimaryKey(autoGenerate = true)

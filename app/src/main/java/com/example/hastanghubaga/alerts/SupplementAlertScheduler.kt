@@ -5,7 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.runBlocking
 import java.time.ZonedDateTime

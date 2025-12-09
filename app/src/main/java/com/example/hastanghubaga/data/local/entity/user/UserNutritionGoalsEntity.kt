@@ -1,9 +1,11 @@
-package com.example.hastanghubaga.data.local.entity.nutrition
+package com.example.hastanghubaga.data.local.entity.user
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.hastanghubaga.domain.model.NutritionGoal
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "nutrition_goals")
 data class UserNutritionGoalsEntity(
     @PrimaryKey(autoGenerate = true)
@@ -23,7 +25,3 @@ data class UserNutritionGoalsEntity(
 
     val isActive: Boolean = false
 )
-
-
-
-

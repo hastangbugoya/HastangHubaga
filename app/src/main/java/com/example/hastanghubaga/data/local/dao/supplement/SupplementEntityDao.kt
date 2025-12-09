@@ -88,4 +88,10 @@ interface SupplementEntityDao {
     @Transaction
     @Query("SELECT * FROM supplements WHERE id = :id")
     suspend fun getSupplementWithSettings(id: Long): SupplementJoinedRoom?
+
+    @Query("SELECT * FROM supplements ORDER BY id ASC")
+    suspend fun getAllOnce(): List<SupplementEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(entries: List<SupplementEntity>)
 }

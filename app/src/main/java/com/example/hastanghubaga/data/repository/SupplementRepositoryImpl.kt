@@ -6,8 +6,8 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
-import com.example.hastanghubaga.domain.model.DailyIngredientSummary
+import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
+import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
@@ -21,8 +21,8 @@ import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEn
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
 import com.example.hastanghubaga.data.local.models.toDomainSafe
-import com.example.hastanghubaga.domain.model.Ingredient
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Ingredient
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

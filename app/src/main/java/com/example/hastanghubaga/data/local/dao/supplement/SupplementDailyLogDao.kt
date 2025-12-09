@@ -18,6 +18,12 @@ interface SupplementDailyLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDoseLogs(logs: List<SupplementDailyLogEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(logs: List<SupplementDailyLogEntity>)
+
+    @Query("SELECT * FROM supplement_daily_log")
+    suspend fun getAllDoseLogs(): List<SupplementDailyLogEntity>
+
     // Delete a log entry
     @Delete
     suspend fun deleteDoseLog(log: SupplementDailyLogEntity)

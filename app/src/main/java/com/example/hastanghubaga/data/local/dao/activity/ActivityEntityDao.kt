@@ -5,7 +5,7 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ActivityDao {
+interface ActivityEntityDao {
 
     @Query("SELECT * FROM activities ORDER BY startTimestamp DESC")
     fun observeAllActivities(): Flow<List<ActivityEntity>>

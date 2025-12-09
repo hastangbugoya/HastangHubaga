@@ -1,12 +1,12 @@
-package com.example.hastanghubaga.data.local.dao.nutrition
+package com.example.hastanghubaga.data.local.dao.user
 
 import androidx.room.*
-import com.example.hastanghubaga.data.local.entity.nutrition.NutritionGoalType
-import com.example.hastanghubaga.data.local.entity.nutrition.UserNutritionGoalsEntity
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface NutritionGoalsDao {
+interface UserNutritionGoalsEntityDao {
 
     // ---------------------------------------------------------
     // INSERT + UPDATE

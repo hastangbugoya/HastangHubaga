@@ -83,13 +83,11 @@ interface IngredientEntityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertIngredientsReturningIds(ingredients: List<IngredientEntity>): List<Long>
 
-//
-//    @Transaction
-//    @Query("SELECT * FROM supplements WHERE id = :id")
-//    fun observeSupplementWithSettings(id: Long): Flow<SupplementJoinedRoom>
-//
-//    @Transaction
-//    @Query("SELECT * FROM supplements WHERE id = :id")
-//    suspend fun getSupplementWithSettings(id: Long): SupplementJoinedRoom?
+
+    @Query("SELECT * FROM ingredients")
+    suspend fun getAllOnce(): List<IngredientEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(entries: List<IngredientEntity>)
 
 }

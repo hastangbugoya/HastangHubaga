@@ -1,6 +1,6 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.nutrition
 
-import com.example.hastanghubaga.data.local.entity.nutrition.NutritionGoalType
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 
 data class NutritionGoal(
     val id: Long,

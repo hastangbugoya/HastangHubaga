@@ -33,4 +33,17 @@ interface EventTimeDao {
 
     @Query("DELETE FROM event_daily_overrides WHERE date = :date AND anchor = :anchor")
     suspend fun removeOverride(date: String, anchor: DoseAnchorType)
+
+    // Backup support
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllDefault(entries: List<EventDefaultTimeEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAllOverrides(entries: List<EventDailyOverrideEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(entries: List<EventDailyOverrideEntity>)
+
+    @Query("SELECT * FROM event_daily_overrides")
+    suspend fun getAllOverrides(): List<EventDailyOverrideEntity>
 }

@@ -2,8 +2,10 @@ package com.example.hastanghubaga.data.local.entity.meal
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.hastanghubaga.domain.model.MealType
+import com.example.hastanghubaga.data.local.entity.meal.MealType
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "meals")
 data class MealEntity(
     @PrimaryKey(autoGenerate = true)

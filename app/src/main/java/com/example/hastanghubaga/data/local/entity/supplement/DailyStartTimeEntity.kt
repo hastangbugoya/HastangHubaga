@@ -2,6 +2,7 @@ package com.example.hastanghubaga.data.local.entity.supplement
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import java.time.LocalDate
 
 /**
@@ -29,6 +30,7 @@ import java.time.LocalDate
  * @property hourZero Number of seconds past midnight representing the start
  * of the user’s day (e.g., 0 = midnight, 3600 = 1:00 AM).
  */
+@Serializable
 @Entity(tableName = "daily_start_time")
 data class DailyStartTimeEntity(
     @PrimaryKey val date: String,

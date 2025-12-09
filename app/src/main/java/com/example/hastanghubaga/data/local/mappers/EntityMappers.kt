@@ -5,8 +5,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
-import com.example.hastanghubaga.domain.model.Ingredient
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Ingredient
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId

@@ -2,6 +2,7 @@ package com.example.hastanghubaga.data.local.entity.supplement
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
 
 /**
@@ -75,6 +76,7 @@ import java.time.DayOfWeek
  * @see com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
  * @see com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
  */
+@Serializable
 @Entity(tableName = "supplements")
 data class SupplementEntity(
     @PrimaryKey(autoGenerate = true)

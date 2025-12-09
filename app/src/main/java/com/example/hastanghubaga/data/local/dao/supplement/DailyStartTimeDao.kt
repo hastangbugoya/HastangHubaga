@@ -21,4 +21,18 @@ interface DailyStartTimeDao {
 
     @Query("DELETE FROM daily_start_time WHERE date < :threshold")
     suspend fun cleanup(threshold: String)
+
+    /**
+     * Inserts or replaces multiple DailyStartTimeEntity rows.
+     * Useful for restoring from backup.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(entries: List<DailyStartTimeEntity>)
+
+    /**
+     * Returns all stored DailyStartTimeEntity rows.
+     * Used by the backup exporter.
+     */
+    @Query("SELECT * FROM daily_start_time")
+    suspend fun getAll(): List<DailyStartTimeEntity>
 }

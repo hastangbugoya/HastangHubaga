@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.meal
 
 data class MealNutrition(
     val protein: Double,
@@ -9,4 +9,3 @@ data class MealNutrition(
     val cholesterol: Double?,
     val fiber: Double?
 )
-

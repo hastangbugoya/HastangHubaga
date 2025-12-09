@@ -1,6 +1,8 @@
 package com.example.hastanghubaga.data.local.entity.supplement
 
 import androidx.room.Entity
+import kotlinx.serialization.Serializable
+
 /**
  * Stores per-day overrides for specific dose anchor times.
  *
@@ -31,6 +33,7 @@ import androidx.room.Entity
  * This allows the scheduler to compute dose times with full flexibility while
  * keeping historical accuracy for past days.
  */
+@Serializable
 @Entity(
     tableName = "event_daily_overrides",
     primaryKeys = ["date", "anchor"]

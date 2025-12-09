@@ -1,8 +1,9 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.supplement
 
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import java.time.DayOfWeek
 
 /**

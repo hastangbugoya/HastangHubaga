@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
 
 android {
@@ -113,6 +114,11 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.5.1")
 
     androidTestImplementation("com.google.truth:truth:1.1.3")
+
+    // Backup
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
 }
 
 configurations.all {

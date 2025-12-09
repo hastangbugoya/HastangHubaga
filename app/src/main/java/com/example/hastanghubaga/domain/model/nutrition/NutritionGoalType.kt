@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.data.local.entity.nutrition
+package com.example.hastanghubaga.domain.model.nutrition
 
 enum class NutritionGoalType {
     BULKING,

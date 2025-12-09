@@ -3,7 +3,6 @@ package com.example.hastanghubaga.data.local.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.hastanghubaga.data.local.converters.Converters
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
@@ -11,7 +10,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
@@ -20,6 +19,13 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDefaultTimeEntity
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
+import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
+import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
+import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 
 
 @Database(
@@ -31,7 +37,11 @@ import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEn
         SupplementIngredientEntity::class,
         EventDefaultTimeEntity::class,
         EventDailyOverrideEntity::class,
-        SupplementUserSettingsEntity::class
+        SupplementUserSettingsEntity::class,
+        ActivityEntity::class,
+        MealEntity::class,
+        MealNutritionEntity::class,
+        UserNutritionGoalsEntity::class
         // add others here later
     ],
     version = 1,
@@ -46,7 +56,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun supplementIngredientDao(): SupplementIngredientDao
     abstract fun eventTimeDao(): EventTimeDao
     abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
-
+    abstract fun activityEntityDao(): ActivityEntityDao
+    abstract fun mealEntityDao(): MealEntityDao
+    abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
 
     companion object
 

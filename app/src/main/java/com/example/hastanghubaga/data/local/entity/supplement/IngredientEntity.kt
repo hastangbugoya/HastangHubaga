@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.local.entity.supplement
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 
 /**
@@ -37,6 +38,7 @@ import androidx.room.PrimaryKey
  * @property category Optional grouping label such as "Vitamin", "Mineral",
  * "Amino Acid", "Herb", etc. Used for sorting and filtering in UI.
  */
+@Serializable
 @Entity(
     tableName = "ingredients",
     indices = [Index(value = ["name"], unique = true)]

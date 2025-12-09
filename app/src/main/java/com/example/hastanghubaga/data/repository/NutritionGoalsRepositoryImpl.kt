@@ -1,17 +1,17 @@
 package com.example.hastanghubaga.data.repository
 
-import com.example.hastanghubaga.data.local.entity.nutrition.NutritionGoalType
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionGoalsRepository
-import com.example.hastanghubaga.data.local.dao.nutrition.NutritionGoalsDao
+import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toEntity
-import com.example.hastanghubaga.domain.model.NutritionGoal
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class NutritionGoalsRepositoryImpl @Inject constructor(
-    private val dao: NutritionGoalsDao
+    private val dao: UserNutritionGoalsEntityDao
 ) : NutritionGoalsRepository {
 
     override fun observeAll(): Flow<List<NutritionGoal>> =

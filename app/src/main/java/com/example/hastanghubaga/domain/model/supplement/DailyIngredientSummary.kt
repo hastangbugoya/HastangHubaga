@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.supplement
 
 /**
  * Represents a single nutrient’s total intake and safety status for a given day.

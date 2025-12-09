@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.activity
 
 enum class ActivityType {
     WALKING,

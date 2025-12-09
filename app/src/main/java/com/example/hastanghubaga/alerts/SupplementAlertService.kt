@@ -11,7 +11,7 @@ import android.os.IBinder
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import com.example.hastanghubaga.data.local.mappers.toLocalTimeLong
-import com.example.hastanghubaga.domain.model.Supplement
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

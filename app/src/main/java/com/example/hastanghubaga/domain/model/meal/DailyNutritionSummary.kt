@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.domain.model.meal
 
 data class DailyNutritionSummary(
     val date: String,
@@ -11,4 +11,3 @@ data class DailyNutritionSummary(
     val cholesterol: Double?,
     val fiber: Double?
 )
-

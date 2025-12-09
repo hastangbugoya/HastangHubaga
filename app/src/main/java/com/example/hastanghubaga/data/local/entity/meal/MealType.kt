@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.domain.model
+package com.example.hastanghubaga.data.local.entity.meal
 
 enum class MealType {
     BREAKFAST,
@@ -7,5 +7,5 @@ enum class MealType {
     SNACK,
     PRE_WORKOUT,
     POST_WORKOUT,
-    OTHER
+    CUSTOM
 }

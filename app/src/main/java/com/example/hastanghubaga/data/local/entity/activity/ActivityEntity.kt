@@ -2,8 +2,10 @@ package com.example.hastanghubaga.data.local.entity.activity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.example.hastanghubaga.domain.model.ActivityType
+import com.example.hastanghubaga.domain.model.activity.ActivityType
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "activities")
 data class ActivityEntity(
     @PrimaryKey(autoGenerate = true)

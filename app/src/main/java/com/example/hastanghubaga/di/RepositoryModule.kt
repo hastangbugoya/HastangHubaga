@@ -5,7 +5,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import dagger.Module

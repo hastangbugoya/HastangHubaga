@@ -1,8 +1,8 @@
 package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
-import com.example.hastanghubaga.domain.model.Activity
-import com.example.hastanghubaga.domain.model.ActivityType
+import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
