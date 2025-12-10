@@ -16,6 +16,14 @@
       </SelectionState>
       <SelectionState runConfigName="SupplementUserSettingsDaoTest">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-12-10T05:25:04.578060700Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\jjrza\.android\avd\Pixel_7a.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="observeSettings_emitsUpdates()">
         <option name="selectionMode" value="DROPDOWN" />

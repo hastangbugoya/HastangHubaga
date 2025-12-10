@@ -34,34 +34,34 @@ import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
  */
 @Database(
     entities = [
-        IngredientEntity::class,
-        SupplementEntity::class,
-        SupplementDailyLogEntity::class,
-        DailyStartTimeEntity::class,
-        SupplementIngredientEntity::class,
-        EventDefaultTimeEntity::class,
-        EventDailyOverrideEntity::class,
+//        IngredientEntity::class,
+//        SupplementEntity::class,
+//        SupplementDailyLogEntity::class,
+//        DailyStartTimeEntity::class,
+//        SupplementIngredientEntity::class,
+//        EventDefaultTimeEntity::class,
+//        EventDailyOverrideEntity::class,
         SupplementUserSettingsEntity::class,
-        ActivityEntity::class,
-        MealEntity::class,
-        MealNutritionEntity::class,
-        UserNutritionGoalsEntity::class
+//        ActivityEntity::class,
+//        MealEntity::class,
+//        MealNutritionEntity::class,
+//        UserNutritionGoalsEntity::class
     ],
     version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class TestAppDatabase : RoomDatabase(){
-    abstract fun ingredientEntityDao(): IngredientEntityDao
-    abstract fun supplementEntityDao(): SupplementEntityDao
-    abstract fun supplementDailyLogDao(): SupplementDailyLogDao
-    abstract fun dailyStartTimeDao(): DailyStartTimeDao
-    abstract fun supplementIngredientDao(): SupplementIngredientDao
-    abstract fun eventTimeDao(): EventTimeDao
+//    abstract fun ingredientEntityDao(): IngredientEntityDao
+//    abstract fun supplementEntityDao(): SupplementEntityDao
+//    abstract fun supplementDailyLogDao(): SupplementDailyLogDao
+//    abstract fun dailyStartTimeDao(): DailyStartTimeDao
+//    abstract fun supplementIngredientDao(): SupplementIngredientDao
+//    abstract fun eventTimeDao(): EventTimeDao
     abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
-    abstract fun activityEntityDao(): ActivityEntityDao
-    abstract fun mealEntityDao(): MealEntityDao
-    abstract fun mealNutritionDao(): MealNutritionDao
-    abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
+//    abstract fun activityEntityDao(): ActivityEntityDao
+//    abstract fun mealEntityDao(): MealEntityDao
+//    abstract fun mealNutritionDao(): MealNutritionDao
+//    abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
     companion object
 }

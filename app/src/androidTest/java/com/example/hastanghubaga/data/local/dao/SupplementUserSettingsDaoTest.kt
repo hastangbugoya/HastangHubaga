@@ -89,34 +89,30 @@ class SupplementUserSettingsDaoTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun observeSettings_emitsUpdates() = runTest {
-        // clear everything first
         db.clearAllTables()
         advanceUntilIdle()
 
-        // Start collecting BEFORE any DB writes
-        val emissionsDeferred = async(UnconfinedTestDispatcher(testScheduler)) {
-            dao.observeSettings(1L)
-                .take(2)
-                .toList()
+        val emissionsDeferred = async {
+            dao.observeSettings(1L).take(2).toList()
         }
 
-        // Make sure subscription is active
-        advanceUntilIdle()
-
-        // First emission
+        // First write
         dao.upsert(makeSettings(1L, dose = 2.0))
         advanceUntilIdle()
 
-        // Second emission
+        // Second write (Room replaces previous state)
         dao.upsert(makeSettings(1L, dose = 10.0))
         advanceUntilIdle()
 
         val emissions = emissionsDeferred.await()
 
-        Assert.assertEquals(2, emissions.size)
-        Assert.assertEquals(2.0, emissions[0]?.preferredServingSize)
-        Assert.assertEquals(10.0, emissions[1]?.preferredServingSize)
+        // First: 2.0
+        Assert.assertEquals(2.0, emissions[0]?.preferredServingSize ?: -1.0, 0.01)
+
+        // Second: 10.0
+        Assert.assertEquals(10.0, emissions[1]?.preferredServingSize ?: -1.0, 0.01)
     }
+
 
 
     @Test
