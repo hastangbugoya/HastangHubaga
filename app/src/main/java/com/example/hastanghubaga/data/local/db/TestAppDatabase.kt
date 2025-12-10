@@ -4,6 +4,9 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.hastanghubaga.data.local.converters.Converters
+import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -11,6 +14,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
@@ -23,12 +27,11 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
-import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
-import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
-import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
-import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 
 
+/**
+ * Same schema as AppDatabase but WITHOUT seeding callback.
+ */
 @Database(
     entities = [
         IngredientEntity::class,
@@ -43,13 +46,12 @@ import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
         MealEntity::class,
         MealNutritionEntity::class,
         UserNutritionGoalsEntity::class
-        // add others here later
     ],
     version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
+abstract class TestAppDatabase : RoomDatabase(){
     abstract fun ingredientEntityDao(): IngredientEntityDao
     abstract fun supplementEntityDao(): SupplementEntityDao
     abstract fun supplementDailyLogDao(): SupplementDailyLogDao
@@ -61,7 +63,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealEntityDao(): MealEntityDao
     abstract fun mealNutritionDao(): MealNutritionDao
     abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
-
     companion object
-
 }

@@ -44,9 +44,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Entity(tableName = "supplement_user_settings")
 data class SupplementUserSettingsEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-
+    @PrimaryKey
     val supplementId: Long,
 
     /** User overrides recommended dosage */

@@ -1,5 +1,8 @@
 package com.example.hastanghubaga.domain.model.supplement
 
+import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+
 /**
  * Represents a single nutrient’s total intake and safety status for a given day.
  *
@@ -22,7 +25,7 @@ package com.example.hastanghubaga.domain.model.supplement
 data class DailyIngredientSummary(
     val name: String,
     var totalAmount: Double,
-    val unit: String,
+    val unit: IngredientUnit,
 
     val rda: Double? = null,
     val upperLimit: Double? = null

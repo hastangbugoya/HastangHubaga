@@ -64,39 +64,3 @@ interface MealEntityDao {
     suspend fun getMealsByType(type: MealType): List<MealEntity>
 
 }
-
-
-//@Dao
-//interface MealEntityDao {
-//
-//    @Transaction
-//    @Query("SELECT * FROM meals ORDER BY timestamp DESC")
-//    fun observeAllMeals(): Flow<List<MealJoinedRoom>>
-//
-//    @Transaction
-//    @Query("SELECT * FROM meals WHERE id = :id")
-//    fun observeMeal(id: Long): Flow<MealJoinedRoom?>
-//
-//    @Transaction
-//    @Query("SELECT * FROM meals WHERE date(timestamp/1000,'unixepoch') = :date")
-//    suspend fun getMealsForDate(date: String): List<MealJoinedRoom>
-//
-//    @Insert(onConflict = OnConflictStrategy.REPLACE)
-//    suspend fun insertMeal(meal: MealEntity): Long
-//
-//    @Insert(onConflict = OnConflictStrategy.REPLACE)
-//    suspend fun insertNutrition(nutrition: MealNutritionEntity)
-//
-//    @Delete
-//    suspend fun deleteMeal(meal: MealEntity)
-//
-//    @Query("DELETE FROM meals WHERE id = :mealId")
-//    suspend fun deleteMealById(mealId: Long)
-//
-//    @Query("DELETE FROM meal_nutrition WHERE mealId = :mealId")
-//    suspend fun deleteNutrition(mealId: Long)
-//
-//    @Query("SELECT * FROM meals WHERE type = :type")
-//    suspend fun getMealsByType(type: MealType): List<MealEntity>
-//
-//}

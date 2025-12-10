@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -72,5 +73,9 @@ object DatabaseModule {
     @Provides
     fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
         db.userNutritionGoalsEntityDao()
+
+    @Provides
+    fun providesMealNutritionDao(db: AppDatabase): MealNutritionDao =
+        db.mealNutritionDao()
 
 }

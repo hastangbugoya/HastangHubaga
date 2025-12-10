@@ -27,7 +27,7 @@ interface DailyStartTimeDao {
      * Useful for restoring from backup.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(entries: List<DailyStartTimeEntity>)
+    suspend fun insertAll(entries: List<DailyStartTimeEntity>)
 
     /**
      * Returns all stored DailyStartTimeEntity rows.

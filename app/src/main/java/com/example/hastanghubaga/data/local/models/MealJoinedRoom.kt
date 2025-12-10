@@ -12,5 +12,5 @@ data class MealJoinedRoom(
         parentColumn = "id",
         entityColumn = "mealId"
     )
-    val nutrition: MealNutritionEntity
+    val nutrition: MealNutritionEntity?
 )

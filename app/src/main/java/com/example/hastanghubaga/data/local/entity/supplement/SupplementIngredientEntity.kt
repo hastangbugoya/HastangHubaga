@@ -78,5 +78,5 @@ data class SupplementIngredientEntity(
     val displayName: String,
 
     val amountPerServing: Double,
-    val unit: String
+    val unit: IngredientUnit
 )

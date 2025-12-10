@@ -32,7 +32,7 @@ fun MealJoinedRoom.toDomain(): Meal =
         type = meal.type,
         timestamp = Instant.ofEpochMilli(meal.timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         notes = meal.notes,
-        nutrition = nutrition.toDomain()
+        nutrition = nutrition?.toDomain()
     )
 
 // ------------------------------------------------------------

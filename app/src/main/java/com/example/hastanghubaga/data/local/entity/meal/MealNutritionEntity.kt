@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 @Entity(tableName = "meal_nutrition")
 data class MealNutritionEntity(
 
-    @PrimaryKey(autoGenerate = true)
+    @PrimaryKey
     val id: Long = 0L,
 
     val mealId: Long,
