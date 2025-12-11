@@ -8,6 +8,9 @@ import androidx.test.filters.SmallTest
 import com.example.hastanghubaga.data.local.db.TestAppDatabase
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.repository.supplement.LiveSupplementSettingsRepository
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -20,22 +23,22 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.yield
 import org.junit.*
 import org.junit.runner.RunWith
+import javax.inject.Inject
 
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 @SmallTest
 class SupplementUserSettingsDaoTest {
 
-    private lateinit var db: TestAppDatabase
-    private lateinit var dao: SupplementUserSettingsDao
+    @get:Rule
+    var hiltRule = HiltAndroidRule(this)
+
+    @Inject lateinit var db: TestAppDatabase
+    @Inject lateinit var dao: SupplementUserSettingsDao
 
     @Before
     fun setup() {
-        db = Room.inMemoryDatabaseBuilder(
-            ApplicationProvider.getApplicationContext(),
-            TestAppDatabase::class.java
-        ).allowMainThreadQueries().build()
-
-        dao = db.supplementUserSettingsDao()
+        hiltRule.inject()
     }
 
     @After
@@ -89,31 +92,24 @@ class SupplementUserSettingsDaoTest {
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun observeSettings_emitsUpdates() = runTest {
-        db.clearAllTables()
-        advanceUntilIdle()
 
         val emissionsDeferred = async {
-            dao.observeSettings(1L).take(2).toList()
+            dao.observeSettings(1L)
+                .take(2)
+                .toList()
         }
 
-        // First write
         dao.upsert(makeSettings(1L, dose = 2.0))
-        advanceUntilIdle()
-
-        // Second write (Room replaces previous state)
         dao.upsert(makeSettings(1L, dose = 10.0))
-        advanceUntilIdle()
 
         val emissions = emissionsDeferred.await()
 
-        // First: 2.0
-        Assert.assertEquals(2.0, emissions[0]?.preferredServingSize ?: -1.0, 0.01)
+        println("MEOW emissions = $emissions")
 
-        // Second: 10.0
-        Assert.assertEquals(10.0, emissions[1]?.preferredServingSize ?: -1.0, 0.01)
+        Assert.assertEquals(2, emissions.size)
+        Assert.assertEquals(2.0, emissions[0]!!.preferredServingSize)
+        Assert.assertEquals(10.0, emissions[1]!!.preferredServingSize)
     }
-
-
 
     @Test
     fun deleteSettings_removesRow() = runBlocking {

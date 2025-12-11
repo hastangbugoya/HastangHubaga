@@ -72,4 +72,3 @@ object TestDatabaseModule {
     @Provides fun provideUserGoalsDao(db: AppDatabase): UserNutritionGoalsEntityDao =
         db.userNutritionGoalsEntityDao()
 }
-
