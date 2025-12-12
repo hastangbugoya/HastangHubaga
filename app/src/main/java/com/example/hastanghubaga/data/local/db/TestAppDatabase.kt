@@ -5,7 +5,10 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.hastanghubaga.data.local.converters.TestConverters
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
+
 /**
  * TestAppDatabase
  *
@@ -93,15 +96,39 @@ import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEn
  *  ✔ fast
  *  ✔ Hilt-safe
  *
+ *  * Test-only Room database used for DAO tests.
+ *  *
+ *  * This database intentionally avoids:
+ *  * - Hilt
+ *  * - App callbacks
+ *  * - Widgets
+ *  * - Production Application initialization
+ *  *
+ *  * Use this database for:
+ *  * - DAO unit tests
+ *  * - Flow emission testing
+ *  * - SQL correctness validation
+ *  *
+ *  * DO NOT replace with AppDatabase in tests.
+ *  * Doing so may cause:
+ *  * - Multiple app root errors
+ *  * - Instrumentation crashes
+ *  * - Flaky tests
+ *
  * If a test fails mysteriously — check this file first.
  */
 
 @Database(
-    entities = [SupplementUserSettingsEntity::class],
+    entities = [
+                SupplementUserSettingsEntity::class,
+                UserNutritionGoalsEntity::class
+               ],
+
     version = 1,
     exportSchema = false
 )
 @TypeConverters(TestConverters::class)
 abstract class TestAppDatabase : RoomDatabase() {
     abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
+    abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
 }
