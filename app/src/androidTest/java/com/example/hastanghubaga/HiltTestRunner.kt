@@ -55,7 +55,6 @@ import dagger.hilt.android.testing.HiltTestApplication
  * This runner ensures the correct test Application is used.
  */
 class HiltTestRunner : AndroidJUnitRunner() {
-
     override fun newApplication(
         cl: ClassLoader?,
         className: String?,
@@ -63,7 +62,7 @@ class HiltTestRunner : AndroidJUnitRunner() {
     ): Application {
         return super.newApplication(
             cl,
-            HiltTestApplication::class.java.name,
+            "com.example.hastanghubaga.testapp.TestApp_HiltTestApplication",
             context
         )
     }

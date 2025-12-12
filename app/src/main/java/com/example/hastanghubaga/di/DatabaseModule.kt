@@ -75,7 +75,7 @@ object DatabaseModule {
         db.userNutritionGoalsEntityDao()
 
     @Provides
-    fun providesMealNutritionDao(db: AppDatabase): MealNutritionDao =
+    fun provideMealNutritionDao(db: AppDatabase): MealNutritionDao =
         db.mealNutritionDao()
 
 }

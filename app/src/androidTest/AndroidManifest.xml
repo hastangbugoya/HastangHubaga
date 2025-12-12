@@ -1,17 +1,11 @@
-<!-- app/src/androidTest/AndroidManifest.xml -->
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application
-        android:name="com.example.hastanghubaga.test.TestApp_HiltTestApplication" >
-
-        <receiver
-            android:name="com.example.hastanghubaga.widget.SupplementWidgetReceiver"
-            android:enabled="false"
-            android:exported="false"/>
-    </application>
+        android:name="com.example.hastanghubaga.testapp.TestApp_HiltTestApplication" />
 
     <instrumentation
-        android:name="com.google.dagger.hilt.android.testing.HiltTestRunner"
+        android:name="com.example.hastanghubaga.HiltTestRunner"
         android:targetPackage="com.example.hastanghubaga" />
 
 </manifest>

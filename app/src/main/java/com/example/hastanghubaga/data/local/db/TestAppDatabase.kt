@@ -3,18 +3,16 @@ package com.example.hastanghubaga.data.local.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.hastanghubaga.data.local.converters.Converters
+import com.example.hastanghubaga.data.local.converters.TestConverters
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 
 @Database(
-    entities = [
-        SupplementUserSettingsEntity::class
-    ],
+    entities = [SupplementUserSettingsEntity::class],
     version = 1,
     exportSchema = false
 )
-@TypeConverters(Converters::class)
+@TypeConverters(TestConverters::class)
 abstract class TestAppDatabase : RoomDatabase() {
     abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
 }
