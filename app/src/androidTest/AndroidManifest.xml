@@ -1,33 +1,46 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<!--
+    Test-only AndroidManifest.
 
+    ## Purpose
+    - Overrides the Application class during instrumented tests
+    - Ensures Hilt uses a test Application instead of the production one
+    - Prevents app-root collisions during compilation and runtime
+
+    ## Why this is critical
+    Without this file:
+    - Hilt tries to process BOTH HastangHubagaApp and TestApp_HiltTestApplication
+    - Results in:
+        "Cannot process multiple app roots"
+        App crashes at startup
+        Tests silently not running
+
+    ## Checklist for Hilt tests
+    - [ ] androidTest manifest exists
+    - [ ] Application name points to TestApp_HiltTestApplication
+    - [ ] HiltTestRunner is set
+    - [ ] No production Application is referenced here
+
+    ## Common mistakes
+    ❌ Leaving production Application name here
+    ❌ Forgetting to override the manifest at all
+    ❌ Using @HiltAndroidApp on both app and test Application
+
+    ## Tip
+    This manifest ONLY applies to androidTest.
+    It will never ship with the app.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:name="com.example.hastanghubaga.testapp.TestApp_HiltTestApplication" />
+        android:name="com.example.hastanghubaga.TestApp_HiltTestApplication_Application">
+
+        <!-- Disable receivers that inject -->
+        <receiver
+            android:name="com.example.hastanghubaga.widget.SupplementWidgetReceiver"
+            android:enabled="false"
+            android:exported="false" />
+    </application>
 
     <instrumentation
-        android:name="com.example.hastanghubaga.HiltTestRunner"
+        android:name="com.google.dagger.hilt.android.testing.HiltTestRunner"
         android:targetPackage="com.example.hastanghubaga" />
-
 </manifest>
-
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
-<!--<manifest />-->
-
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
-
-<!--<manifest xmlns:android="http://schemas.android.com/apk/res/android">-->
-
-<!--    <application android:name="com.example.hastanghubaga.TestApp_HiltTestApplication">-->
-
-<!--        <receiver-->
-<!--            android:name="com.example.hastanghubaga.widget.SupplementWidgetReceiver"-->
-<!--            android:enabled="false"-->
-<!--            android:exported="false" />-->
-<!--    </application>-->
-
-<!--    <instrumentation-->
-<!--        android:name="com.google.dagger.hilt.android.testing.HiltTestRunner"-->
-<!--        android:targetPackage="com.example.hastanghubaga" />-->
-
-<!--</manifest>-->
-

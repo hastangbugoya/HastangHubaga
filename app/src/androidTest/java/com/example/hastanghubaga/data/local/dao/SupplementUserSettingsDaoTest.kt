@@ -13,7 +13,46 @@ import kotlinx.coroutines.test.runTest
 import org.junit.*
 import org.junit.runner.RunWith
 import javax.inject.Inject
-
+/**
+ * app/src/androidTest/java/com/example/hastanghubaga/data/local/dao/SupplementUserSettingsDaoTest.kt
+ *
+ * Instrumentation test for [SupplementUserSettingsDao].
+ *
+ * PURPOSE
+ * -------
+ * Verifies correct behavior of:
+ * - Upsert logic
+ * - Flow emissions
+ * - Deletion behavior
+ * - Bulk inserts
+ *
+ * WHY THIS TEST WAS HARD
+ * ----------------------
+ * Room + Flow + Hilt introduce:
+ * - Initial null emissions
+ * - Transaction replays
+ * - Coroutine timing issues
+ *
+ * CHECKLIST (MUST VERIFY)
+ * -----------------------
+ * ✓ Uses runTest (not runBlocking)
+ * ✓ Collects Flow BEFORE writing
+ * ✓ Uses take(n) to prevent infinite collection
+ * ✓ Handles duplicate emissions
+ * ✓ Uses TestDatabaseModule
+ *
+ * COMMON MISTAKES
+ * ---------------
+ * ✗ Expecting only one Flow emission
+ * ✗ Forgetting initial emission behavior
+ * ✗ Mixing runBlocking with runTest
+ *
+ * TIPS
+ * ----
+ * • Print emissions when debugging Flow tests
+ * • Duplicate emissions are NORMAL for Room
+ * • Always assert order explicitly
+ */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class SupplementUserSettingsDaoTest {
@@ -56,7 +95,8 @@ class SupplementUserSettingsDaoTest {
         dao.upsert(makeSettings(1, 10.0))
 
         val emissions = emissionsDeferred.await()
-
+        Assert.assertEquals(2, emissions.size)
+        println("Meow Emissions: $emissions")
         Assert.assertEquals(2.0, emissions[0]?.preferredServingSize)
         Assert.assertEquals(10.0, emissions[1]?.preferredServingSize)
     }
