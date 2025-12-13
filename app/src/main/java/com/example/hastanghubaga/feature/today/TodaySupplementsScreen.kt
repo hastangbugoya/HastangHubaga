@@ -18,6 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.room.util.TableInfo
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 
 @Composable
 fun TodaySupplementsScreen(
@@ -57,6 +58,6 @@ fun TodaySupplementsScreen(
 }
 
 @Composable
-private fun SupplementRow(supplement: Supplement) {
-    Text(supplement.name)
+private fun SupplementRow(supplement: SupplementWithUserSettings) {
+    Text(supplement.supplement.name)
 }

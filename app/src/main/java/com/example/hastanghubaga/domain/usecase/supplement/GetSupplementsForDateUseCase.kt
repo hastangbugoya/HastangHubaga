@@ -58,3 +58,15 @@ class GetSupplementsForDateUseCase @Inject constructor(
         return supplementRepository.getActiveSupplementsOrderedByOffset()
     }
 }
+// ------------------------------------------------------------
+// SCHEDULING LOGIC
+//
+// Rules are evaluated in this order:
+// 1. Is the supplement active?
+// 2. Should it be taken today?
+// 3. What anchor applies?
+// 4. Is there a daily override?
+// 5. Is there a default anchor time?
+// 6. Apply offset minutes
+// ------------------------------------------------------------
+

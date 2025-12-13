@@ -12,7 +12,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 // Supplement
-fun SupplementEntity.toDomain(): Supplement =
+fun SupplementEntity.toSupplementSettings(): Supplement =
     Supplement(
         id = id,
         name = name,
@@ -39,7 +39,7 @@ fun SupplementEntity.toDomain(): Supplement =
     )
 
 // Ingredient
-fun IngredientEntity.toDomain() = Ingredient(
+fun IngredientEntity.toSupplementSettings() = Ingredient(
     id = this.id,
     name = this.name,
     defaultUnit = this.defaultUnit,

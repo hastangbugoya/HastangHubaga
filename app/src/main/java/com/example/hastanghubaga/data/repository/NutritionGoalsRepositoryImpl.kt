@@ -3,7 +3,7 @@ package com.example.hastanghubaga.data.repository
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionGoalsRepository
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
-import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 import kotlinx.coroutines.flow.Flow
@@ -15,16 +15,16 @@ class NutritionGoalsRepositoryImpl @Inject constructor(
 ) : NutritionGoalsRepository {
 
     override fun observeAll(): Flow<List<NutritionGoal>> =
-        dao.observeAllGoals().map { list -> list.map { it.toDomain() } }
+        dao.observeAllGoals().map { list -> list.map { it.toSupplementSettings() } }
 
     override fun observeActive(): Flow<NutritionGoal?> =
-        dao.observeActiveGoal().map { entity -> entity?.toDomain() }
+        dao.observeActiveGoal().map { entity -> entity?.toSupplementSettings() }
 
     override suspend fun getAll(): List<NutritionGoal> =
-        dao.getAllGoals().map { it.toDomain() }
+        dao.getAllGoals().map { it.toSupplementSettings() }
 
     override suspend fun getActive(): NutritionGoal? =
-        dao.getActiveGoal()?.toDomain()
+        dao.getActiveGoal()?.toSupplementSettings()
 
     override suspend fun upsert(goal: NutritionGoal): Long =
         dao.upsert(goal.toEntity())
@@ -38,5 +38,5 @@ class NutritionGoalsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getByType(type: NutritionGoalType): List<NutritionGoal> =
-        dao.getGoalsByType(type).map { it.toDomain() }
+        dao.getGoalsByType(type).map { it.toSupplementSettings() }
 }

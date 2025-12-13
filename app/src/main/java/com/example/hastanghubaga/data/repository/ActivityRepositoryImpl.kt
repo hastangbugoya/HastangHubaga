@@ -1,7 +1,7 @@
 package com.example.hastanghubaga.data.repository
 
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
-import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
@@ -14,10 +14,10 @@ class ActivityRepositoryImpl @Inject constructor(
 ) : ActivityRepository {
 
     override fun observeAll(): Flow<List<Activity>> =
-        dao.observeAllActivities().map { list -> list.map { it.toDomain() } }
+        dao.observeAllActivities().map { list -> list.map { it.toSupplementSettings() } }
 
     override fun observeActivity(id: Long): Flow<Activity?> =
-        dao.observeActivity(id).map { it?.toDomain() }
+        dao.observeActivity(id).map { it?.toSupplementSettings() }
 
     override suspend fun addActivity(activity: Activity): Long =
         dao.insertActivity(activity.toEntity())

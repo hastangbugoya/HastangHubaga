@@ -30,4 +30,8 @@ interface SupplementUserSettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(entries: List<SupplementUserSettingsEntity>)
+
+    @Query("SELECT * FROM supplement_user_settings")
+    fun observeAllSettings(): Flow<List<SupplementUserSettingsEntity>>
+
 }

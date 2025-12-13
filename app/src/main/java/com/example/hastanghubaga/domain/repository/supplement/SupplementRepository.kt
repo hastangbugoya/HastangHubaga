@@ -15,6 +15,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.LocalTime
@@ -96,5 +98,18 @@ interface SupplementRepository {
         supplementId: Long,
         dose: Double,
         unit: SupplementDoseUnit
+    )
+
+    fun getSupplementsForDate(
+        date: String
+    ): Flow<List<SupplementWithUserSettings>>
+
+    fun observeSupplement(
+        supplementId: Long
+    ): Flow<SupplementWithUserSettings?>
+
+    suspend fun saveUserSettings(
+        settings: UserSupplementSettings,
+        supplementId: Long
     )
 }

@@ -4,12 +4,14 @@ import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsForDateUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.ui.main.MainScreenIntent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -17,7 +19,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TodaySupplementsViewModel @Inject constructor(
-    private val getSupplementsForDateUseCase: GetSupplementsForDateUseCase
+    private val getSupplementsWithUserSettingsForDateUseCase: GetSupplementsWithUserSettingsForDateUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TodaySupplementsState())
@@ -44,14 +46,17 @@ class TodaySupplementsViewModel @Inject constructor(
 
             try {
                 val today = LocalDate.now()
-                val supplements = getSupplementsForDateUseCase(today)
+                val supplements = getSupplementsWithUserSettingsForDateUseCase(today)
 
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        todaySupplements = supplements
-                    )
-                }
+                getSupplementsWithUserSettingsForDateUseCase(today)
+                    .collectLatest { supplements ->
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                todaySupplements = supplements
+                            )
+                        }
+                    }
 
                 emitMainScreenEvent(MainScreenIntent.SetLoading(false))
 

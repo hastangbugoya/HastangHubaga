@@ -12,7 +12,7 @@ import java.time.ZoneId
 // ------------------------------------------------------------
 // MealNutritionEntity → Domain
 // ------------------------------------------------------------
-fun MealNutritionEntity.toDomain(): MealNutrition =
+fun MealNutritionEntity.toSupplementSettings(): MealNutrition =
     MealNutrition(
         protein = protein,
         carbs = carbs,
@@ -26,13 +26,13 @@ fun MealNutritionEntity.toDomain(): MealNutrition =
 // ------------------------------------------------------------
 // MealJoinedRoom → Domain Meal
 // ------------------------------------------------------------
-fun MealJoinedRoom.toDomain(): Meal =
+fun MealJoinedRoom.toSupplementSettings(): Meal =
     Meal(
         id = meal.id,
         type = meal.type,
         timestamp = Instant.ofEpochMilli(meal.timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         notes = meal.notes,
-        nutrition = nutrition?.toDomain()
+        nutrition = nutrition?.toSupplementSettings()
     )
 
 // ------------------------------------------------------------

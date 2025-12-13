@@ -2,8 +2,7 @@ package com.example.hastanghubaga.data.repository
 
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
-import com.example.hastanghubaga.data.local.mappers.toDomain
-import com.example.hastanghubaga.data.local.mappers.toEntity
+import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
@@ -20,13 +19,13 @@ class MealRepositoryImpl @Inject constructor(
 ) : MealRepository {
 
     override fun observeAll(): Flow<List<Meal>> =
-        mealEntityDao.observeAllMeals().map { list -> list.map { it.toDomain() } }
+        mealEntityDao.observeAllMeals().map { list -> list.map { it.toSupplementSettings() } }
 
     override fun observeMeal(id: Long): Flow<Meal?> =
-        mealEntityDao.observeMeal(id).map { it?.toDomain() }
+        mealEntityDao.observeMeal(id).map { it?.toSupplementSettings() }
 
     override suspend fun getMealsForDate(date: LocalDate): List<Meal> =
-        mealEntityDao.getMealsForDate(date.toString()).map { it.toDomain() }
+        mealEntityDao.getMealsForDate(date.toString()).map { it.toSupplementSettings() }
 
     override suspend fun addMeal(
         meal: MealEntity,
@@ -44,6 +43,6 @@ class MealRepositoryImpl @Inject constructor(
 
     override suspend fun getMealsByType(type: MealType): List<Meal> =
         mealEntityDao.getMealsForDate(LocalDate.now().toString())
-            .map { it.toDomain() }
+            .map { it.toSupplementSettings() }
             .filter { it.type == type }
 }

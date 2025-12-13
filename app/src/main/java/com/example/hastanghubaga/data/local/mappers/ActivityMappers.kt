@@ -7,7 +7,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-fun ActivityEntity.toDomain(): Activity =
+fun ActivityEntity.toSupplementSettings(): Activity =
     Activity(
         id = id,
         type = type,

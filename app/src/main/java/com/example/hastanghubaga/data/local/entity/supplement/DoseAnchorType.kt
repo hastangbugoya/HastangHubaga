@@ -61,6 +61,7 @@ enum class DoseAnchorType {
      * Supplements with no preferred timing.
      * The app may schedule them in any convenient slot.
      */
-    ANYTIME
+    ANYTIME,
+    ANY_MEAL
 }
 
