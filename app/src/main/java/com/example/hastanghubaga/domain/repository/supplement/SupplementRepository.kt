@@ -39,6 +39,8 @@ interface SupplementRepository {
 
     suspend fun getAllSupplementsOnce(): List<Supplement>
 
+    suspend fun getActiveSupplementsOrderedByOffset(): List<Supplement>
+
     suspend fun logDose(
         supplementId: Long,
         date: LocalDate,

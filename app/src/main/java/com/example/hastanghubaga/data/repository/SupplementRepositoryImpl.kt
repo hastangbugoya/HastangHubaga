@@ -140,6 +140,11 @@ class SupplementRepositoryImpl @Inject constructor(
             .map { it.toDomain() }
     }
 
+    override suspend fun getActiveSupplementsOrderedByOffset(): List<Supplement> =
+        supplementDao.getActiveSupplementsOrderedByOffset()
+            .map { it.toDomain() }
+
+
     override fun getActiveSupplements(): Flow<List<Supplement>> =
         supplementDao.getActiveSupplementsFlow()
             .map { list -> list.map { it.toDomain() } }

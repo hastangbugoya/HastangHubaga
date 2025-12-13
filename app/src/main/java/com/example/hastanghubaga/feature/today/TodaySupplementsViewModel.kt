@@ -3,7 +3,7 @@ package com.example.hastanghubaga.feature.today
 import androidx.compose.material3.Text
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hastanghubaga.domain.usecase.GetSupplementsForDateUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsForDateUseCase
 import com.example.hastanghubaga.ui.main.MainScreenIntent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow

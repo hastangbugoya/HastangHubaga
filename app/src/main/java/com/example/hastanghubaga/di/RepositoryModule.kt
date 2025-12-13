@@ -1,40 +1,71 @@
 package com.example.hastanghubaga.di
 
-import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
-import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
-import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-
 @Module
 @InstallIn(SingletonComponent::class)
-object RepositoryModule {
+abstract class RepositoryModule {
 
+    @Binds
     @Singleton
-    @Provides
-    fun provideSupplementRepository(
-        supplementDao: SupplementEntityDao,
-        ingredientEntityDao: IngredientEntityDao,
-        supplementDailyLogDao: SupplementDailyLogDao,
-        dailyStartTimeDao: DailyStartTimeDao,
-        eventTimeDao: EventTimeDao,
-        supplementUserSettingsDao: SupplementUserSettingsDao
-    ): SupplementRepository {
-        return SupplementRepositoryImpl(
-            supplementDao,
-            ingredientEntityDao,
-            supplementDailyLogDao,
-            dailyStartTimeDao,
-            eventTimeDao,
-            supplementUserSettingsDao
-        )
-    }
+    abstract fun bindSupplementRepository(
+        impl: SupplementRepositoryImpl
+    ): SupplementRepository
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+//@Module
+//@InstallIn(SingletonComponent::class)
+//object RepositoryModule {
+//    @Singleton
+//    @Provides
+//    fun provideSupplementRepository(
+//        supplementDao: SupplementEntityDao,
+//        ingredientEntityDao: IngredientEntityDao,
+//        supplementDailyLogDao: SupplementDailyLogDao,
+//        dailyStartTimeDao: DailyStartTimeDao,
+//        eventTimeDao: EventTimeDao,
+//        supplementUserSettingsDao: SupplementUserSettingsDao
+//    ): SupplementRepository {
+//        return SupplementRepositoryImpl(
+//            supplementDao,
+//            ingredientEntityDao,
+//            supplementDailyLogDao,
+//            dailyStartTimeDao,
+//            eventTimeDao,
+//            supplementUserSettingsDao
+//        )
+//    }
+//
+//    @Binds
+//    abstract fun bindSupplementRepository(
+//        impl: SupplementRepositoryImpl
+//    ): SupplementRepository
+//}

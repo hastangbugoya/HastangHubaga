@@ -1,7 +1,9 @@
-package com.example.hastanghubaga.domain.usecase
+package com.example.hastanghubaga.domain.usecase.supplement
 
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -42,17 +44,17 @@ import javax.inject.Inject
  * @return A list of supplements applicable for the provided date.
  */
 class GetSupplementsForDateUseCase @Inject constructor(
-    private val supplementDao: SupplementEntityDao
+    private val supplementRepository: SupplementRepository
 ) {
 
     /**
      * Executes the use case.
      *
      * @param date The date for which supplements should be retrieved.
-     * @return A list of `SupplementEntity` items active on that date.
+     * @return A list of `Supplement` items active on that date.
      */
-    suspend operator fun invoke(date: LocalDate): List<SupplementEntity> {
+    suspend operator fun invoke(date: LocalDate): List<Supplement> {
         // TODO: Apply full scheduling logic here
-        return supplementDao.getActiveSupplementsOrderedByOffset()
+        return supplementRepository.getActiveSupplementsOrderedByOffset()
     }
 }
