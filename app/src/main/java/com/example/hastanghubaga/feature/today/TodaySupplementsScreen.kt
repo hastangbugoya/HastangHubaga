@@ -4,20 +4,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.room.util.TableInfo
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
-import com.example.hastanghubaga.domain.model.supplement.Supplement
+import androidx.compose.ui.unit.dp
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 
 @Composable
@@ -59,5 +56,14 @@ fun TodaySupplementsScreen(
 
 @Composable
 private fun SupplementRow(supplement: SupplementWithUserSettings) {
-    Text(supplement.supplement.name)
+    Box(modifier = Modifier.fillMaxWidth().padding(5.dp)){
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(supplement.supplement.name)
+            Text(supplement.supplement.recommendedServingSize.toString())
+            supplement.userSettings?.let {
+                Text(supplement.userSettings.preferredServingSize.toString())
+            }
+            Text(text = supplement.supplement.avoidCaffeine.toString())
+        }
+    }
 }

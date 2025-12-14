@@ -7,6 +7,8 @@ import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsForDate
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.ui.main.MainScreenIntent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -29,6 +31,9 @@ class TodaySupplementsViewModel @Inject constructor(
     private val _events = MutableSharedFlow<MainScreenIntent>()
     val events: SharedFlow<MainScreenIntent> = _events
 
+    private var todayJob: Job? = null
+
+
     init {
         loadToday()
     }
@@ -40,13 +45,14 @@ class TodaySupplementsViewModel @Inject constructor(
     }
 
     private fun loadToday(showSuccess: Boolean = false) {
-        viewModelScope.launch {
+        todayJob?.cancel()
+
+        todayJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
             emitMainScreenEvent(MainScreenIntent.SetLoading(true))
 
             try {
                 val today = LocalDate.now()
-                val supplements = getSupplementsWithUserSettingsForDateUseCase(today)
 
                 getSupplementsWithUserSettingsForDateUseCase(today)
                     .collectLatest { supplements ->
@@ -58,13 +64,8 @@ class TodaySupplementsViewModel @Inject constructor(
                         }
                     }
 
-                emitMainScreenEvent(MainScreenIntent.SetLoading(false))
-
-                if (showSuccess) {
-                    emitMainScreenEvent(
-                        MainScreenIntent.ShowSnackbar("Today's supplements refreshed")
-                    )
-                }
+                // NOTE: code below will NOT execute unless the flow completes
+                // (which is expected behavior for Room flows)
 
             } catch (e: Exception) {
 
@@ -84,14 +85,26 @@ class TodaySupplementsViewModel @Inject constructor(
                     )
                 )
             }
-            emitMainScreenEvent(MainScreenIntent.ShowBottomSheet(
-                {
+        }
+
+        // One-time UI effects that should happen per refresh
+        viewModelScope.launch {
+            if (showSuccess) {
+                emitMainScreenEvent(
+                    MainScreenIntent.ShowSnackbar("Today's supplements refreshed")
+                )
+            }
+
+            emitMainScreenEvent(MainScreenIntent.ShowBanner("Today's supplements refreshed"))
+
+            emitMainScreenEvent(
+                MainScreenIntent.ShowBottomSheet {
                     Text("Loading finished")
                 }
-            ))
-            emitMainScreenEvent(MainScreenIntent.ShowBanner( "Today's supplements refreshed"))
+            )
         }
     }
+
 
     // Helper for screens to trigger UI events
     fun emitMainScreenEvent(intent: MainScreenIntent) {
