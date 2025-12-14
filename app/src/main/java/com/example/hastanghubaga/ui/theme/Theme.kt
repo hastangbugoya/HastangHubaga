@@ -10,17 +10,19 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.example.hastanghubaga.ui.tokens.AppColors
 
+// AppColors > Theme > UiColors > Composable
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = AppColors.PrimaryLight,
+    secondary = AppColors.SecondaryLight,
+    tertiary = AppColors.ErrorLight
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = AppColors.PrimaryDark,
+    secondary = AppColors.SecondaryDark,
+    tertiary = AppColors.ErrorDark
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -53,6 +55,7 @@ fun HastangHubagaTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = shapes,
         content = content
     )
 }

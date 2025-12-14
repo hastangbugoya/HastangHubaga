@@ -25,6 +25,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.hastanghubaga.R
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.ui.theme.AlertLevel
+import com.example.hastanghubaga.ui.theme.UiAlertColors
 import com.example.hastanghubaga.ui.tokens.AppIcons
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
