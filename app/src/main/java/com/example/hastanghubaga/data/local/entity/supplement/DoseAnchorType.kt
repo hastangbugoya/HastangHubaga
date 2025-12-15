@@ -1,67 +1,151 @@
 package com.example.hastanghubaga.data.local.entity.supplement
-
 /**
- * Defines anchor points used to schedule supplement doses relative
- * to meaningful times in a user’s daily routine.
+ * Represents the **anchor point in time** around which a supplement dose
+ * should be scheduled.
  *
- * Each anchor represents a logical point in the day from which offset-based
- * dose times can be calculated (e.g., “30 minutes after BREAKFAST”).
+ * -------------------------------------------------------------------------
+ * OVERVIEW
+ * -------------------------------------------------------------------------
+ * A `DoseAnchorType` answers the question:
  *
- * This abstraction allows the scheduling engine to adapt to different
- * user lifestyles (shift work, intermittent fasting, late wake-up times, etc.)
- * without requiring changes to supplement definitions.
+ * 👉 “What real-world event should this supplement be tied to?”
  *
- * ## How anchors are used
- * - `MIDNIGHT` acts as the absolute base (00:00), unless overridden by
- *   `DailyStartTimeEntity` for users with shifted day cycles.
- * - Anchors like `BREAKFAST`, `LUNCH`, `DINNER`, and `WAKEUP` refer to
- *   user-defined or learned times.
- * - `CUSTOM_EVENT` supports future extensibility for arbitrary user-defined anchors.
- * - `ANYTIME` is used for supplements that have no timing sensitivity.
+ * Examples:
+ * - A meal (Breakfast, Lunch, Dinner)
+ * - A daily routine (Wakeup, Midnight)
+ * - An activity (Workout)
+ * - A flexible or abstract concept (Anytime, Custom)
  *
- * These values are typically resolved into seconds-of-day via the
- * `event_default_times` table or user settings.
+ * Anchors are later resolved into concrete `LocalTime` values using:
+ * - User-defined defaults (EventDefaultTimeEntity)
+ * - Day-of-week overrides (EventDayOfWeekTimeEntity)
+ * - Fallback system defaults
+ *
+ * Offsets (positive or negative minutes) may then be applied to support:
+ * - “10 minutes before breakfast”
+ * - “30 minutes after dinner”
+ *
+ * -------------------------------------------------------------------------
+ * RATIONALE
+ * -------------------------------------------------------------------------
+ * Anchors are modeled as an enum instead of raw times because:
+ *
+ * 1) Real-world schedules are **semantic**, not just clock-based
+ *    - “After workout” is more meaningful than “5:45 PM”
+ *
+ * 2) User schedules change
+ *    - Breakfast might be 8am on weekdays, 10am on weekends
+ *
+ * 3) Anchors enable **smart rescheduling**
+ *    - If a meal is skipped, the dose can become “Pending”
+ *
+ * 4) Anchors enable **conflict handling**
+ *    - Multiple doses tied to the same meal
+ *    - Stacking vs staggering logic
+ *
+ * -------------------------------------------------------------------------
+ * MEAL AWARENESS
+ * -------------------------------------------------------------------------
+ * Some anchors are associated with meals via [mealType].
+ *
+ * This allows the system to:
+ * - Detect whether a dose depends on a meal
+ * - Mark doses as `PendingMeal` if the meal hasn’t occurred
+ * - Support `ANY_MEAL` logic (first available meal)
+ *
+ * Use:
+ * ```
+ * anchor.mealType != null
+ * ```
+ * to determine if an anchor is meal-based.
+ *
+ * -------------------------------------------------------------------------
+ * FUTURE USAGE EXAMPLES
+ * -------------------------------------------------------------------------
+ *
+ * Scheduling:
+ * ```
+ * val baseTime = resolveAnchorTime(anchor, date)
+ * val finalTime = baseTime.plusMinutes(offsetMinutes)
+ * ```
+ *
+ * Meal-aware UI:
+ * ```
+ * if (anchor.mealType != null && mealNotEatenYet) {
+ *     doseState = PendingMeal
+ * }
+ * ```
+ *
+ * Conflict handling:
+ * ```
+ * if (two doses resolve to same time) {
+ *     stack OR stagger
+ * }
+ * ```
  */
-enum class DoseAnchorType {
+enum class DoseAnchorType(
+    /** Optional meal this anchor is associated with */
+    val mealType: MealType?
+) {
 
-    /** Default anchor representing the start of the calendar day (00:00). */
-    MIDNIGHT,
-
-    /** User-defined wake-up time, used for morning-aligned doses. */
-    WAKEUP,
-
-    /** The user’s breakfast time or morning meal anchor. */
-    BREAKFAST,
-
-    /** Midday meal anchor. Used for supplements taken with lunch. */
-    LUNCH,
-
-    /** Evening meal anchor. Used for supplements requiring food. */
-    DINNER,
-
-    /** Time when caffeine or stimulant intake generally occurs. */
-    CAFFEINE,
-
-    /** Anchor for doses recommended before a workout session. */
-    BEFORE_WORKOUT,
-
-    /** Anchor for doses recommended immediately after a workout session. */
-    AFTER_WORKOUT,
-
-    /** Anchor for doses recommended immediately after a snack. */
-    SNACK,
-
-    /**
-     * A flexible anchor reserved for future extension.
-     * Allows users or the system to define new time-based events.
+    /** Absolute start of the day (00:00).
+     *  Useful for fasting supplements or strict schedules.
      */
-    CUSTOM_EVENT,
+    MIDNIGHT(null),
 
-    /**
-     * Supplements with no preferred timing.
-     * The app may schedule them in any convenient slot.
+    /** Time the user wakes up.
+     *  Common for hydration, thyroid meds, or baseline supplements.
      */
-    ANYTIME,
-    ANY_MEAL
+    WAKEUP(null),
+
+    /** Tied specifically to breakfast.
+     *  Meal-dependent supplements (e.g., fat-soluble vitamins).
+     */
+    BREAKFAST(MealType.BREAKFAST),
+
+    /** Tied specifically to lunch. */
+    LUNCH(MealType.LUNCH),
+
+    /** Tied specifically to dinner. */
+    DINNER(MealType.DINNER),
+
+    /** A light meal or snack.
+     *  Useful for supplements that shouldn’t be taken on an empty stomach.
+     */
+    SNACK(MealType.SNACK),
+
+    /** Conceptual anchor for caffeine-related supplements.
+     *  Used mainly for filtering, warnings, or UI grouping.
+     */
+    CAFFEINE(null),
+
+    /** Scheduled before workout begins.
+     *  Common for pre-workout supplements.
+     */
+    BEFORE_WORKOUT(null),
+
+    /** Scheduled after workout completes.
+     *  Common for recovery supplements.
+     */
+    AFTER_WORKOUT(null),
+
+    /** User-defined or externally triggered event.
+     *  Allows future extensibility without schema changes.
+     */
+    CUSTOM_EVENT(null),
+
+    /** Tied to *any* meal.
+     *  Resolved to the first applicable meal of the day.
+     */
+    ANY_MEAL(MealType.ANY),
+
+    /** No strict anchor.
+     *  Used for flexible or “take anytime today” supplements.
+     */
+    ANYTIME(null)
+}
+
+enum class MealType {
+    BREAKFAST, LUNCH, DINNER, SNACK, ANY
 }
 

@@ -96,6 +96,7 @@ data class Supplement(
     val recommendedLiquidInOz: Double?,
     val recommendedTimeBetweenDailyDosesMinutes: Int?,
     val avoidCaffeine: Boolean?,
+    val doseConditions: Set<DoseCondition> = emptySet(),
 
     val doseAnchorType: DoseAnchorType,
     val frequencyType: FrequencyType,

@@ -96,6 +96,9 @@ dependencies {
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.51")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.51")
 
+    // Coroutines testing
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
     // Glance Widgets
     implementation("androidx.glance:glance-appwidget:1.0.0")
 

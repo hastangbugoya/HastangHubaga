@@ -1,5 +1,7 @@
 package com.example.hastanghubaga.feature.today
 
+import android.util.Log
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,8 +23,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
+import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.ui.tokens.AppIcons
 import com.example.hastanghubaga.ui.tokens.Dimens
@@ -54,6 +63,7 @@ fun TodaySupplementsScreen(
                     Text("Error: ${state.errorMessage}")
                 }
                 else -> {
+                    Log.d("Meow", "TodaySupplementsScreen> Rendering ${state.todaySupplements.size} supplements")
                     LazyColumn {
                         items(state.todaySupplements) { supp ->
                             SupplementRow(supp)
@@ -66,13 +76,15 @@ fun TodaySupplementsScreen(
 }
 
 @Composable
-private fun SupplementRow(
+fun SupplementRow(
     supplement: SupplementWithUserSettings
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(5.dp)
+            .border(color = Color.Black, width = 1.dp)
+            .padding(3.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
@@ -111,3 +123,49 @@ private fun SupplementRow(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+private fun SupplementRowPreview() {
+    MaterialTheme {
+        SupplementRow(
+            supplement = previewSupplementWithUserSettings()
+        )
+    }
+}
+
+private fun previewSupplementWithUserSettings(): SupplementWithUserSettings {
+    return SupplementWithUserSettings(
+        supplement = previewSupplement(),
+        userSettings = null,
+        doseState = MealAwareDoseState.Unknown,
+        scheduledTimes = emptyList()
+    )
+}
+
+private fun previewSupplement(): Supplement {
+    return Supplement(
+        id = 1L,
+        name = "Vitamin C",
+        recommendedServingSize = 2.0,
+        recommendedDoseUnit = SupplementDoseUnit.MG,
+        avoidCaffeine = true,
+        brand = "Brand X",
+        notes = "notes",
+        servingsPerDay = 1,
+        recommendedWithFood = null,
+        recommendedLiquidInOz = null,
+        recommendedTimeBetweenDailyDosesMinutes = null,
+        doseConditions = emptySet(),
+        doseAnchorType = DoseAnchorType.MIDNIGHT,
+        frequencyType = FrequencyType.DAILY,
+        frequencyInterval = null,
+        weeklyDays = emptyList(),
+        offsetMinutes = null,
+        startDate = null,
+        lastTakenDate = null,
+        ingredients = emptyList(),
+        isActive = true,
+        // fill only what SupplementRow actually uses
+        // everything else can be default / dummy
+    )
+}

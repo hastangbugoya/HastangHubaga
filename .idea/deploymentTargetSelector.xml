@@ -24,12 +24,6 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="DailyStartTimeDaoTest">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="Tests in 'com.example.hastanghubaga.data.local.dao'">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="UserNutritionGoalsEntityDaoTest">
         <option name="selectionMode" value="DROPDOWN" />
         <DropdownSelection timestamp="2025-12-12T21:19:44.680332Z">
@@ -42,6 +36,12 @@
         <DialogSelection />
       </SelectionState>
       <SelectionState runConfigName="DatabaseCallbackTest">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="EventTimeDaoTest">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="GetSupplementsWithUserSettingsForDateUseCaseTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

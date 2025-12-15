@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
@@ -65,5 +66,8 @@ interface EventTimeDao {
 
     @Query("SELECT * FROM event_day_of_week_times")
     suspend fun getAllDayOfWeekOverrides(): List<EventDayOfWeekTimeEntity>
+
+    @Upsert
+    fun upsertDailyOverride(eventDailyOverrideEntity: EventDailyOverrideEntity)
 
 }

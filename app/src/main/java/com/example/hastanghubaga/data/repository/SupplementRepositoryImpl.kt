@@ -21,7 +21,10 @@ import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
 import com.example.hastanghubaga.data.local.models.toDomainSafe
+import com.example.hastanghubaga.domain.model.supplement.DoseCondition
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
+import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+import com.example.hastanghubaga.domain.model.supplement.MealLog
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
@@ -621,7 +624,8 @@ class SupplementRepositoryImpl @Inject constructor(
 
                 SupplementWithUserSettings(
                     supplement = domainSupplement,
-                    userSettings = userSettings?.toSupplementSettings()
+                    userSettings = userSettings?.toSupplementSettings(),
+                    doseState = MealAwareDoseState.Unknown
                 )
             }
         }
@@ -664,7 +668,8 @@ class SupplementRepositoryImpl @Inject constructor(
             supplementEntity?.let {
                 SupplementWithUserSettings(
                     supplement = it.toSupplementSettings(),
-                    userSettings = settingsEntity?.toUserSupplementSettings()
+                    userSettings = settingsEntity?.toUserSupplementSettings(),
+                    doseState = MealAwareDoseState.Unknown
                 )
             }
         }
@@ -759,5 +764,8 @@ class SupplementRepositoryImpl @Inject constructor(
             else -> null
         }
     }
+
+
+
 
 }
