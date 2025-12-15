@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.feature.today
 
+import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -132,6 +133,15 @@ private fun SupplementRowPreview() {
         )
     }
 }
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SupplementRowPreviewDark() {
+    MaterialTheme {
+    SupplementRow(
+        supplement = previewSupplementWithUserSettings()
+    )
+}}
 
 private fun previewSupplementWithUserSettings(): SupplementWithUserSettings {
     return SupplementWithUserSettings(
