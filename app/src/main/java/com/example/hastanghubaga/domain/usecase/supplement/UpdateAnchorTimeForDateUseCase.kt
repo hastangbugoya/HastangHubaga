@@ -10,7 +10,6 @@ import javax.inject.Inject
 class UpdateAnchorTimeForDateUseCase @Inject constructor(
     private val eventTimeDao: EventTimeDao
 ) {
-
     suspend operator fun invoke(
         anchor: DoseAnchorType,
         date: LocalDate,

@@ -1,18 +1,10 @@
 package com.example.hastanghubaga.domain.repository.supplement
 
-import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
-import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
-import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
-import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
-import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
+import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
@@ -73,8 +65,6 @@ interface SupplementRepository {
     suspend fun getNextDoseDateTime(
         supplement: Supplement
     ): ZonedDateTime?
-
-//    suspend fun getAnchorTime(anchor: DoseAnchorType, date: LocalDate): LocalTime?
 
     suspend fun setDefaultEventTime(anchor: DoseAnchorType, time: LocalTime)
 

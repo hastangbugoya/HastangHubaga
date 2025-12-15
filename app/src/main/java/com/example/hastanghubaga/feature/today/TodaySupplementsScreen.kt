@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.feature.today
 
+import android.R
 import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.foundation.border
@@ -34,6 +35,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.ui.preview.PreviewData
 import com.example.hastanghubaga.ui.tokens.AppIcons
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
@@ -83,9 +85,9 @@ fun SupplementRow(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(5.dp)
-            .border(color = Color.Black, width = 1.dp)
-            .padding(3.dp)
+            .padding(Dimens.SpaceS)
+            .border(color = UiColors.Primary(), width = 1.dp)
+            .padding(Dimens.SpaceS)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
 
@@ -129,7 +131,7 @@ fun SupplementRow(
 private fun SupplementRowPreview() {
     MaterialTheme {
         SupplementRow(
-            supplement = previewSupplementWithUserSettings()
+            supplement = PreviewData.supplementWithCaffeineWarning
         )
     }
 }
@@ -139,9 +141,21 @@ private fun SupplementRowPreview() {
 private fun SupplementRowPreviewDark() {
     MaterialTheme {
     SupplementRow(
-        supplement = previewSupplementWithUserSettings()
+        supplement = PreviewData.supplementWithCaffeineWarning
     )
 }}
+
+@Preview(showBackground = true)
+@Composable
+private fun SupplementListPreview() {
+    MaterialTheme {
+        LazyColumn {
+            items(PreviewData.supplementList) { supp ->
+                SupplementRow(supp)
+            }
+        }
+    }
+}
 
 private fun previewSupplementWithUserSettings(): SupplementWithUserSettings {
     return SupplementWithUserSettings(
