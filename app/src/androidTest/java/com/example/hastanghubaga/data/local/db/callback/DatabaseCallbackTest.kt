@@ -10,16 +10,19 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.DayOfWeek
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -116,5 +119,17 @@ class DatabaseCallbackTest {
     fun callback_insertsSupplementUserSettings() = runBlocking {
         val firstTableRow = supplementUserSettingsDao.getSettings(1)
         Assert.assertTrue("Expected supplement user settings is not empty", firstTableRow != null)
+    }
+
+    @Test
+    fun dayOfWeekOverrides_areSeeded() = runTest {
+        val overrides = eventTimeDao.getAllDayOfWeekOverrides()
+
+        Assert.assertTrue(
+            overrides.any {
+                it.anchor == DoseAnchorType.BREAKFAST &&
+                        it.dayOfWeek == DayOfWeek.SATURDAY
+            }
+        )
     }
 }

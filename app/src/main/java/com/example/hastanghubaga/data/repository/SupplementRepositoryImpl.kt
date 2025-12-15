@@ -704,4 +704,60 @@ class SupplementRepositoryImpl @Inject constructor(
         )
     }
 
+    /**
+     * Resolves the effective time for a supplement anchor on a given date.
+     *
+     * Resolution priority:
+     * 1) Explicit date override
+     * 2) Day-of-week override
+     * 3) Global default anchor time
+     * 4) Anchor fallback (MIDNIGHT / null)
+     *
+     * @return LocalTime if the anchor represents a fixed time, or null for ANYTIME
+     */
+    private suspend fun resolveAnchorTime(
+        anchor: DoseAnchorType,
+        date: LocalDate
+    ): LocalTime? {
+
+        // ANYTIME means no fixed time
+        if (anchor == DoseAnchorType.ANYTIME) {
+            return null
+        }
+
+        val dayOfWeek = date.dayOfWeek
+
+        // --------------------------------------------------
+        // 1️⃣ Explicit per-date override
+        // --------------------------------------------------
+        eventTimeDao.getOverride(date.toString(), anchor)
+            ?.let { override ->
+                return LocalTime.ofSecondOfDay(override.timeSeconds.toLong())
+            }
+
+        // --------------------------------------------------
+        // 2️⃣ Day-of-week override (NEW)
+        // --------------------------------------------------
+        eventTimeDao.getDayOfWeekOverride(anchor, dayOfWeek)
+            ?.let { dow ->
+                return LocalTime.ofSecondOfDay(dow.timeSeconds.toLong())
+            }
+
+        // --------------------------------------------------
+        // 3️⃣ Global default anchor time
+        // --------------------------------------------------
+        eventTimeDao.getDefault(anchor)
+            ?.let { def ->
+                return LocalTime.ofSecondOfDay(def.timeSeconds.toLong())
+            }
+
+        // --------------------------------------------------
+        // 4️⃣ Fallback rules
+        // --------------------------------------------------
+        return when (anchor) {
+            DoseAnchorType.MIDNIGHT -> LocalTime.MIDNIGHT
+            else -> null
+        }
+    }
+
 }

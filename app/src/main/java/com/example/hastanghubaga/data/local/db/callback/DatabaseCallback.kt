@@ -243,72 +243,72 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             (id, supplementId, ingredientId, displayName, amountPerServing, unit)
             VALUES
               -- Supplement 1 (Daily Multivitamin)
-              (1, 1, 10, 'Vitamin C (Ascorbic Acid)', 500.0, 'mg'),
+              (1, 1, 10, 'Vitamin C (Ascorbic Acid)', 500.0, 'MG'),
               (2, 1, 11, 'Vitamin D3 (Cholecalciferol)', 1000.0, 'IU'),
-              (3, 1, 16, 'Magnesium (Glycinate)', 75.0, 'mg'),
-              (4, 1, 17, 'Zinc (Picolinate)', 11.0, 'mg'),
-              (5, 1, 9, 'Vitamin B12 (Cobalamin)', 6.0, 'mcg'),
-              (6, 1, 8, 'Folate (Methylfolate)', 400.0, 'mcg'),
+              (3, 1, 16, 'Magnesium (Glycinate)', 75.0, 'MG'),
+              (4, 1, 17, 'Zinc (Picolinate)', 11.0, 'MG'),
+              (5, 1, 9, 'Vitamin B12 (Cobalamin)', 6.0, 'MCG'),
+              (6, 1, 8, 'Folate (Methylfolate)', 400.0, 'MCG'),
 
               -- Supplement 2 (Fish Oil)
-              (7, 2, 24, 'EPA', 600.0, 'mg'),
-              (8, 2, 25, 'DHA', 400.0, 'mg'),
+              (7, 2, 24, 'EPA', 600.0, 'MG'),
+              (8, 2, 25, 'DHA', 400.0, 'MG'),
 
               -- Supplement 3 (Creatine)
-              (9, 3, 27, 'Creatine Monohydrate', 5.0, 'g'),
+              (9, 3, 27, 'Creatine Monohydrate', 5.0, 'G'),
 
               -- Supplement 4 (Magnesium Glycinate)
-              (10, 4, 16, 'Magnesium (Glycinate)', 200.0, 'mg'),
+              (10, 4, 16, 'Magnesium (Glycinate)', 200.0, 'MG'),
 
               -- Supplement 5 (Ashwagandha)
-              (11, 5, 30, 'Ashwagandha (KSM-66)', 300.0, 'mg'),
+              (11, 5, 30, 'Ashwagandha (KSM-66)', 300.0, 'MG'),
 
               -- Supplement 6 (Zinc Picolinate)
-              (12, 6, 17, 'Zinc (Picolinate)', 22.0, 'mg'),
+              (12, 6, 17, 'Zinc (Picolinate)', 22.0, 'MG'),
 
               -- Supplement 7 (Melatonin)
-              (13, 7, 37, 'Melatonin', 5.0, 'mg'),
+              (13, 7, 37, 'Melatonin', 5.0, 'MG'),
 
               -- Supplement 8 (Probiotic)
               (14, 8, 36, 'Probiotic Blend (CFU)', 40000000000.0, 'CFU'),
 
               -- Supplement 9 (Theanine + Caffeine)
-              (15, 9, 28, 'L-Theanine', 200.0, 'mg'),
-              (16, 9, 29, 'Caffeine', 100.0, 'mg'),
+              (15, 9, 28, 'L-Theanine', 200.0, 'MG'),
+              (16, 9, 29, 'Caffeine', 100.0, 'MG'),
 
               -- Supplement 10 (Electrolyte Mix)
-              (17, 10, 45, 'Electrolyte Blend', 2000.0, 'mg'),
-              (18, 10, 21, 'Potassium', 300.0, 'mg'),
-              (19, 10, 22, 'Sodium', 1000.0, 'mg'),
+              (17, 10, 45, 'Electrolyte Blend', 2000.0, 'MG'),
+              (18, 10, 21, 'Potassium', 300.0, 'MG'),
+              (19, 10, 22, 'Sodium', 1000.0, 'MG'),
 
               -- Supplement 11 (Turmeric)
-              (20, 11, 32, 'Turmeric Extract', 500.0, 'mg'),
-              (21, 11, 33, 'Curcumin', 95.0, 'mg'),
-              (22, 11, 34, 'Black Pepper Extract (Piperine)', 5.0, 'mg'),
+              (20, 11, 32, 'Turmeric Extract', 500.0, 'MG'),
+              (21, 11, 33, 'Curcumin', 95.0, 'MG'),
+              (22, 11, 34, 'Black Pepper Extract (Piperine)', 5.0, 'MG'),
 
               -- Supplement 12 (Vitamin D weekly)
               (23, 12, 11, 'Vitamin D3 (weekly)', 50000.0, 'IU'),
 
               -- Supplement 13 (CoQ10)
-              (24, 13, 26, 'CoQ10 (Ubiquinone)', 200.0, 'mg'),
+              (24, 13, 26, 'CoQ10 (Ubiquinone)', 200.0, 'MG'),
 
               -- Supplement 14 (Vitamin C 1000)
-              (25, 14, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'mg'),
+              (25, 14, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'MG'),
 
               -- Supplement 15 (Calcium + D)
-              (26, 15, 14, 'Calcium (as Carbonate)', 500.0, 'mg'),
+              (26, 15, 14, 'Calcium (as Carbonate)', 500.0, 'MG'),
               (27, 15, 11, 'Vitamin D3', 1000.0, 'IU'),
 
               -- Supplement 16 (Collagen)
-              (28, 16, 38, 'Glycine', 3.0, 'g'),
+              (28, 16, 38, 'Glycine', 3.0, 'G'),
 
               -- Supplement 17 (NAC)
-              (29, 17, 35, 'NAC (N-Acetyl Cysteine)', 600.0, 'mg'),
+              (29, 17, 35, 'NAC (N-Acetyl Cysteine)', 600.0, 'MG'),
 
               -- Supplement 18 (High Potency Multi Q3)
-              (30, 18, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'mg'),
+              (30, 18, 10, 'Vitamin C (Ascorbic Acid)', 1000.0, 'MG'),
               (31, 18, 11, 'Vitamin D3', 2000.0, 'IU'),
-              (32, 18, 16, 'Magnesium', 100.0, 'mg')
+              (32, 18, 16, 'Magnesium', 100.0, 'MG')
             ;
         """)
 
@@ -347,5 +347,15 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                     (7, 1.0, 'TABLET', 2, 0);    -- Melatonin disabled by user
                 """)
 
+        db.execSQL(
+            """
+            INSERT INTO event_day_of_week_times (anchor, dayOfWeek, timeSeconds)
+            VALUES
+                ('BREAKFAST', 'SATURDAY', ${LocalTime.of(10, 0).toSecondOfDay()}),
+                ('BREAKFAST', 'SUNDAY', ${LocalTime.of(6, 0).toSecondOfDay()}),
+                ('BREAKFAST', 'WEDNESDAY', ${LocalTime.of(9, 0).toSecondOfDay()})
+            ;
+            """.trimIndent()
+                )
     }
 }

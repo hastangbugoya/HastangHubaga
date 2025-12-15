@@ -55,4 +55,12 @@ class Converters {
     @TypeConverter
     fun fromString(value: String): DoseAnchorType =
         DoseAnchorType.valueOf(value)
+
+    @TypeConverter
+    fun fromDayOfWeek(day: DayOfWeek?): String? = day?.name
+
+    @TypeConverter
+    fun toDayOfWeek(value: String?): DayOfWeek? =
+        value?.let { DayOfWeek.valueOf(it) }
+
 }

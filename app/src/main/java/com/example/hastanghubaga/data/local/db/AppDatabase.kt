@@ -27,6 +27,7 @@ import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
+import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
 
 
 @Database(
@@ -37,12 +38,13 @@ import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
         DailyStartTimeEntity::class,
         SupplementIngredientEntity::class,
         EventDefaultTimeEntity::class,
+        EventDayOfWeekTimeEntity::class,
         EventDailyOverrideEntity::class,
         SupplementUserSettingsEntity::class,
         ActivityEntity::class,
         MealEntity::class,
         MealNutritionEntity::class,
-        UserNutritionGoalsEntity::class
+        UserNutritionGoalsEntity::class,
         // add others here later
     ],
     version = 1,

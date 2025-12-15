@@ -12,6 +12,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.DayOfWeek
 
 @RunWith(AndroidJUnit4::class)
 class EventTimeDaoTest {
@@ -143,4 +144,74 @@ class EventTimeDaoTest {
         val all = dao.getAllOverrides()
         assertEquals(2, all.size)
     }
+
+    // ---------------------------------------------------------
+    // DAY-OF-WEEK OVERRIDE TESTS
+    // ---------------------------------------------------------
+
+    @Test
+    fun upsertDayOfWeekOverride_insertsAndUpdates() = runTest {
+        val anchor = DoseAnchorType.BREAKFAST
+        val day = DayOfWeek.SATURDAY
+
+        dao.upsertDayOfWeekOverride(
+            EventDayOfWeekTimeEntity(
+                anchor = anchor,
+                dayOfWeek = day,
+                timeSeconds = 10 * 60 * 60 // 10:00 AM
+            )
+        )
+
+        // Update same entry
+        dao.upsertDayOfWeekOverride(
+            EventDayOfWeekTimeEntity(
+                anchor = anchor,
+                dayOfWeek = day,
+                timeSeconds = 11 * 60 * 60 // 11:00 AM
+            )
+        )
+
+        val loaded = dao.getDayOfWeekOverride(anchor, day)
+
+        assertNotNull(loaded)
+        assertEquals(11 * 60 * 60, loaded!!.timeSeconds)
+    }
+
+    @Test
+    fun getDayOfWeekOverride_returnsNullWhenMissing() = runTest {
+        val result = dao.getDayOfWeekOverride(
+            anchor = DoseAnchorType.LUNCH,
+            day = DayOfWeek.SUNDAY
+        )
+
+        assertNull(result)
+    }
+
+    @Test
+    fun getAllDayOfWeekOverrides_returnsAllEntries() = runTest {
+        val list = listOf(
+            EventDayOfWeekTimeEntity(
+                DoseAnchorType.BREAKFAST,
+                DayOfWeek.SATURDAY,
+                10 * 60 * 60
+            ),
+            EventDayOfWeekTimeEntity(
+                DoseAnchorType.BREAKFAST,
+                DayOfWeek.SUNDAY,
+                9 * 60 * 60
+            ),
+            EventDayOfWeekTimeEntity(
+                DoseAnchorType.DINNER,
+                DayOfWeek.WEDNESDAY,
+                19 * 60 * 60
+            )
+        )
+
+        list.forEach { dao.upsertDayOfWeekOverride(it) }
+
+        val all = dao.getAllDayOfWeekOverrides()
+
+        assertEquals(3, all.size)
+    }
+
 }
