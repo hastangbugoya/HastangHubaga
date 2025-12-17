@@ -1,12 +1,12 @@
 package com.example.hastanghubaga.ui.preview
 
-import com.example.hastanghubaga.domain.model.supplement.Supplement
-import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
 import java.time.LocalTime
 
 /**
@@ -44,8 +44,9 @@ object PreviewData {
         ),
         userSettings = null,
         doseState = MealAwareDoseState.Ready,
-        scheduledTimes = emptyList()
+        scheduledTimes = listOf(LocalTime.of(8, 0)) // ✅ REQUIRED
     )
+
 
     val supplementWithoutCaffeineWarning = SupplementWithUserSettings(
         supplement = supplementWithCaffeineWarning.supplement.copy(
@@ -75,5 +76,6 @@ object PreviewData {
         supplementWithoutCaffeineWarning,
         supplementWithUserOverride
     )
+
 }
 

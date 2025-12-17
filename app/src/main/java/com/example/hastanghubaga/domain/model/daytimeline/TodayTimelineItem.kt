@@ -10,16 +10,19 @@ sealed interface TodayTimelineItem {
 }
 
 data class SupplementTimelineItem(
+    val key: String,
     override val time: LocalTime,
     val supplement: SupplementWithUserSettings
 ) : TodayTimelineItem
 
 data class ActivityTimelineItem(
+    val key: String,
     override val time: LocalTime,
     val activity: Activity
 ) : TodayTimelineItem
 
 data class MealTimelineItem(
+    val key: String,
     override val time: LocalTime,
     val meal: Meal
 ) : TodayTimelineItem

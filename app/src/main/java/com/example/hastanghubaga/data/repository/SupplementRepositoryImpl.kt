@@ -6,7 +6,6 @@ import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
-import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
@@ -17,14 +16,13 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
-import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
 import com.example.hastanghubaga.data.local.mappers.toEntity
+import com.example.hastanghubaga.data.local.mappers.toMealNutrition
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
 import com.example.hastanghubaga.data.local.models.toDomainSafe
-import com.example.hastanghubaga.domain.model.supplement.DoseCondition
+import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
-import com.example.hastanghubaga.domain.model.supplement.MealLog
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
@@ -37,6 +35,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
+
 /**
  * Concrete implementation of [SupplementRepository] responsible for coordinating all
  * supplement-related persistence, scheduling logic, dosage logs, ingredient aggregation,
@@ -161,7 +160,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
-            .map { list -> list.map { it.toSupplementSettings() } }
+            .map { list -> list.map { it.toMealNutrition() } }
 
     /**
      * Fetches all supplements once (non-reactive).
@@ -171,7 +170,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override suspend fun getAllSupplementsOnce(): List<Supplement> {
         return supplementDao.getAllSupplementsOnce()
-            .map { it.toSupplementSettings() }
+            .map { it.toMealNutrition() }
     }
 
     /**
@@ -182,7 +181,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override suspend fun getActiveSupplementsOrderedByOffset(): List<Supplement> =
         supplementDao.getActiveSupplementsOrderedByOffset()
-            .map { it.toSupplementSettings() }
+            .map { it.toMealNutrition() }
 
     /**
      * Observes only supplements that are currently active.
@@ -191,7 +190,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getActiveSupplements(): Flow<List<Supplement>> =
         supplementDao.getActiveSupplementsFlow()
-            .map { list -> list.map { it.toSupplementSettings() } }
+            .map { list -> list.map { it.toMealNutrition() } }
 
     /**
      * Observes all ingredients stored in the database.
@@ -200,7 +199,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getAllIngredients(): Flow<List<Ingredient>> =
         ingredientDao.getAllIngredientsFlow()
-            .map { list -> list.map { it.toSupplementSettings() } }
+            .map { list -> list.map { it.toMealNutrition() } }
 
     /**
      * Logs that a supplement dose was taken at a specific date and time.
@@ -616,15 +615,15 @@ class SupplementRepositoryImpl @Inject constructor(
             supplementUserSettingsDao.observeAllSettings()
         ) { supplements, settings ->
             supplements.map { entity ->
-                val domainSupplement = entity.toSupplementSettings()
+                val domainSupplement = entity.toMealNutrition()
 
                 val userSettings = settings
                     .firstOrNull { it.supplementId == entity.id }
-                    ?.toSupplementSettings()
+                    ?.toMealNutrition()
 
                 SupplementWithUserSettings(
                     supplement = domainSupplement,
-                    userSettings = userSettings?.toSupplementSettings(),
+                    userSettings = userSettings?.toMealNutrition(),
                     doseState = MealAwareDoseState.Unknown
                 )
             }
@@ -667,7 +666,7 @@ class SupplementRepositoryImpl @Inject constructor(
         ) { supplementEntity, settingsEntity ->
             supplementEntity?.let {
                 SupplementWithUserSettings(
-                    supplement = it.toSupplementSettings(),
+                    supplement = it.toMealNutrition(),
                     userSettings = settingsEntity?.toUserSupplementSettings(),
                     doseState = MealAwareDoseState.Unknown
                 )
@@ -724,7 +723,6 @@ class SupplementRepositoryImpl @Inject constructor(
         anchor: DoseAnchorType,
         date: LocalDate
     ): LocalTime? {
-
         // ANYTIME means no fixed time
         if (anchor == DoseAnchorType.ANYTIME) {
             return null

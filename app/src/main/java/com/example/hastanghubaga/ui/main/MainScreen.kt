@@ -1,16 +1,38 @@
 package com.example.hastanghubaga.ui.main
 
 import SheetErrorContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.*
-import com.example.hastanghubaga.feature.today.TodaySupplementsScreen
-import com.example.hastanghubaga.feature.today.TodaySupplementsViewModel
-import com.example.hastanghubaga.ui.components.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.hastanghubaga.feature.today.TodayScreen
+import com.example.hastanghubaga.feature.today.TodayScreenViewModel
+import com.example.hastanghubaga.ui.components.BottomNavigationBar
+import com.example.hastanghubaga.ui.components.BottomSheetController
 import com.example.hastanghubaga.ui.components.BottomSheetState
+import com.example.hastanghubaga.ui.components.SheetConfirmContent
+import com.example.hastanghubaga.ui.components.SheetSuccessContent
+import com.example.hastanghubaga.ui.components.TopBanner
 import com.example.hastanghubaga.ui.screens.SettingsScreen
 import com.example.hastanghubaga.ui.screens.SupplementsScreen
 import kotlinx.coroutines.launch
@@ -18,7 +40,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    todaySupplementsViewModel: TodaySupplementsViewModel
+    todayScreenViewModel: TodayScreenViewModel
 ) {
 
     val navController = rememberNavController()
@@ -86,7 +108,7 @@ fun MainScreen(
     }
     // COLLECT VIEWMODEL UI EVENTS (MINIMAL ADD)
     LaunchedEffect(Unit) {
-        todaySupplementsViewModel.events.collect { event ->
+        todayScreenViewModel.events.collect { event ->
             when (event) {
 
                 is MainScreenIntent.ShowSnackbar -> {
@@ -140,10 +162,10 @@ fun MainScreen(
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable(NavItem.HOME.route) {
-                    TodaySupplementsScreen(
+                    TodayScreen(
                         showBottomSheet = { bottomSheetController.show(it) },
                         snackbarData = snackbarHostState,
-                        viewModel = todaySupplementsViewModel
+                        viewModel = todayScreenViewModel
                     )
                 }
                 composable(NavItem.SUPPLEMENTS.route) {

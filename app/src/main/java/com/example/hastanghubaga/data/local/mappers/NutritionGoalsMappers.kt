@@ -4,7 +4,7 @@ package com.example.hastanghubaga.data.local.mappers
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 
-fun UserNutritionGoalsEntity.toSupplementSettings(): NutritionGoal = NutritionGoal(
+fun UserNutritionGoalsEntity.toMealNutrition(): NutritionGoal = NutritionGoal(
     id = id,
     type = type,
     name = name,

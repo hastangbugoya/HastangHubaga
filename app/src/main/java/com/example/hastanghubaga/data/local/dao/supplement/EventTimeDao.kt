@@ -70,4 +70,8 @@ interface EventTimeDao {
     @Upsert
     fun upsertDailyOverride(eventDailyOverrideEntity: EventDailyOverrideEntity)
 
+    @Query("SELECT * FROM event_default_times")
+    suspend fun debugGetAll(): List<EventDefaultTimeEntity>
+
+
 }

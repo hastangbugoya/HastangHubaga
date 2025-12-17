@@ -1,6 +1,5 @@
 package com.example.hastanghubaga.domain.usecase.supplement
 
-import android.util.Log
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
@@ -70,14 +69,13 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
 
         val dosesPerDay = resolveDosesPerDay()
         val offsetMinutes = supplement.offsetMinutes ?: 0
-        val baseTime = resolveAnchorTime(supplement.doseAnchorType)
-
+        val baseTime = this@GetSupplementsWithUserSettingsForDateUseCase
+            .resolveAnchorTime(supplement.doseAnchorType, eventTimeDao)
         val scheduledTimes =
             if (baseTime == null) emptyList()
             else List(dosesPerDay) { index ->
                 baseTime.plusMinutes((index * offsetMinutes).toLong())
             }
-        Log.d("Meow", "GetSupplementsWithUserSettingsForDateUseCase.kt>SupplementWithUserSettings.withScheduleFor> Resolved times for ${supplement.name}: $scheduledTimes")
         // Resolve dose state per scheduled time
         val doseState =
             scheduledTimes.firstOrNull()?.let { time ->
@@ -87,7 +85,6 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                     mealsToday = mealsToday
                 )
             } ?: MealAwareDoseState.Ready
-
         return copy(
             scheduledTimes = scheduledTimes,
             doseState = doseState
@@ -99,19 +96,36 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             ?: supplement.servingsPerDay
 
     /**
-     * Resolves anchor time from DB defaults or fallbacks.
+     * Resolves the effective anchor time for scheduling.
+     *
+     * MIDNIGHT is treated as a sentinel value meaning "no user-selected time".
+     * In this case, we default to WAKEUP, which represents the earliest valid
+     * time a supplement can reasonably be taken.
+     *
+     * This avoids scheduling supplements at 00:00 while still allowing the
+     * MIDNIGHT enum to act as an unset / placeholder state.
      */
     private suspend fun resolveAnchorTime(
-        anchor: DoseAnchorType
-    ): LocalTime? =
-        eventTimeDao.getDefault(anchor)
-            ?.let { LocalTime.ofSecondOfDay(it.timeSeconds.toLong()) }
-            ?: fallbackAnchorTime(anchor)
+        anchor: DoseAnchorType,
+        eventTimeDao: EventTimeDao
+    ): LocalTime? {
+        val effectiveAnchor =
+            if (anchor == DoseAnchorType.MIDNIGHT)
+                DoseAnchorType.WAKEUP
+            else
+                anchor
+
+        return eventTimeDao
+            .getDefault(effectiveAnchor)
+            ?.timeSeconds
+            ?.let {
+                LocalTime.ofSecondOfDay(it.toLong())
+            }
+    }
 
     // ---------------------------------------------------------------------
     // Frequency rules
     // ---------------------------------------------------------------------
-
     private fun SupplementWithUserSettings.shouldTakeOn(
         date: LocalDate
     ): Boolean =
@@ -137,7 +151,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
 
     private fun fallbackAnchorTime(anchor: DoseAnchorType): LocalTime? =
         when (anchor) {
-            DoseAnchorType.MIDNIGHT -> LocalTime.MIDNIGHT
+            DoseAnchorType.MIDNIGHT -> null
             DoseAnchorType.WAKEUP -> LocalTime.of(7, 0)
             DoseAnchorType.BREAKFAST -> LocalTime.of(8, 0)
             DoseAnchorType.LUNCH -> LocalTime.of(12, 0)
@@ -180,11 +194,9 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         doseConditions: Set<DoseCondition>,
         mealsToday: List<MealLog>
     ): MealAwareDoseState {
-
         val lastMealTime = mealsToday
             .maxByOrNull { it.time }
             ?.time
-
         /* ------------------------------------------------------------
            EMPTY STOMACH CHECK
            ------------------------------------------------------------ */
@@ -204,7 +216,6 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                 )
             }
         }
-
         /* ------------------------------------------------------------
            WITH FOOD CHECK
            ------------------------------------------------------------ */
@@ -222,7 +233,6 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                 )
             }
         }
-
         /* ------------------------------------------------------------
            AVOID CAFFEINE (INFORMATIONAL)
            ------------------------------------------------------------ */
@@ -231,7 +241,6 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                 reason = "Avoid caffeine close to this dose if possible."
             )
         }
-
         /* ------------------------------------------------------------
            DEFAULT: READY
            ------------------------------------------------------------ */

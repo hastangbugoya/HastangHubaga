@@ -2,11 +2,11 @@ package com.example.hastanghubaga.data.repository
 
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
-import com.example.hastanghubaga.data.local.mappers.toSupplementSettings
-import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.data.local.mappers.toMealNutrition
+import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,13 +19,20 @@ class MealRepositoryImpl @Inject constructor(
 ) : MealRepository {
 
     override fun observeAll(): Flow<List<Meal>> =
-        mealEntityDao.observeAllMeals().map { list -> list.map { it.toSupplementSettings() } }
+        mealEntityDao.observeAllMeals().map { list -> list.map { it.toMealNutrition() } }
 
     override fun observeMeal(id: Long): Flow<Meal?> =
-        mealEntityDao.observeMeal(id).map { it?.toSupplementSettings() }
+        mealEntityDao.observeMeal(id).map { it?.toMealNutrition() }
 
     override suspend fun getMealsForDate(date: LocalDate): List<Meal> =
-        mealEntityDao.getMealsForDate(date.toString()).map { it.toSupplementSettings() }
+        mealEntityDao.getMealsForDate(date.toString()).map { it.toMealNutrition() }
+
+    override fun observeMealsForDate(date: LocalDate): Flow<List<Meal>> {
+        return mealEntityDao
+            .observeMealsForDate(date.toString())
+            .map { joinedList -> joinedList.map { it.toMealNutrition() }
+    }
+    }
 
     override suspend fun addMeal(
         meal: MealEntity,
@@ -43,6 +50,6 @@ class MealRepositoryImpl @Inject constructor(
 
     override suspend fun getMealsByType(type: MealType): List<Meal> =
         mealEntityDao.getMealsForDate(LocalDate.now().toString())
-            .map { it.toSupplementSettings() }
+            .map { it.toMealNutrition() }
             .filter { it.type == type }
 }

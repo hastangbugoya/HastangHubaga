@@ -1,9 +1,9 @@
 package com.example.hastanghubaga.domain.repository.meal
 
-import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.domain.model.meal.Meal
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
@@ -14,6 +14,8 @@ interface MealRepository {
     fun observeMeal(id: Long): Flow<Meal?>
 
     suspend fun getMealsForDate(date: LocalDate): List<Meal>
+
+    fun observeMealsForDate(date: LocalDate): Flow<List<Meal>>
 
     suspend fun addMeal(
         meal: MealEntity,

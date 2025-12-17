@@ -1,9 +1,10 @@
 package com.example.hastanghubaga.data.local.db.callback
 
-import androidx.sqlite.db.SupportSQLiteDatabase
+import android.util.Log
 import androidx.room.RoomDatabase
-import javax.inject.Inject
+import androidx.sqlite.db.SupportSQLiteDatabase
 import java.time.LocalTime
+import javax.inject.Inject
 
 /**
  * Prepopulates the DB using raw SQL on creation.
@@ -319,15 +320,14 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             INSERT INTO daily_start_time (date, hourZero)
             VALUES ('${java.time.LocalDate.now()}', 28800);
         """)
-
+        Log.d("Meow", "🔥 Room onCreate() callback RUNNING")
         // -------------------------------
         // DEFAULT EVENT TIME
         // -------------------------------
         db.execSQL(
             """
-        INSERT INTO event_default_times (anchor, timeSeconds)
+        INSERT OR IGNORE INTO event_default_times (anchor, timeSeconds)
         VALUES
-            ('MIDNIGHT', 0),
             ('WAKEUP', ${LocalTime.of(7, 0).toSecondOfDay()}),
             ('BREAKFAST', ${LocalTime.of(8, 0).toSecondOfDay()}),
             ('LUNCH', ${LocalTime.of(12, 0).toSecondOfDay()}),
@@ -357,5 +357,27 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             ;
             """.trimIndent()
                 )
+
+        // -------------------------------
+        // MEALS ADDED HERE
+        // -------------------------------
+        db.execSQL(
+            """
+    INSERT INTO meals (type, timestamp)
+    VALUES
+        (
+            'BREAKFAST',
+            (strftime('%s', 'now', 'start of day') + 8 * 3600) * 1000
+        ),
+        (
+            'LUNCH',
+            (strftime('%s', 'now', 'start of day') + 12 * 3600) * 1000
+        ),
+        (
+            'DINNER',
+            (strftime('%s', 'now', 'start of day') + 18 * 3600) * 1000
+        );
+    """.trimIndent()
+        )
     }
 }

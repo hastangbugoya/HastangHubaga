@@ -1,16 +1,22 @@
 package com.example.hastanghubaga.data.local.db.callback
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Room
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
+import com.example.hastanghubaga.data.local.entity.meal.MealEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
+import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.first
@@ -23,6 +29,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -34,6 +43,10 @@ class DatabaseCallbackTest {
     private lateinit var eventTimeDao: EventTimeDao
 
     private lateinit var supplementUserSettingsDao: SupplementUserSettingsDao
+
+    private lateinit var mealEntityDao: MealEntityDao
+    private lateinit var mealNutritionDao: MealNutritionDao
+
 
     @get:Rule
     var hiltRule = HiltAndroidRule(this)
@@ -55,6 +68,8 @@ class DatabaseCallbackTest {
         linkDao = db.supplementIngredientDao()
         eventTimeDao = db.eventTimeDao()
         supplementUserSettingsDao = db.supplementUserSettingsDao()
+        mealEntityDao = db.mealEntityDao()
+        mealNutritionDao = db.mealNutritionDao()
     }
 
     @After
@@ -131,5 +146,51 @@ class DatabaseCallbackTest {
                         it.dayOfWeek == DayOfWeek.SATURDAY
             }
         )
+    }
+
+    @Test
+    fun meals_are_seeded_for_today_onDatabaseCreate() = runTest {
+        // WHEN
+        val meals = mealEntityDao.getMealsForDate(LocalDate.now(ZoneOffset.UTC).toString())
+
+        // THEN
+        assertThat(meals).hasSize(3)
+
+        val types = meals.map { it.meal.type }.toSet()
+        assertThat(types).containsExactly(
+            MealType.BREAKFAST,
+            MealType.LUNCH,
+            MealType.DINNER
+        )
+        Log.d("Meow", "meals: $meals")
+
+
+        // All meals should be today (UTC)
+        val todayUtc = LocalDate.now(ZoneOffset.UTC)
+        meals.forEach { joined ->
+            val mealDateUtc =
+                Instant.ofEpochMilli(joined.meal.timestamp)
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate()
+
+            assertThat(mealDateUtc).isEqualTo(todayUtc)
+        }
+        Log.d("Meow", "todayUtc: $todayUtc")
+
+        // Optional: validate approximate times
+        fun hourUtc(meal: MealEntity): Int =
+            Instant.ofEpochMilli(meal.timestamp)
+                .atZone(ZoneOffset.UTC)
+                .hour
+
+        val hoursByType: Map<MealType, Int> =
+            meals.associate { joined ->
+                joined.meal.type to hourUtc(joined.meal)
+            }
+        Log.d("Meow", "hours:Map > $hoursByType")
+
+        assertThat(hoursByType[MealType.BREAKFAST]).isEqualTo(8)
+        assertThat(hoursByType[MealType.LUNCH]).isEqualTo(12)
+        assertThat(hoursByType[MealType.DINNER]).isEqualTo(18)
     }
 }

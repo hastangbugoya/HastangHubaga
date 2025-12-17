@@ -2,9 +2,6 @@ package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
-import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
-import com.example.hastanghubaga.data.local.models.SupplementJoinedRoom
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import java.time.LocalDate
@@ -12,7 +9,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 // Supplement
-fun SupplementEntity.toSupplementSettings(): Supplement =
+fun SupplementEntity.toMealNutrition(): Supplement =
     Supplement(
         id = id,
         name = name,
@@ -39,7 +36,7 @@ fun SupplementEntity.toSupplementSettings(): Supplement =
     )
 
 // Ingredient
-fun IngredientEntity.toSupplementSettings() = Ingredient(
+fun IngredientEntity.toMealNutrition() = Ingredient(
     id = this.id,
     name = this.name,
     defaultUnit = this.defaultUnit,

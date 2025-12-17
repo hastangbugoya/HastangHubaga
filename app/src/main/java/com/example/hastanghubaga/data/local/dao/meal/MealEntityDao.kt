@@ -1,6 +1,11 @@
 package com.example.hastanghubaga.data.local.dao.meal
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
@@ -30,6 +35,12 @@ interface MealEntityDao {
     """)
     suspend fun getMealsForDate(date: String): List<MealJoinedRoom>
 
+    @Transaction
+    @Query("""
+    SELECT * FROM meals 
+    WHERE date(timestamp / 1000, 'unixepoch', 'localtime') = :date
+""")
+    fun observeMealsForDate(date: String): Flow<List<MealJoinedRoom>>
 
     // -------------------------------
     // INSERT
