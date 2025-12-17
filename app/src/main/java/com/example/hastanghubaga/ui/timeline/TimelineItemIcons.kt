@@ -1,0 +1,46 @@
+package com.example.hastanghubaga.ui.timeline
+
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.hastanghubaga.R
+import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+
+/**
+ * Resolves which icon should be shown for a timeline item.
+ *
+ * This is UI-only logic and intentionally not part of the domain layer.
+ */
+fun TimelineItemUiModel.icon(): Int =
+    when (this) {
+        is TimelineItemUiModel.Supplement -> supplementIcon()
+        is TimelineItemUiModel.Meal -> mealIcon()
+        is TimelineItemUiModel.Activity -> activityIcon()
+    }
+
+private fun TimelineItemUiModel.Supplement.supplementIcon(): Int =
+    when (doseState) {
+        is MealAwareDoseState.PendingMeal -> R.drawable.ic_supplement_with_food_utensils
+        is MealAwareDoseState.Ready -> R.drawable.ic_supplement_ready_medicine
+        is MealAwareDoseState.PendingEmptyStomach -> R.drawable.ic_supplement_no_food
+        else -> R.drawable.ic_supplement_eye_alert
+    }
+
+private fun TimelineItemUiModel.Meal.mealIcon(): Int =
+    when (type) {
+        MealType.BREAKFAST -> R.drawable.ic_meal_breakfast_egg
+        MealType.LUNCH -> R.drawable.ic_meal_lunch_sandwich
+        MealType.DINNER -> R.drawable.ic_meal_dinner_plate_fork
+        MealType.SNACK -> R.drawable.ic_meal_snack_popcorn
+        MealType.PRE_WORKOUT -> R.drawable.ic_meal_preworkout_salad
+        MealType.POST_WORKOUT -> R.drawable.ic_meal_postworkout_burger
+        MealType.CUSTOM -> R.drawable.ic_meal_rice_bowl
+    }
+
+private fun TimelineItemUiModel.Activity.activityIcon(): Int =
+    when (activityType) {
+        ActivityType.STRENGTH_TRAINING -> R.drawable.ic_activity_strength
+        ActivityType.WALKING -> R.drawable.ic_activity_walking
+        ActivityType.SLEEP -> R.drawable.ic_activity_sleeping
+        else -> R.drawable.ic_activity_default
+    }

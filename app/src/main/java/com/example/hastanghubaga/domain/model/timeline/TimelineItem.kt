@@ -7,16 +7,19 @@ import java.time.LocalTime
 
 sealed interface TimelineItem {
     val time: LocalTime
+
+    data class SupplementTimelineItem(
+        override val time: LocalTime,
+        val supplement: SupplementWithUserSettings
+    ) : TimelineItem
+
+    data class ActivityTimelineItem(
+        override val time: LocalTime,
+        val activity: Activity
+    ) : TimelineItem
+
+    data class MealTimelineItem(
+        override val time: LocalTime,
+        val meal: Meal
+    ) : TimelineItem
 }
-data class SupplementTimelineItem(
-    override val time: LocalTime,
-    val supplement: SupplementWithUserSettings
-) : TimelineItem
-data class ActivityTimelineItem(
-    override val time: LocalTime,
-    val activity: Activity
-) : TimelineItem
-data class MealTimelineItem(
-    override val time: LocalTime,
-    val meal: Meal
-) : TimelineItem

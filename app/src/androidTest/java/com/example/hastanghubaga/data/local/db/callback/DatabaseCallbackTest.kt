@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
@@ -47,6 +48,9 @@ class DatabaseCallbackTest {
     private lateinit var mealEntityDao: MealEntityDao
     private lateinit var mealNutritionDao: MealNutritionDao
 
+    private lateinit var activityDao: ActivityEntityDao
+
+
 
     @get:Rule
     var hiltRule = HiltAndroidRule(this)
@@ -70,6 +74,7 @@ class DatabaseCallbackTest {
         supplementUserSettingsDao = db.supplementUserSettingsDao()
         mealEntityDao = db.mealEntityDao()
         mealNutritionDao = db.mealNutritionDao()
+        activityDao = db.activityEntityDao()
     }
 
     @After
@@ -193,4 +198,26 @@ class DatabaseCallbackTest {
         assertThat(hoursByType[MealType.LUNCH]).isEqualTo(12)
         assertThat(hoursByType[MealType.DINNER]).isEqualTo(18)
     }
+
+    @Test
+    fun activities_arePrepopulated() = runBlocking {
+        val activities = db.activityEntityDao().getAllActivities()
+
+        assertThat(activities).isNotEmpty()
+        assertThat(activities.size).isAtLeast(4)
+
+        // Verify timestamps are sane
+        activities.forEach { activity ->
+            assertThat(activity.startTimestamp).isGreaterThan(0L)
+
+            activity.endTimestamp?.let { end ->
+                assertThat(end).isGreaterThan(activity.startTimestamp)
+            }
+        }
+
+        // Verify we have multiple activity types
+        val types = activities.map { it.type }.toSet()
+        assertThat(types.size).isGreaterThan(1)
+    }
+
 }

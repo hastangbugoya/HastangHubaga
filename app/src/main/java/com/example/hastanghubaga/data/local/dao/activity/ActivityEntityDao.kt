@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.Flow
 interface ActivityEntityDao {
 
     @Query("SELECT * FROM activities ORDER BY startTimestamp DESC")
+    suspend fun getAllActivities(): List<ActivityEntity>
+
+    @Query("SELECT * FROM activities ORDER BY startTimestamp DESC")
     fun observeAllActivities(): Flow<List<ActivityEntity>>
 
     @Query("SELECT * FROM activities WHERE id = :id")
@@ -21,4 +24,14 @@ interface ActivityEntityDao {
 
     @Query("DELETE FROM activities")
     suspend fun clearAll()
+
+    @Query("""
+        SELECT * FROM activities
+        WHERE startTimestamp BETWEEN :start AND :end
+        ORDER BY startTimestamp ASC
+    """)
+    fun observeActivitiesForDay(
+        start: Long,
+        end: Long
+    ): Flow<List<ActivityEntity>>
 }

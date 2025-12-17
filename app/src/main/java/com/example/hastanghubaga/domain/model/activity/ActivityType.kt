@@ -10,5 +10,8 @@ enum class ActivityType {
     SPORTS,
     WORK,
     COMMUTE,
+    RELAX,
+    SLEEP,
+    MEAL,
     OTHER
 }

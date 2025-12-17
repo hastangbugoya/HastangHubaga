@@ -16,7 +16,7 @@ val topBarConfigs = mapOf(
         }
     ),
 
-    NavItem.SUPPLEMENTS.route to TopBarConfig(
+    NavItem.MANAGE.route to TopBarConfig(
         title = "Supplements",
         actions = {
             IconButton(onClick = { /* add supplement */ }) {

@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.feature.today
 
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,17 +10,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.glance.LocalGlanceId
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hastanghubaga.ui.common.BannerController
+import com.example.hastanghubaga.ui.common.BottomSheetController
+import com.example.hastanghubaga.ui.common.ErrorView
+import com.example.hastanghubaga.ui.common.LoadingView
+import com.example.hastanghubaga.ui.common.SnackbarController
 import com.example.hastanghubaga.ui.preview.PreviewData
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.toPreviewTimelineItems
@@ -29,51 +36,104 @@ import com.example.hastanghubaga.ui.tokens.UiColors
 
 @Composable
 fun TodayScreen(
-    showBottomSheet: (content: @Composable () -> Unit) -> Unit,
-    snackbarData: SnackbarHostState,
+    snackbarController: SnackbarController,
+    bannerController: BannerController,
+    bottomSheetController: BottomSheetController,
+    onNavigate: (TodayScreenContract.Destination) -> Unit,
     viewModel: TodayScreenViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = {
-                showBottomSheet {
-                    Text("Hello from Today Screen!")
-                }
-            }) {
-                Text("Show Alert Sheet")
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.onIntent(TodayScreenContract.Intent.LoadToday)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effect.collect { effect ->
+            when (effect) {
+                is TodayScreenContract.Effect.ShowSnackbar ->
+                    snackbarController.show(effect.message)
+
+                is TodayScreenContract.Effect.ShowBanner ->
+                    bannerController.show(effect.message)
+
+                is TodayScreenContract.Effect.ShowBottomSheet ->
+                    bottomSheetController.show(effect.content)
+
+                is TodayScreenContract.Effect.Navigate ->
+                    onNavigate(effect.destination)
+
+                is TodayScreenContract.Effect.ShowError -> TODO()
             }
         }
-        Box(modifier = Modifier.fillMaxSize()){
-            when {
-                state.isLoading -> {
-                    Text("Loading...")
-                }
-                state.errorMessage != null -> {
-                    Text("Error: ${state.errorMessage}")
-                }
-                else -> {
-                    LazyColumn {
-                        items(state.timelineItems, key = {it.key}) { supp ->
-                            TimelineRow(supp)
-                        }
-                    }
-                }
-            }
+    }
+
+    TodayScreenContent(
+        state = state,
+        onItemClick = {
+            viewModel.onIntent(
+                TodayScreenContract.Intent.TimelineItemClicked(it)
+            )
+        },
+        onRefresh = {
+            viewModel.onIntent(TodayScreenContract.Intent.Refresh)
+        }
+    )
+}
+
+@Composable
+fun TimelineList(
+    items: List<TimelineItemUiModel>,
+    onItemClick: (TimelineItemUiModel) -> Unit
+) {
+    Log.d("TimelineList", "Rendering ${items.size} items")
+    items.forEach {
+        Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(
+            items = items,
+            key = { it.key } // stable UI key (correct)
+        ) { item ->
+            TimelineRow(
+                item = item
+            )
         }
     }
 }
 
 @Composable
+fun TodayScreenContent(
+    state: TodayScreenContract.State,
+    onItemClick: (TimelineItemUiModel) -> Unit,
+    onRefresh: () -> Unit
+) {
+    when {
+        state.isLoading -> LoadingView()
+
+        state.errorMessage != null ->
+            ErrorView(state.errorMessage, onRefresh)
+
+        else ->
+            TimelineList(
+                items = state.timelineItems,
+                onItemClick = onItemClick
+            )
+    }
+}
+
+@Composable
 fun TimelineRow(
-    item: TimelineItemUiModel
+    item: TimelineItemUiModel,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(Dimens.SpaceS)
             .border(color = UiColors.Primary(), width = 1.dp)
-            .padding(Dimens.SpaceS)
+            .padding(Dimens.SpaceS),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(text = item.time.toString(), style = MaterialTheme.typography.titleMedium)
@@ -82,6 +142,8 @@ fun TimelineRow(
         }
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable
@@ -93,9 +155,14 @@ private fun TimelineRowPreview() {
             .sortedBy { it.time }
 
     MaterialTheme {
-        LazyColumn {
-            items(uiItems) { item ->
-                TimelineRow(item)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn {
+                items(
+                    items = uiItems,
+                    key = {it.key}
+                ) { item ->
+                    TimelineRow(item)
+                }
             }
         }
     }
@@ -111,9 +178,11 @@ private fun SupplementRowPreviewDark() {
             .sortedBy { it.time }
 
     MaterialTheme {
-        LazyColumn {
-            items(uiItems) { item ->
-                TimelineRow(item)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn {
+                items(uiItems) { item ->
+                    TimelineRow(item)
+                }
             }
         }
     }
@@ -122,19 +191,16 @@ private fun SupplementRowPreviewDark() {
 @Preview(showBackground = true)
 @Composable
 private fun TimelineListPreview() {
-    val timelineItems =
+    val uiItems =
         PreviewData.supplementList
             .flatMap { it.toPreviewTimelineItems() }
+            .map { it.toTimelineItemUiModel() }
             .sortedBy { it.time }
 
     MaterialTheme {
-        LazyColumn {
-            items(
-                items = timelineItems,
-                key = { it.toTimelineItemUiModel().id }
-            ) { item ->
-                TimelineRow(item.toTimelineItemUiModel())
-            }
-        }
+        TimelineList(
+            items = uiItems,
+            onItemClick = {}
+        )
     }
 }

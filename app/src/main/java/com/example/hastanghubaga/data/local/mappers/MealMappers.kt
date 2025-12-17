@@ -4,16 +4,16 @@ package com.example.hastanghubaga.data.local.mappers
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.models.MealJoinedRoom
-import com.example.hastanghubaga.domain.model.timeline.MealTimelineItem
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
+import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import java.time.Instant
 import java.time.ZoneId
 
 // ------------------------------------------------------------
 // MealNutritionEntity → Domain
 // ------------------------------------------------------------
-fun MealNutritionEntity.toMealNutrition(): MealNutrition =
+fun MealNutritionEntity.toDomain(): MealNutrition =
     MealNutrition(
         protein = protein,
         carbs = carbs,
@@ -27,13 +27,13 @@ fun MealNutritionEntity.toMealNutrition(): MealNutrition =
 // ------------------------------------------------------------
 // MealJoinedRoom → Domain Meal
 // ------------------------------------------------------------
-fun MealJoinedRoom.toMealNutrition(): Meal =
+fun MealJoinedRoom.toDomain(): Meal =
     Meal(
         id = meal.id,
         type = meal.type,
         timestamp = Instant.ofEpochMilli(meal.timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         notes = meal.notes,
-        nutrition = nutrition?.toMealNutrition()
+        nutrition = nutrition?.toDomain()
     )
 
 // ------------------------------------------------------------
@@ -64,8 +64,8 @@ fun Meal.toNutritionEntity(): MealNutritionEntity? =
         )
     }
 
-fun Meal.toTimelineItem(): MealTimelineItem {
-    return MealTimelineItem(
+fun Meal.toTimelineItem(): TimelineItem.MealTimelineItem {
+    return TimelineItem.MealTimelineItem(
         time = timestamp.toLocalTime(),
         meal = this,
     )

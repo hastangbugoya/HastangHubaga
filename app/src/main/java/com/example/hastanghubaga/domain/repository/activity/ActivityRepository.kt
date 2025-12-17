@@ -13,4 +13,6 @@ interface ActivityRepository {
     suspend fun addActivity(activity: Activity): Long
 
     suspend fun deleteActivity(activity: Activity)
+
+    fun observeActivitiesForDate(date: LocalDate): Flow<List<Activity>>
 }

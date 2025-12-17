@@ -1,6 +1,6 @@
 package com.example.hastanghubaga.domain.repository.supplement
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
-import com.example.hastanghubaga.data.local.mappers.toMealNutrition
+import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.settings.SupplementSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -18,7 +18,7 @@ class LiveSupplementSettingsRepository(
     fun observeSettings(supplementId: Long): Flow<SupplementSettings> =
         dao.observeSettings(supplementId)
             .map { entity ->
-                entity?.toMealNutrition() ?: SupplementSettings.default(supplementId)
+                entity?.toDomain() ?: SupplementSettings.default(supplementId)
             }
             .distinctUntilChanged()
 }

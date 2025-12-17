@@ -1,16 +1,13 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
-import com.example.hastanghubaga.domain.model.timeline.ActivityTimelineItem
-import com.example.hastanghubaga.domain.model.timeline.MealTimelineItem
-import com.example.hastanghubaga.domain.model.timeline.SupplementTimelineItem
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
 
 fun SupplementWithUserSettings.toPreviewTimelineItems(): List<TimelineItem> =
     scheduledTimes.map { time ->
-        SupplementTimelineItem(
+        TimelineItem.SupplementTimelineItem(
             time = time,
             supplement = this,
         )
@@ -18,7 +15,7 @@ fun SupplementWithUserSettings.toPreviewTimelineItems(): List<TimelineItem> =
 
 fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
     when (this) {
-        is SupplementTimelineItem -> {
+        is TimelineItem.SupplementTimelineItem -> {
             TimelineItemUiModel.Supplement(
                 id = supplement.supplement.id,
                 time = time,
@@ -27,7 +24,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 doseState = supplement.doseState,
             )
         }
-        is MealTimelineItem ->
+        is TimelineItem.MealTimelineItem ->
             TimelineItemUiModel.Meal(
                 id = meal.id,
                 time = meal.timestamp.toLocalTime(),
@@ -35,12 +32,16 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 subtitle = meal.notes,
                 type = meal.type,
             )
-        is ActivityTimelineItem ->
+        is TimelineItem.ActivityTimelineItem ->
             TimelineItemUiModel.Activity(
                 id = activity.id,
                 time = activity.start.toLocalTime(),
                 title = activity.type.name,
-                subtitle = "${activity.start.toLocalTime()}${activity.end?.let { " to ${it.toLocalTime()}" }}"
+                subtitle = "${activity.start.toLocalTime()}${activity.end?.let { " to ${it.toLocalTime()}" }}",
+                activityType = activity.type,
+                endTime = activity.end?.toLocalTime()
             )
     }
 
+fun List<TimelineItem>.toTimelineItemUiModels(): List<TimelineItemUiModel> =
+    map { it.toTimelineItemUiModel() }

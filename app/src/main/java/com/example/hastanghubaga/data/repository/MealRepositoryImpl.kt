@@ -5,7 +5,7 @@ import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
-import com.example.hastanghubaga.data.local.mappers.toMealNutrition
+import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import kotlinx.coroutines.flow.Flow
@@ -19,18 +19,18 @@ class MealRepositoryImpl @Inject constructor(
 ) : MealRepository {
 
     override fun observeAll(): Flow<List<Meal>> =
-        mealEntityDao.observeAllMeals().map { list -> list.map { it.toMealNutrition() } }
+        mealEntityDao.observeAllMeals().map { list -> list.map { it.toDomain() } }
 
     override fun observeMeal(id: Long): Flow<Meal?> =
-        mealEntityDao.observeMeal(id).map { it?.toMealNutrition() }
+        mealEntityDao.observeMeal(id).map { it?.toDomain() }
 
     override suspend fun getMealsForDate(date: LocalDate): List<Meal> =
-        mealEntityDao.getMealsForDate(date.toString()).map { it.toMealNutrition() }
+        mealEntityDao.getMealsForDate(date.toString()).map { it.toDomain() }
 
     override fun observeMealsForDate(date: LocalDate): Flow<List<Meal>> {
         return mealEntityDao
             .observeMealsForDate(date.toString())
-            .map { joinedList -> joinedList.map { it.toMealNutrition() }
+            .map { joinedList -> joinedList.map { it.toDomain() }
     }
     }
 
@@ -50,6 +50,6 @@ class MealRepositoryImpl @Inject constructor(
 
     override suspend fun getMealsByType(type: MealType): List<Meal> =
         mealEntityDao.getMealsForDate(LocalDate.now().toString())
-            .map { it.toMealNutrition() }
+            .map { it.toDomain() }
             .filter { it.type == type }
 }

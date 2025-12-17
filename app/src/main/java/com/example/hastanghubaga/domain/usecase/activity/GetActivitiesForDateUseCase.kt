@@ -22,6 +22,6 @@ class GetActivitiesForDateUseCase @Inject constructor(
 ) {
 
     operator fun invoke(date: LocalDate): Flow<List<Activity>> {
-        return flowOf(emptyList())
+        return activityRepository.observeActivitiesForDate(date)
     }
 }

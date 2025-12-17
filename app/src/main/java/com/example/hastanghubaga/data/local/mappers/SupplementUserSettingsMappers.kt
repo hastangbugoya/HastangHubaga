@@ -4,7 +4,7 @@ import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEn
 import com.example.hastanghubaga.domain.model.settings.SupplementSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
 
-fun SupplementUserSettingsEntity.toMealNutrition(): SupplementSettings =
+fun SupplementUserSettingsEntity.toDomain(): SupplementSettings =
     SupplementSettings(
         supplementId = supplementId,
         preferredServingSize = preferredServingSize,
@@ -34,7 +34,7 @@ fun SupplementSettings.toEntity(): SupplementUserSettingsEntity =
         userNotes = userNotes
     )
 
-fun SupplementSettings.toMealNutrition(): UserSupplementSettings =
+fun SupplementSettings.toDomain(): UserSupplementSettings =
     UserSupplementSettings(
         preferredServingSize = preferredServingSize,
         preferredUnit = preferredUnit,

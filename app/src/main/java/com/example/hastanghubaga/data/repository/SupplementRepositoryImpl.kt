@@ -17,7 +17,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.mappers.toEntity
-import com.example.hastanghubaga.data.local.mappers.toMealNutrition
+import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
 import com.example.hastanghubaga.data.local.models.toDomainSafe
 import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
@@ -160,7 +160,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
-            .map { list -> list.map { it.toMealNutrition() } }
+            .map { list -> list.map { it.toDomain() } }
 
     /**
      * Fetches all supplements once (non-reactive).
@@ -170,7 +170,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override suspend fun getAllSupplementsOnce(): List<Supplement> {
         return supplementDao.getAllSupplementsOnce()
-            .map { it.toMealNutrition() }
+            .map { it.toDomain() }
     }
 
     /**
@@ -181,7 +181,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override suspend fun getActiveSupplementsOrderedByOffset(): List<Supplement> =
         supplementDao.getActiveSupplementsOrderedByOffset()
-            .map { it.toMealNutrition() }
+            .map { it.toDomain() }
 
     /**
      * Observes only supplements that are currently active.
@@ -190,7 +190,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getActiveSupplements(): Flow<List<Supplement>> =
         supplementDao.getActiveSupplementsFlow()
-            .map { list -> list.map { it.toMealNutrition() } }
+            .map { list -> list.map { it.toDomain() } }
 
     /**
      * Observes all ingredients stored in the database.
@@ -199,7 +199,7 @@ class SupplementRepositoryImpl @Inject constructor(
      */
     override fun getAllIngredients(): Flow<List<Ingredient>> =
         ingredientDao.getAllIngredientsFlow()
-            .map { list -> list.map { it.toMealNutrition() } }
+            .map { list -> list.map { it.toDomain() } }
 
     /**
      * Logs that a supplement dose was taken at a specific date and time.
@@ -615,15 +615,15 @@ class SupplementRepositoryImpl @Inject constructor(
             supplementUserSettingsDao.observeAllSettings()
         ) { supplements, settings ->
             supplements.map { entity ->
-                val domainSupplement = entity.toMealNutrition()
+                val domainSupplement = entity.toDomain()
 
                 val userSettings = settings
                     .firstOrNull { it.supplementId == entity.id }
-                    ?.toMealNutrition()
+                    ?.toDomain()
 
                 SupplementWithUserSettings(
                     supplement = domainSupplement,
-                    userSettings = userSettings?.toMealNutrition(),
+                    userSettings = userSettings?.toDomain(),
                     doseState = MealAwareDoseState.Unknown
                 )
             }
@@ -666,7 +666,7 @@ class SupplementRepositoryImpl @Inject constructor(
         ) { supplementEntity, settingsEntity ->
             supplementEntity?.let {
                 SupplementWithUserSettings(
-                    supplement = it.toMealNutrition(),
+                    supplement = it.toDomain(),
                     userSettings = settingsEntity?.toUserSupplementSettings(),
                     doseState = MealAwareDoseState.Unknown
                 )

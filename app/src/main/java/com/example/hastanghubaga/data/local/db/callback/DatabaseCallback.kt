@@ -363,21 +363,57 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         // -------------------------------
         db.execSQL(
             """
-    INSERT INTO meals (type, timestamp)
-    VALUES
-        (
-            'BREAKFAST',
-            (strftime('%s', 'now', 'start of day') + 8 * 3600) * 1000
-        ),
-        (
-            'LUNCH',
-            (strftime('%s', 'now', 'start of day') + 12 * 3600) * 1000
-        ),
-        (
-            'DINNER',
-            (strftime('%s', 'now', 'start of day') + 18 * 3600) * 1000
-        );
-    """.trimIndent()
+                INSERT INTO meals (type, timestamp)
+                VALUES
+                    (
+                        'BREAKFAST',
+                        (strftime('%s', 'now', 'start of day') + 8 * 3600) * 1000
+                    ),
+                    (
+                        'LUNCH',
+                        (strftime('%s', 'now', 'start of day') + 12 * 3600) * 1000
+                    ),
+                    (
+                        'DINNER',
+                        (strftime('%s', 'now', 'start of day') + 18 * 3600) * 1000
+                    );
+                """.trimIndent()
+        )
+
+        db.execSQL(
+            """
+                INSERT INTO activities (type, startTimestamp, endTimestamp, notes) VALUES
+                -- Morning workout (45 min)
+                ('STRENGTH_TRAINING',
+                  strftime('%s','now','start of day','+7 hours') * 1000,
+                  strftime('%s','now','start of day','+7 hours','+45 minutes') * 1000,
+                  'Morning strength training'
+                ),
+                -- Breakfast walk (20 min)
+                ('WALKING',
+                  strftime('%s','now','start of day','+8 hours','+15 minutes') * 1000,
+                  strftime('%s','now','start of day','+8 hours','+35 minutes') * 1000,
+                  'Post-breakfast walk'
+                ),
+                -- Focus work session (90 min)
+                ('WORK',
+                  strftime('%s','now','start of day','+10 hours') * 1000,
+                  strftime('%s','now','start of day','+11 hours','+30 minutes') * 1000,
+                  'Deep work session'
+                ),
+                -- Lunch break (30 min)
+                ('MEAL',
+                  strftime('%s','now','start of day','+12 hours') * 1000,
+                  strftime('%s','now','start of day','+12 hours','+30 minutes') * 1000,
+                  'Lunch break'
+                ),
+                -- Evening relaxation (no end time yet)
+                ('RELAX',
+                  strftime('%s','now','start of day','+20 hours') * 1000,
+                  NULL,
+                  'Evening relaxation'
+                );
+                """.trimIndent()
         )
     }
 }

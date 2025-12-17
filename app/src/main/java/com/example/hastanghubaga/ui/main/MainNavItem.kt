@@ -12,6 +12,6 @@ enum class NavItem(
     val icon: ImageVector
 ) {
     HOME("home", "Home", Icons.Filled.Home),
-    SUPPLEMENTS("supplements", "Supplements", Icons.Filled.CheckCircle),
+    MANAGE("manage", "Manage", Icons.Filled.CheckCircle),
     SETTINGS("settings", "Settings", Icons.Filled.Settings)
 }

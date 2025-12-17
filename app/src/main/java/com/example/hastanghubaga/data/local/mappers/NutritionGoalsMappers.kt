@@ -4,7 +4,7 @@ package com.example.hastanghubaga.data.local.mappers
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 
-fun UserNutritionGoalsEntity.toMealNutrition(): NutritionGoal = NutritionGoal(
+fun UserNutritionGoalsEntity.toDomain(): NutritionGoal = NutritionGoal(
     id = id,
     type = type,
     name = name,
@@ -15,7 +15,9 @@ fun UserNutritionGoalsEntity.toMealNutrition(): NutritionGoal = NutritionGoal(
     sodium = sodiumLimitMg,
     cholesterol = cholesterolLimitMg,
     fiber = fiberTargetGrams,
-    isActive = isActive
+    isActive = isActive,
+    start = startDate,
+    end = endDate
 )
 
 fun NutritionGoal.toEntity(): UserNutritionGoalsEntity =
@@ -30,5 +32,7 @@ fun NutritionGoal.toEntity(): UserNutritionGoalsEntity =
         sodiumLimitMg = sodium,
         cholesterolLimitMg = cholesterol,
         fiberTargetGrams = fiber,
-        isActive = isActive
+        isActive = isActive,
+        startDate = start,
+        endDate = end
     )

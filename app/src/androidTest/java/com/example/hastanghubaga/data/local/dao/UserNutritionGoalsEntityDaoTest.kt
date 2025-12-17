@@ -59,6 +59,8 @@ class UserNutritionGoalsEntityDaoTest {
         sodiumLimitMg = 2300.0,
         cholesterolLimitMg = 300.0,
         fiberTargetGrams = 30.0,
+        startDate = System.currentTimeMillis(),
+        endDate = System.currentTimeMillis(),
     )
 
     // ---------------------------------------------------------
