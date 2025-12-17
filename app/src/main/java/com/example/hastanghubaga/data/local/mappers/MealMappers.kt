@@ -4,7 +4,7 @@ package com.example.hastanghubaga.data.local.mappers
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.models.MealJoinedRoom
-import com.example.hastanghubaga.domain.model.daytimeline.MealTimelineItem
+import com.example.hastanghubaga.domain.model.timeline.MealTimelineItem
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import java.time.Instant
@@ -68,7 +68,6 @@ fun Meal.toTimelineItem(): MealTimelineItem {
     return MealTimelineItem(
         time = timestamp.toLocalTime(),
         meal = this,
-        key = "MEAL-$id-${timestamp.toLocalTime()}"
     )
 }
 

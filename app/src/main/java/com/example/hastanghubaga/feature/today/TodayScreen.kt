@@ -76,10 +76,8 @@ fun TimelineRow(
             .padding(Dimens.SpaceS)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-            Text(text = item.time.toString())
-            Text(text = item.title)
-
+            Text(text = item.time.toString(), style = MaterialTheme.typography.titleMedium)
+            Text(text = item.title, style = MaterialTheme.typography.titleLarge)
             item.subtitle?.let { Text(text = it) }
         }
     }

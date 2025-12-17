@@ -20,7 +20,7 @@ interface TimelineItemUiModel {
         val doseState: MealAwareDoseState?,
         ) : TimelineItemUiModel {
             override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT
-        override val key = "${rowType.name}-${id}-$time"
+            override val key = "${rowType.name}-${id}-$time"
         }
 
     data class Meal(

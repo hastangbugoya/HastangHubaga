@@ -13,7 +13,8 @@ data class UserNutritionGoalsEntity(
 
     val type: NutritionGoalType,
     val name: String, // "Summer Cut", "Lean Bulk", etc.
-
+    val startDate: Long, // epoch millis - start of goal
+    val endDate: Long?, // epoch millis - end of goal (may be null)
     val dailyProteinTarget: Double,
     val dailyFatTarget: Double,
     val dailyCarbTarget: Double,

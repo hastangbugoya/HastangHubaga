@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
  * not specific colors.
  */
 object UiAlertColors {
-
     /** Critical errors (validation failures, crashes, blocking issues) */
     @Composable
     fun error(): Color = MaterialTheme.colorScheme.error

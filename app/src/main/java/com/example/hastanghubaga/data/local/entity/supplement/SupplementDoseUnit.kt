@@ -63,3 +63,46 @@ enum class SupplementDoseUnit {
      */
     OTHER
 }
+
+fun SupplementDoseUnit.toDisplayCase(size: Double): String {
+    val isSingular = size == 1.0
+
+    return when (this) {
+        // Countable solids
+        SupplementDoseUnit.CAPSULE ->
+            if (isSingular) "capsule" else "capsules"
+
+        SupplementDoseUnit.TABLET ->
+            if (isSingular) "tablet" else "tablets"
+
+        SupplementDoseUnit.SOFTGEL ->
+            if (isSingular) "softgel" else "softgels"
+
+        SupplementDoseUnit.SCOOP ->
+            if (isSingular) "scoop" else "scoops"
+
+        SupplementDoseUnit.DROP ->
+            if (isSingular) "drop" else "drops"
+
+        // Spoon measures (spelled out for UI clarity)
+        SupplementDoseUnit.SPOON_TBSP ->
+            if (isSingular) "tablespoon" else "tablespoons"
+
+        SupplementDoseUnit.SPOON_TSP ->
+            if (isSingular) "teaspoon" else "teaspoons"
+
+        // Scientific units (never pluralized)
+        SupplementDoseUnit.ML ->
+            "mL"
+
+        SupplementDoseUnit.GRAM ->
+            "g"
+
+        SupplementDoseUnit.MG ->
+            "mg"
+
+        // Fallback / freeform
+        SupplementDoseUnit.OTHER ->
+            if (isSingular) "dose" else "doses"
+    }
+}
