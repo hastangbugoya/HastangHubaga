@@ -91,7 +91,7 @@ data class Supplement(
 
     val recommendedServingSize: Double,
     val recommendedDoseUnit: SupplementDoseUnit,
-    val servingsPerDay: Int,
+    val servingsPerDay: Double,
     val recommendedWithFood: Boolean?,
     val recommendedLiquidInOz: Double?,
     val recommendedTimeBetweenDailyDosesMinutes: Int?,

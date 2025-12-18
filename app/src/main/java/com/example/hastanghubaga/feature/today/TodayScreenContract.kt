@@ -42,6 +42,12 @@ object TodayScreenContract {
         data class Navigate(
             val destination: Destination
         ) : Effect
+        data class ShowTimelineItemInfo(
+            val title: String,
+            val subtitle: String,
+            val time: String,
+            val key: String
+        ) : Effect
     }
 
 

@@ -7,6 +7,7 @@ import com.example.hastanghubaga.data.local.models.MealJoinedRoom
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.domain.time.TimePolicy
 import java.time.Instant
 import java.time.ZoneId
 
@@ -31,7 +32,7 @@ fun MealJoinedRoom.toDomain(): Meal =
     Meal(
         id = meal.id,
         type = meal.type,
-        timestamp = Instant.ofEpochMilli(meal.timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime(),
+        timestamp = TimePolicy.utcMillisToLocalDateTime(meal.timestamp),
         notes = meal.notes,
         nutrition = nutrition?.toDomain()
     )
@@ -43,7 +44,7 @@ fun Meal.toEntity(): MealEntity =
     MealEntity(
         id = id,
         type = type,
-        timestamp = timestamp.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+        timestamp = TimePolicy.localDateTimeToUtcMillis(timestamp),
         notes = notes
     )
 

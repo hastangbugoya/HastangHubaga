@@ -51,7 +51,7 @@ class SupplementEntityDaoTest {
         notes = null,
         recommendedServingSize = 1.0,
         recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-        servingsPerDay = 1,
+        servingsPerDay = 1.0,
         recommendedWithFood = null,
         recommendedLiquidInOz = null,
         recommendedTimeBetweenDailyDosesMinutes = null,
@@ -230,7 +230,7 @@ class SupplementEntityDaoTest {
                 supplementId = id,
                 preferredServingSize = 2.0,
                 preferredUnit = SupplementDoseUnit.CAPSULE,
-                preferredServingPerDay = 1,
+                preferredServingPerDay = 1.0,
                 isEnabled = true,
                 userNotes = "Take with food"
             )

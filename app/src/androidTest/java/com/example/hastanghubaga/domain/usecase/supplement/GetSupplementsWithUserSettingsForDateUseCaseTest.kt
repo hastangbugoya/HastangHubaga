@@ -88,7 +88,7 @@ class GetSupplementsWithUserSettingsForDateUseCaseTest {
                     id = 1L,
                     name = "Vitamin C",
                     doseAnchorType = DoseAnchorType.BREAKFAST,
-                    servingsPerDay = 1,
+                    servingsPerDay = 1.0,
                     frequencyType = FrequencyType.DAILY,
                     brand = "Brand X",
                     notes = "Notes",

@@ -8,6 +8,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
+import com.example.hastanghubaga.domain.time.TimePolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -24,8 +25,13 @@ class MealRepositoryImpl @Inject constructor(
     override fun observeMeal(id: Long): Flow<Meal?> =
         mealEntityDao.observeMeal(id).map { it?.toDomain() }
 
-    override suspend fun getMealsForDate(date: LocalDate): List<Meal> =
-        mealEntityDao.getMealsForDate(date.toString()).map { it.toDomain() }
+    override suspend fun getMealsForDate(date: LocalDate): List<Meal> {
+        val startAndEnd = TimePolicy.utcRangeForLocalDate(date)
+        val startUtc = startAndEnd.first
+        val endUtc = startAndEnd.second
+        return mealEntityDao.getMealsForDayOnce(startUtc, endUtc).map { it.toDomain() }
+    }
+
 
     override fun observeMealsForDate(date: LocalDate): Flow<List<Meal>> {
         return mealEntityDao
@@ -48,8 +54,10 @@ class MealRepositoryImpl @Inject constructor(
         mealEntityDao.deleteMeal(meal)
     }
 
-    override suspend fun getMealsByType(type: MealType): List<Meal> =
-        mealEntityDao.getMealsForDate(LocalDate.now().toString())
-            .map { it.toDomain() }
-            .filter { it.type == type }
+    override suspend fun getMealsByType(type: MealType): List<Meal> {
+        val startAndEnd = TimePolicy.utcRangeForLocalDate(LocalDate.now())
+        val startUtc = startAndEnd.first
+        val endUtc = startAndEnd.second
+        return mealEntityDao.getMealsForDayOnce(startUtc, endUtc).map { it.toDomain() }.filter { it.type == type }
+    }
 }

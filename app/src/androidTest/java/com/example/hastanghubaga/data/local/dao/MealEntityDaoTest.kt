@@ -7,6 +7,7 @@ import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.domain.time.TimePolicy
 import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.*
 import org.junit.runner.RunWith
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -96,8 +98,12 @@ class MealEntityDaoTest {
 
         // 2025-01-02
         dao.insertMeal(MealEntity(type = MealType.SNACK, timestamp = 1735776000000L))
+        val range: Pair<Long, Long> =
+            TimePolicy.utcRangeForLocalDate(LocalDate.parse("2025-01-01"))
 
-        val meals = dao.getMealsForDate("2025-01-01")
+        val startUtc = range.first
+        val endUtc = range.second
+        val meals = dao.getMealsForDayOnce(startUtc, endUtc)
         assertThat(meals.size).isEqualTo(1)
     }
 

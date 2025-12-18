@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.ui.components
+package com.example.hastanghubaga.ui.common.sheets
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

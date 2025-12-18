@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
+import android.util.Log
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.meal.Meal
@@ -24,6 +25,7 @@ class BuildTodayTimelineUseCase @Inject constructor() {
                     )
                 }
             }
+        Log.d("Meow", "BuildTodayTimelineUseCase> supplementItems: ${supplementItems.size}")
         val mealItems =
             meals.map { meal ->
                 TimelineItem.MealTimelineItem(
@@ -31,7 +33,10 @@ class BuildTodayTimelineUseCase @Inject constructor() {
                     meal = meal,
                 )
             }
-
+        Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
+        mealItems.forEach {
+            Log.d("Meow", "BuildTodayTimelineUseCase> mealItem: $it")
+        }
         val activityItems =
             activities.map { activity ->
                 TimelineItem.ActivityTimelineItem(
@@ -39,7 +44,10 @@ class BuildTodayTimelineUseCase @Inject constructor() {
                     activity = activity,
                 )
             }
-
+        Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
+        activityItems.forEach {
+            Log.d("Meow", "BuildTodayTimelineUseCase> activityItem: $it")
+        }
         return (supplementItems + mealItems + activityItems)
             .sortedBy { it.time }
     }

@@ -16,5 +16,12 @@ interface BottomSheetController {
         onYes: () -> Unit,
         onNo: () -> Unit = {}
     )
+    fun showTimelineInfoSheet(
+        title: String,
+        subtitle: String,
+        time: String,
+        key: String,
+        onClose: () -> Unit
+    )
     fun hide()
 }

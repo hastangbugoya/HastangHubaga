@@ -7,7 +7,6 @@ import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUse
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
-import com.example.hastanghubaga.feature.today.TodayScreenContract
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,8 +46,18 @@ class TodayScreenViewModel @Inject constructor(
             TodayScreenContract.Intent.Refresh ->
                 loadToday(LocalDate.now())
 
-            is TodayScreenContract.Intent.TimelineItemClicked ->
-                handleItemClick(intent.item)
+            is TodayScreenContract.Intent.TimelineItemClicked -> {
+                viewModelScope.launch {
+                    _effect.send(
+                        TodayScreenContract.Effect.ShowTimelineItemInfo(
+                            title = intent.item.title,
+                            subtitle = intent.item.subtitle.orEmpty(),
+                            time = intent.item.time.toString(),
+                            key = intent.item.key
+                        )
+                    )
+                }
+            }
         }
     }
 

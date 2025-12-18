@@ -26,7 +26,7 @@ object PreviewData {
             recommendedDoseUnit = SupplementDoseUnit.MG,
             avoidCaffeine = true,
             doseAnchorType = DoseAnchorType.BREAKFAST,
-            servingsPerDay = 1,
+            servingsPerDay = 1.0,
             frequencyType = FrequencyType.DAILY,
             recommendedWithFood = null,
             recommendedLiquidInOz = null,

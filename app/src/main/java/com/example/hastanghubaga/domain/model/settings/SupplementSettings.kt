@@ -6,7 +6,7 @@ data class SupplementSettings(
     val supplementId: Long,
     val preferredServingSize: Double? = null,
     val preferredUnit: SupplementDoseUnit? = null,
-    val preferredServingPerDay: Int? = null,
+    val preferredServingPerDay: Double? = null,
     val isEnabled: Boolean = true,
     val userNotes: String? = null
 ) {

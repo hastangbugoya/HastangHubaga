@@ -3,6 +3,7 @@ package com.example.hastanghubaga.feature.today
 import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,11 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.glance.LocalGlanceId
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.ui.common.BannerController
@@ -44,6 +43,21 @@ fun TodayScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    LaunchedEffect(
+        state.isLoading,
+        state.timelineItems.size
+    ) {
+        if (!state.isLoading && state.timelineItems.isNotEmpty()) {
+            val count = state.timelineItems.size
+            bannerController.show(
+                if (count == 1)
+                    "Loaded 1 timeline item"
+                else
+                    "Loaded $count timeline items"
+            )
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.onIntent(TodayScreenContract.Intent.LoadToday)
     }
@@ -63,7 +77,19 @@ fun TodayScreen(
                 is TodayScreenContract.Effect.Navigate ->
                     onNavigate(effect.destination)
 
-                is TodayScreenContract.Effect.ShowError -> TODO()
+                is TodayScreenContract.Effect.ShowError ->
+                    bannerController.show(effect.message)
+
+                is TodayScreenContract.Effect.ShowTimelineItemInfo -> {
+                    Log.d("Meow", "TodayScreen> viewModel.effect.collect>is TodayScreenContract.Effect.ShowTimelineItemInfo ")
+                    bottomSheetController.showTimelineInfoSheet(
+                        title = effect.title,
+                        subtitle = effect.subtitle,
+                        time = effect.time,
+                        key = effect.key,
+                        onClose = {}
+                    )
+                }
             }
         }
     }
@@ -98,7 +124,8 @@ fun TimelineList(
             key = { it.key } // stable UI key (correct)
         ) { item ->
             TimelineRow(
-                item = item
+                item = item,
+                onClick = onItemClick
             )
         }
     }
@@ -114,7 +141,7 @@ fun TodayScreenContent(
         state.isLoading -> LoadingView()
 
         state.errorMessage != null ->
-            ErrorView(state.errorMessage, onRefresh)
+            ErrorView(state.errorMessage)
 
         else ->
             TimelineList(
@@ -127,13 +154,15 @@ fun TodayScreenContent(
 @Composable
 fun TimelineRow(
     item: TimelineItemUiModel,
+    onClick: (TimelineItemUiModel) -> Unit = {}
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(Dimens.SpaceS)
             .border(color = UiColors.Primary(), width = 1.dp)
-            .padding(Dimens.SpaceS),
+            .padding(Dimens.SpaceS)
+            .clickable { onClick(item) },
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(text = item.time.toString(), style = MaterialTheme.typography.titleMedium)

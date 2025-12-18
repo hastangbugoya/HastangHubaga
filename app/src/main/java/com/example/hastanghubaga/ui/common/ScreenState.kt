@@ -15,8 +15,7 @@ fun ScreenState(
 
         errorMessage != null ->
             ErrorView(
-                message = errorMessage,
-                onRetry = onRetry
+                message = errorMessage
             )
 
         else ->

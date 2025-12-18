@@ -27,20 +27,34 @@ interface MealEntityDao {
     @Query("SELECT * FROM meals WHERE id = :id")
     fun observeMeal(id: Long): Flow<MealJoinedRoom?>
 
-    // IMPORTANT: date string must be "YYYY-MM-DD"
     @Transaction
     @Query("""
-        SELECT * FROM meals 
-        WHERE date(timestamp/1000,'unixepoch') = :date
-    """)
-    suspend fun getMealsForDate(date: String): List<MealJoinedRoom>
+            SELECT * FROM meals
+            WHERE timestamp BETWEEN :start AND :end
+            ORDER BY timestamp ASC
+        """)
+    suspend fun getMealsForDayOnce(
+        start: Long,
+        end: Long
+    ): List<MealJoinedRoom>
 
     @Transaction
     @Query("""
-    SELECT * FROM meals 
-    WHERE date(timestamp / 1000, 'unixepoch', 'localtime') = :date
-""")
+            SELECT * FROM meals 
+            WHERE date(timestamp / 1000, 'unixepoch', 'localtime') = :date
+        """)
     fun observeMealsForDate(date: String): Flow<List<MealJoinedRoom>>
+
+    @Transaction
+    @Query("""
+    SELECT * FROM meals
+    WHERE timestamp BETWEEN :start AND :end
+    ORDER BY timestamp ASC
+""")
+    fun observeMealsForDay(
+        start: Long,
+        end: Long
+    ): Flow<List<MealJoinedRoom>>
 
     // -------------------------------
     // INSERT

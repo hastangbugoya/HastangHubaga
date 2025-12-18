@@ -72,9 +72,13 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         val baseTime = this@GetSupplementsWithUserSettingsForDateUseCase
             .resolveAnchorTime(supplement.doseAnchorType, eventTimeDao)
         val scheduledTimes =
-            if (baseTime == null) emptyList()
-            else List(dosesPerDay) { index ->
-                baseTime.plusMinutes((index * offsetMinutes).toLong())
+            if (baseTime == null) {
+                emptyList()
+            } else {
+                val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
+                List(doseCount) { index ->
+                    baseTime.plusMinutes((index * offsetMinutes).toLong())
+                }
             }
         // Resolve dose state per scheduled time
         val doseState =
@@ -91,7 +95,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         )
     }
 
-    private fun SupplementWithUserSettings.resolveDosesPerDay(): Int =
+    private fun SupplementWithUserSettings.resolveDosesPerDay(): Double =
         userSettings?.preferredServingsPerDay
             ?: supplement.servingsPerDay
 

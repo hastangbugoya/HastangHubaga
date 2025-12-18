@@ -71,7 +71,7 @@ class SupplementUserSettingsDaoTest {
             supplementId = id,
             preferredServingSize = dose,
             preferredUnit = SupplementDoseUnit.CAPSULE,
-            preferredServingPerDay = 1,
+            preferredServingPerDay = 1.0,
             isEnabled = true,
             userNotes = null
         )

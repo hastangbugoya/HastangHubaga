@@ -47,7 +47,7 @@ class SupplementIngredientDaoTest {
         notes = null,
         recommendedServingSize = 2.0,
         recommendedDoseUnit = SupplementDoseUnit.CAPSULE,
-        servingsPerDay = 1,
+        servingsPerDay = 1.0,
         recommendedWithFood = null,
         recommendedLiquidInOz = null,
         recommendedTimeBetweenDailyDosesMinutes = null,

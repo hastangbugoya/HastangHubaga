@@ -87,7 +87,7 @@ data class SupplementEntity(
 
     val recommendedServingSize: Double,    // e.g., 2 capsules
     val recommendedDoseUnit: SupplementDoseUnit,
-    val servingsPerDay: Int,
+    val servingsPerDay: Double,
     val recommendedWithFood: Boolean? = null,   // recommended to be taken with food
     val recommendedLiquidInOz: Double? = null,  // recommended with liquid in oz
     val recommendedTimeBetweenDailyDosesMinutes: Int? = null, // time between doses in minutes

@@ -17,6 +17,8 @@ import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
+import com.example.hastanghubaga.data.local.entity.supplement.SentinelAnchors
+import com.example.hastanghubaga.domain.time.TimePolicy
 import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -33,6 +35,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import org.junit.Assert.assertTrue
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -128,11 +131,12 @@ class DatabaseCallbackTest {
         )
 
         // OPTIONAL — check a specific anchor exists
-        val midnight = rows.any { it.anchor.name == "MIDNIGHT" }
-        Assert.assertTrue(
-            "Default event time MUST contain MIDNIGHT",
-            midnight
-        )
+        SentinelAnchors.REQUIRED.forEach { sentinel ->
+            assertTrue(
+                "Default event times MUST contain sentinel anchor: $sentinel",
+                rows.any { it.anchor == sentinel }
+            )
+        }
     }
 
     @Test
@@ -156,7 +160,12 @@ class DatabaseCallbackTest {
     @Test
     fun meals_are_seeded_for_today_onDatabaseCreate() = runTest {
         // WHEN
-        val meals = mealEntityDao.getMealsForDate(LocalDate.now(ZoneOffset.UTC).toString())
+        val range: Pair<Long, Long> =
+            TimePolicy.utcRangeForLocalDate(LocalDate.now())
+
+        val startUtc = range.first
+        val endUtc = range.second
+        val meals = mealEntityDao.getMealsForDayOnce(startUtc, endUtc)
 
         // THEN
         assertThat(meals).hasSize(3)

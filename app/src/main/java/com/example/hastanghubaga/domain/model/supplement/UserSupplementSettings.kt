@@ -11,7 +11,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 data class UserSupplementSettings(
     val preferredServingSize: Double?,
     val preferredUnit: SupplementDoseUnit?,
-    val preferredServingsPerDay: Int?,
+    val preferredServingsPerDay: Double?,
     val isEnabled: Boolean,
     val notes: String?
 )

@@ -45,7 +45,7 @@ data class SupplementWithSettings(
                 ?:  supplement.recommendedServingSize
 
     /** If the user reduces servings per day, reflect it. Otherwise fallback. */
-    val effectiveServingsPerDay: Int
+    val effectiveServingsPerDay: Double
         get() = settings?.preferredServingPerDay ?: supplement.servingsPerDay
 
     /** Whether the user disabled this supplement entirely */

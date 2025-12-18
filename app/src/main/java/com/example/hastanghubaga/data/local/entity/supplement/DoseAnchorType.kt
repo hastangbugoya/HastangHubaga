@@ -85,13 +85,14 @@ package com.example.hastanghubaga.data.local.entity.supplement
  */
 enum class DoseAnchorType(
     /** Optional meal this anchor is associated with */
-    val mealType: MealType?
+    val mealType: MealType?,
+    val isSentinel: Boolean = false
 ) {
 
     /** Absolute start of the day (00:00).
      *  Useful for fasting supplements or strict schedules.
      */
-    MIDNIGHT(null),
+    MIDNIGHT(null, isSentinel = true),
 
     /** Time the user wakes up.
      *  Common for hydration, thyroid meds, or baseline supplements.
@@ -148,4 +149,26 @@ enum class DoseAnchorType(
 enum class MealType {
     BREAKFAST, LUNCH, DINNER, SNACK, ANY
 }
+
+fun DoseAnchorType.isUserVisible(): Boolean = !isSentinel
+
+fun Iterable<DoseAnchorType>.userVisibleAnchors(): List<DoseAnchorType> =
+    filter { it.isUserVisible() }
+
+/**
+ * Sentinel anchors define system-level temporal boundaries.
+ *
+ * Rules:
+ * - Sentinels MUST be persisted
+ * - Sentinels MUST NOT be shown in UI
+ * - Sentinels MAY be used for scheduling math and defaults
+ * - Sentinels MUST have deterministic times
+ */
+object SentinelAnchors {
+
+    val REQUIRED = setOf(
+        DoseAnchorType.MIDNIGHT
+    )
+}
+
 

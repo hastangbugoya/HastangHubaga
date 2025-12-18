@@ -122,6 +122,8 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
+    testImplementation(kotlin("test-junit"))
+
 }
 
 configurations.all {

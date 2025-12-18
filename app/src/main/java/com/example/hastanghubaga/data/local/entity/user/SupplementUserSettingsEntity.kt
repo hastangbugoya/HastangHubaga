@@ -51,7 +51,7 @@ data class SupplementUserSettingsEntity(
     val preferredServingSize: Double? = null,
     val preferredUnit: SupplementDoseUnit? = null,
 
-    val preferredServingPerDay: Int? = null,
+    val preferredServingPerDay: Double? = null,
 
 
     /** Whether the user wants this supplement active */

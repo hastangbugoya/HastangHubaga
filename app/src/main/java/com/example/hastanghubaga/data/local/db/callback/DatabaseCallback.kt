@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.local.db.callback
 import android.util.Log
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.hastanghubaga.domain.time.TimePolicy
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -20,7 +21,15 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
+        val zoneId = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now(zoneId)
 
+        fun millisAt(hour: Int, minute: Int): Long =
+            today
+                .atTime(hour, minute)
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli()
         // -------------------------------
         // INGREDIENTS (45)
         // -------------------------------
@@ -328,6 +337,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             """
         INSERT OR IGNORE INTO event_default_times (anchor, timeSeconds)
         VALUES
+        ('MIDNIGHT', ${LocalTime.MIDNIGHT.toSecondOfDay()}),
             ('WAKEUP', ${LocalTime.of(7, 0).toSecondOfDay()}),
             ('BREAKFAST', ${LocalTime.of(8, 0).toSecondOfDay()}),
             ('LUNCH', ${LocalTime.of(12, 0).toSecondOfDay()}),
@@ -361,22 +371,16 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         // -------------------------------
         // MEALS ADDED HERE
         // -------------------------------
-        db.execSQL(
-            """
-                INSERT INTO meals (type, timestamp)
-                VALUES
-                    (
-                        'BREAKFAST',
-                        (strftime('%s', 'now', 'start of day') + 8 * 3600) * 1000
-                    ),
-                    (
-                        'LUNCH',
-                        (strftime('%s', 'now', 'start of day') + 12 * 3600) * 1000
-                    ),
-                    (
-                        'DINNER',
-                        (strftime('%s', 'now', 'start of day') + 18 * 3600) * 1000
-                    );
+        val todayMeals = TimePolicy.todayLocal()
+
+        fun mealMillis(h: Int, m: Int) =
+            TimePolicy.localDateTimeToUtcMillis(today, java.time.LocalTime.of(h, m))
+            db.execSQL(
+                """
+                INSERT INTO meals (type, timestamp) VALUES
+                    ('BREAKFAST', ${mealMillis(8, 0)}),
+                    ('LUNCH',     ${mealMillis(12, 0)}),
+                    ('DINNER',    ${mealMillis(18, 0)});
                 """.trimIndent()
         )
 
@@ -385,35 +389,36 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                 INSERT INTO activities (type, startTimestamp, endTimestamp, notes) VALUES
                 -- Morning workout (45 min)
                 ('STRENGTH_TRAINING',
-                  strftime('%s','now','start of day','+7 hours') * 1000,
-                  strftime('%s','now','start of day','+7 hours','+45 minutes') * 1000,
+                  ${millisAt(7, 0)},
+                  ${millisAt(7, 45)},
                   'Morning strength training'
                 ),
                 -- Breakfast walk (20 min)
                 ('WALKING',
-                  strftime('%s','now','start of day','+8 hours','+15 minutes') * 1000,
-                  strftime('%s','now','start of day','+8 hours','+35 minutes') * 1000,
+                  ${millisAt(8, 15)},
+                  ${millisAt(8, 35)},
                   'Post-breakfast walk'
                 ),
                 -- Focus work session (90 min)
                 ('WORK',
-                  strftime('%s','now','start of day','+10 hours') * 1000,
-                  strftime('%s','now','start of day','+11 hours','+30 minutes') * 1000,
+                  ${millisAt(10, 0)},
+                  ${millisAt(11, 30)},
                   'Deep work session'
                 ),
                 -- Lunch break (30 min)
                 ('MEAL',
-                  strftime('%s','now','start of day','+12 hours') * 1000,
-                  strftime('%s','now','start of day','+12 hours','+30 minutes') * 1000,
+                  ${millisAt(12, 0)},
+                  ${millisAt(12, 30)},
                   'Lunch break'
                 ),
-                -- Evening relaxation (no end time yet)
+                -- Evening relaxation (no end time)
                 ('RELAX',
-                  strftime('%s','now','start of day','+20 hours') * 1000,
+                  ${millisAt(20, 0)},
                   NULL,
                   'Evening relaxation'
                 );
                 """.trimIndent()
         )
+
     }
 }

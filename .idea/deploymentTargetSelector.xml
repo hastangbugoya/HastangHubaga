@@ -13,19 +13,13 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="EventTimeDaoTest">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="GetSupplementsWithUserSettingsForDateUseCaseTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="meals_are_seeded_for_today_onDatabaseCreate()">
+      <SelectionState runConfigName="DatabaseCallbackTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="activities_arePrepopulated()">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="ErrorViewPreview">
+      <SelectionState runConfigName="callback_insertsDefaultEventTimes()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
