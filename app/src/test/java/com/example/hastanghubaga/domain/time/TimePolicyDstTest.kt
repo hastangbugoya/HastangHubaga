@@ -113,6 +113,46 @@ class TimePolicyDstTest {
             assertEquals(date, local.toLocalDate())
         }
     }
+
+    @Test
+    fun `UTC zone always has 24-hour days`() {
+        TimePolicy.withZone(ZoneId.of("UTC")) {
+            val date = LocalDate.of(2025, 6, 15)
+
+            val (start, end) = TimePolicy.utcRangeForLocalDate(date)
+            val hours = Duration.ofMillis(end - start + 1).toHours()
+
+            assertEquals(24, hours)
+        }
+    }
+
+
+    @Test
+    fun `UTC invariant always 24 hours`() {
+        TimePolicy.withZone(ZoneId.of("UTC")) {
+            listOf(
+                LocalDate.of(2025, 1, 1),
+                LocalDate.of(2025, 3, 9),  // DST elsewhere
+                LocalDate.of(2025, 11, 2)  // DST elsewhere
+            ).forEach { date ->
+                val (start, end) = TimePolicy.utcRangeForLocalDate(date)
+                val hours = Duration.ofMillis(end - start + 1).toHours()
+
+                assertEquals(24, hours)
+            }
+        }
+    }
+
+    @Test
+    fun `UTC invariants must never change`() {
+        val date = LocalDate.of(2025, 1, 1)
+        val (start, end) = TimePolicy.utcRangeForLocalDate(date)
+
+        val hours = Duration.ofMillis(end - start + 1).toHours()
+        assertEquals(24, hours)
+    }
+
+
 }
 
 
