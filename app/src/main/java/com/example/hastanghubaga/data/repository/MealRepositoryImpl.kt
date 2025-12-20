@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.repository
 
+import android.util.Log
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
@@ -34,10 +35,14 @@ class MealRepositoryImpl @Inject constructor(
 
 
     override fun observeMealsForDate(date: LocalDate): Flow<List<Meal>> {
+        val startAndEnd = TimePolicy.utcRangeForLocalDate(date)
+        val startUtc = startAndEnd.first
+        val endUtc = startAndEnd.second
+        Log.d("Meow", "Meals query range: $startUtc → $endUtc")
         return mealEntityDao
-            .observeMealsForDate(date.toString())
+            .observeMealsForDay(startUtc, endUtc)
             .map { joinedList -> joinedList.map { it.toDomain() }
-    }
+        }
     }
 
     override suspend fun addMeal(

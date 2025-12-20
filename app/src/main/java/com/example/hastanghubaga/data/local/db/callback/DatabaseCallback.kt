@@ -374,8 +374,12 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         val todayMeals = TimePolicy.todayLocal()
 
         fun mealMillis(h: Int, m: Int) =
-            TimePolicy.localDateTimeToUtcMillis(today, java.time.LocalTime.of(h, m))
-            db.execSQL(
+            TimePolicy.localDateTimeToUtcMillis(
+                today, java.time.
+                LocalTime.of(h, m)
+            )
+
+        db.execSQL(
                 """
                 INSERT INTO meals (type, timestamp) VALUES
                     ('BREAKFAST', ${mealMillis(8, 0)}),
@@ -419,6 +423,6 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                 );
                 """.trimIndent()
         )
-
+        Log.d("Meow", "Inserted meal millis: ${mealMillis(8, 0)}")
     }
 }

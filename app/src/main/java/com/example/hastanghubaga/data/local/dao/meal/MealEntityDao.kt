@@ -40,13 +40,6 @@ interface MealEntityDao {
 
     @Transaction
     @Query("""
-            SELECT * FROM meals 
-            WHERE date(timestamp / 1000, 'unixepoch', 'localtime') = :date
-        """)
-    fun observeMealsForDate(date: String): Flow<List<MealJoinedRoom>>
-
-    @Transaction
-    @Query("""
     SELECT * FROM meals
     WHERE timestamp BETWEEN :start AND :end
     ORDER BY timestamp ASC

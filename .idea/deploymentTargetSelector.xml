@@ -19,7 +19,7 @@
       <SelectionState runConfigName="DatabaseCallbackTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="callback_insertsDefaultEventTimes()">
+      <SelectionState runConfigName="Tests in 'com.example.hastanghubaga.data.local.dao'">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
