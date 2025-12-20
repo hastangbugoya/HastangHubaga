@@ -139,6 +139,7 @@ enum class DoseAnchorType(
      *  Resolved to the first applicable meal of the day.
      */
     ANY_MEAL(MealType.ANY),
+    SLEEP(null),
 
     /** No strict anchor.
      *  Used for flexible or “take anytime today” supplements.

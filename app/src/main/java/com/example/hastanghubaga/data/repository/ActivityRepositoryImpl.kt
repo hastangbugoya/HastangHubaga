@@ -9,8 +9,8 @@ import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
-import java.time.ZoneId
 import javax.inject.Inject
+import com.example.hastanghubaga.domain.time.TimePolicy
 
 class ActivityRepositoryImpl @Inject constructor(
     private val dao: ActivityEntityDao
@@ -29,10 +29,7 @@ class ActivityRepositoryImpl @Inject constructor(
         dao.deleteActivity(activity.toEntity())
 
     override fun observeActivitiesForDate(date: LocalDate): Flow<List<Activity>> {
-        val zone = ZoneId.systemDefault()
-
-        val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
-        val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val (start, end) = TimePolicy.utcRangeForLocalDate(date)
 
         return dao.observeActivitiesForDay(start, end)
             .map { it.map(ActivityEntity::toDomain) }

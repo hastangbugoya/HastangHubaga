@@ -5,6 +5,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import java.time.DayOfWeek
 import java.time.LocalTime
 
@@ -63,4 +64,11 @@ class Converters {
     fun toDayOfWeek(value: String?): DayOfWeek? =
         value?.let { DayOfWeek.valueOf(it) }
 
+    @TypeConverter
+    fun fromActivityType(type: ActivityType?): String? =
+        type?.name
+
+    @TypeConverter
+    fun toActivityType(value: String?): ActivityType? =
+        value?.let { ActivityType.valueOf(it) }
 }

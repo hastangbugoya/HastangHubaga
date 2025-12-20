@@ -343,7 +343,8 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             ('LUNCH', ${LocalTime.of(12, 0).toSecondOfDay()}),
             ('DINNER', ${LocalTime.of(18, 0).toSecondOfDay()}),
             ('BEFORE_WORKOUT', ${LocalTime.of(16, 30).toSecondOfDay()}),
-            ('AFTER_WORKOUT', ${LocalTime.of(17, 45).toSecondOfDay()})
+            ('AFTER_WORKOUT', ${LocalTime.of(17, 45).toSecondOfDay()}),
+            ('SLEEP', ${LocalTime.of(21, 0).toSecondOfDay()})
         ;
         """.trimIndent()
         )
@@ -420,6 +421,11 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                   ${millisAt(20, 0)},
                   NULL,
                   'Evening relaxation'
+                ),
+                ('SLEEP',
+                  ${millisAt(21, 0)},
+                  NULL,
+                  'Sleep'
                 );
                 """.trimIndent()
         )

@@ -26,15 +26,24 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
+import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalTime
+import javax.inject.Inject
+
+// Domain-facing time types (method signatures)
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalTime
+
+// Internal scheduling / DB time types
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import javax.inject.Inject
 
 /**
  * Concrete implementation of [SupplementRepository] responsible for coordinating all
@@ -151,8 +160,9 @@ class SupplementRepositoryImpl @Inject constructor(
     private val dailyStartTimeDao: DailyStartTimeDao,
     private val eventTimeDao: EventTimeDao,
     private val supplementUserSettingsDao: SupplementUserSettingsDao
-) : SupplementRepository {
-
+) : SupplementRepository, SupplementDoseLogRepository {
+    val zone = ZoneId.systemDefault()
+    val today = java.time.LocalDate.now(zone)
     /**
      * Returns a live stream of all supplements in the system.
      *
@@ -218,9 +228,14 @@ class SupplementRepositoryImpl @Inject constructor(
         fractionTaken: Double,
         doseUnit: SupplementDoseUnit
     ) {
-        val timestamp = date.atTime(time)
+        val javaDate = date.toJavaLocalDate()
+        val javaTime = time.toJavaLocalTime()
+
+        val timestamp = javaDate
+            .atTime(javaTime)
             .atZone(ZoneId.systemDefault())
-            .toInstant().toEpochMilli()
+            .toInstant()
+            .toEpochMilli()
 
         supplementDailyLogDao.insertDoseLog(
             SupplementDailyLogEntity(
@@ -762,8 +777,5 @@ class SupplementRepositoryImpl @Inject constructor(
             else -> null
         }
     }
-
-
-
 
 }

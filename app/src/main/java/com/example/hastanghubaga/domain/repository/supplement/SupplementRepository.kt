@@ -10,9 +10,9 @@ import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZonedDateTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.Instant
 
 /**
  * Repository interface for managing ${CLASS_NAME}.
@@ -35,14 +35,6 @@ interface SupplementRepository {
 
     suspend fun getActiveSupplementsOrderedByOffset(): List<Supplement>
 
-    suspend fun logDose(
-        supplementId: Long,
-        date: LocalDate,
-        time: LocalTime,
-        fractionTaken: Double,
-        doseUnit: SupplementDoseUnit
-    )
-
     suspend fun shouldTakeToday(supplement: Supplement, date: LocalDate): Boolean
 
     suspend fun getPredictedNextDoseTime(
@@ -64,7 +56,7 @@ interface SupplementRepository {
     // Returns the absolute next dose datetime
     suspend fun getNextDoseDateTime(
         supplement: Supplement
-    ): ZonedDateTime?
+    ): Instant?
 
     suspend fun setDefaultEventTime(anchor: DoseAnchorType, time: LocalTime)
 

@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
+import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import com.example.hastanghubaga.domain.time.TimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
@@ -56,15 +57,15 @@ import java.time.LocalTime
  * @see TimelineTapAction.RequestDoseInput
  */
 class LogSupplementDoseUseCase @Inject constructor(
-    private val repository: SupplementRepository,
-    private val clock: Clock = Clock.System
+    private val repository: SupplementDoseLogRepository,
+    private val clock: Clock
 ) {
 
     /**
      * Validates and persists a supplement intake record.
      *
      * @param input
-     * The confirmed dose information provided by the user.
+     * The confirmed dose information provided by the user.`
      * This input is assumed to come from explicit user confirmation
      * (e.g. a dose input dialog).
      *
