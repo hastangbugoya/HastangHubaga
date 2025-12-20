@@ -20,8 +20,14 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 id = supplement.supplement.id,
                 time = time,
                 title = supplement.supplement.name,
-                subtitle = "${supplement.effectiveServingSize.asDisplayTextNonComposable()} ${supplement.effectiveDoseUnit.toDisplayCase(supplement.effectiveServingSize)}",
+                subtitle = "${supplement.effectiveServingSize.asDisplayTextNonComposable()} ${
+                    supplement.effectiveDoseUnit.toDisplayCase(
+                        supplement.effectiveServingSize
+                    )
+                }",
                 doseState = supplement.doseState,
+                suggestedDose = supplement.supplement.recommendedServingSize,
+                defaultUnit =supplement.supplement.recommendedDoseUnit,
             )
         }
         is TimelineItem.MealTimelineItem ->

@@ -9,16 +9,18 @@ import java.time.LocalTime
 
 object FakeActivityFactory {
 
+    private var nextId = 1L
     fun create(
         name: String,
-        at: LocalDateTime
-    ): Activity {
-        return Activity(
-            id = 1L,
-            type = ActivityType.STRENGTH_TRAINING,
-            start = at,
-            end = at.plusMinutes(60),
-            notes = name
+        at: LocalDateTime,
+        type: ActivityType = ActivityType.STRENGTH_TRAINING,
+        notes: String? = null
+    ): Activity =
+        Activity(
+            id = nextId++,
+            start = at,          // ✅ critical mapping
+            end = null,
+            type = type,
+            notes = notes
         )
-    }
 }

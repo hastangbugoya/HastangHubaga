@@ -1,9 +1,11 @@
 package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementDailyLog
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -51,4 +53,20 @@ fun LocalTime.toLocalTimeLong() = this.atDate(LocalDate.now())
     .atZone(ZoneId.systemDefault())
     .toInstant()
     .toEpochMilli()
+
+fun SupplementDailyLogEntity.toDomain() = SupplementDailyLog(
+    supplementId = this.id,
+    date = this.date,
+    actualServingTaken = this.actualServingTaken,
+    doseUnit = this.doseUnit,
+    timestamp = this.timestamp
+)
+
+fun SupplementDailyLog.toEntity() = SupplementDailyLogEntity(
+    supplementId = this.supplementId,
+    date = this.date,
+    actualServingTaken = this.actualServingTaken,
+    doseUnit = this.doseUnit,
+    timestamp = this.timestamp
+)
 

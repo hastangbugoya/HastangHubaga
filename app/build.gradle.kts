@@ -59,6 +59,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
+    // Clock
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
+
     // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

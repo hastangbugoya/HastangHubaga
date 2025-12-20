@@ -1,21 +1,61 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import java.time.LocalTime
 
 /**
- * UI-normalized timeline row model.
+ * Represents a **UI-facing model** for a single entry in the Today timeline.
  *
- * This sealed interface represents ALL items that can appear
- * in the Today timeline (meals, supplements, activities).
+ * ## Why this is a UI model
+ * `TimelineItemUiModel` is intentionally **not** a domain model.
+ * It exists to serve the needs of the presentation layer by:
  *
- * Design goals:
- * - Single LazyColumn source
- * - Stable UI keys
- * - Exhaustive rendering via sealed types
- * - No domain leakage (UI-only model)
+ * - Combining data from multiple domain sources
+ *   (supplements, meals, activities)
+ * - Normalizing heterogeneous items into a single renderable shape
+ * - Precomputing UI-friendly fields such as:
+ *   - icons
+ *   - display strings
+ *   - formatted times
+ *
+ * This allows the UI to remain:
+ * - Stateless
+ * - Declarative
+ * - Free of business logic
+ *
+ * ## What this model may contain
+ * - Display-ready text
+ * - Preformatted dates/times
+ * - UI-specific enums (icons, colors, row types)
+ * - Stable domain identifiers (IDs)
+ *
+ * ## What this model must NOT contain
+ * - Validation rules
+ * - Persistence logic
+ * - Repository references
+ * - Business decisions
+ *
+ * ## Relationship to Domain Models
+ * Domain models represent **truth**.
+ * UI models represent **presentation**.
+ *
+ * Mapping from domain → UI models typically occurs in:
+ * - Use cases (e.g. `BuildTodayTimelineUseCase`)
+ * - Mappers owned by the presentation layer
+ *
+ * The domain layer must never depend on this type.
+ *
+ * ## Architectural Rationale
+ * Keeping this model UI-facing prevents:
+ * - Leaking presentation concerns into the domain
+ * - Bloated domain entities
+ * - UI conditionals based on domain internals
+ *
+ * It also enables the timeline to evolve visually
+ * without impacting persistence or business rules.
  */
 sealed interface TimelineItemUiModel {
 
@@ -42,7 +82,9 @@ sealed interface TimelineItemUiModel {
         override val time: LocalTime,
         override val title: String,
         override val subtitle: String?,
-        val doseState: MealAwareDoseState?
+        val doseState: MealAwareDoseState?,
+        val suggestedDose: Double,
+        val defaultUnit: SupplementDoseUnit
     ) : TimelineItemUiModel {
         override val rowType = TodayUiRowType.SUPPLEMENT
         override val key = "${rowType.name}-$id-$time"

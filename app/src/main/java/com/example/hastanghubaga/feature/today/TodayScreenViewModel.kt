@@ -2,12 +2,19 @@ package com.example.hastanghubaga.feature.today
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.domain.time.TimePolicy
+import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
+import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
+import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
+import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
+import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -20,6 +27,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,7 +35,9 @@ class TodayScreenViewModel @Inject constructor(
     private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase, // can be stubbed
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
-    private val buildTodayTimeline: BuildTodayTimelineUseCase
+    private val buildTodayTimeline: BuildTodayTimelineUseCase,
+    private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
+    private val logSupplementDoseUseCase: LogSupplementDoseUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TodayScreenContract.State())
@@ -40,20 +50,34 @@ class TodayScreenViewModel @Inject constructor(
 
     fun onIntent(intent: TodayScreenContract.Intent) {
         when (intent) {
-            TodayScreenContract.Intent.LoadToday ->
+            is TodayScreenContract.Intent.LoadToday ->
                 loadToday(LocalDate.now())
 
-            TodayScreenContract.Intent.Refresh ->
+            is TodayScreenContract.Intent.Refresh ->
                 loadToday(LocalDate.now())
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
+                handleTimelineItemClicked(intent.item)
+            }
+            is TodayScreenContract.Intent.ConfirmDose -> {
                 viewModelScope.launch {
-                    _effect.send(
-                        TodayScreenContract.Effect.ShowTimelineItemInfo(
-                            title = intent.item.title,
-                            subtitle = intent.item.subtitle.orEmpty(),
-                            time = intent.item.time.toString(),
-                            key = intent.item.key
+                    val timeUseIntent =
+                    when {
+                        intent.actualTime != null ->
+                            TimeUseIntent.Explicit(
+                                date = TimePolicy.todayLocal(),
+                                time = intent.actualTime
+                            )
+
+                        else ->
+                            TimeUseIntent.Scheduled(intent.scheduledTime)
+                    }
+                    logSupplementDoseUseCase(
+                        LogDoseInput(
+                            supplementId = intent.supplementId,
+                            fractionTaken = intent.amount,
+                            unit = intent.unit,
+                            timeUseIntent = timeUseIntent
                         )
                     )
                 }
@@ -61,7 +85,7 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-    fun loadToday(date: LocalDate = LocalDate.now()) {
+    fun loadToday(date: LocalDate = TimePolicy.todayLocal()) {
         loadJob?.cancel()
 
         loadJob = viewModelScope.launch {
@@ -84,7 +108,8 @@ class TodayScreenViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isLoading = false,
-                                timelineItems = timeline.toTimelineItemUiModels()
+                                domainTimelineItems = timeline,
+                                uiTimelineItems = timeline.toTimelineItemUiModels()
                             )
                         }
                     }
@@ -102,23 +127,75 @@ class TodayScreenViewModel @Inject constructor(
 
     private fun List<TimelineItem>.collectLatest(function: Any) {}
 
-    private fun handleItemClick(item: TimelineItemUiModel) {
-        val destination =
-            when (item) {
-                is TimelineItemUiModel.Supplement ->
-                    TodayScreenContract.Destination.Supplement(item.id)
-
-                is TimelineItemUiModel.Meal ->
-                    TodayScreenContract.Destination.Meal(item.id)
-
-                is TimelineItemUiModel.Activity ->
-                    TodayScreenContract.Destination.Activity(item.id)
+    private fun handleTimelineItemClicked(
+        uiItem: TimelineItemUiModel
+    ) {
+        val domainItem = findDomainItemFor(uiItem) ?: return
+        when (
+            val action = handleTimelineItemTapUseCase.resolve(uiItem)
+        ) {
+            is TimelineTapAction.RequestDoseInput -> {
+                viewModelScope.launch {
+                    _effect.send(
+                        TodayScreenContract.Effect.ShowDoseInputDialog(
+                            supplementId = action.supplementId,
+                            title = action.title,
+                            defaultUnit = action.defaultUnit,
+                            suggestedDose = action.suggestedDose,
+                            scheduledTime = action.scheduledTime
+                        )
+                    )
+                }
             }
 
-        viewModelScope.launch {
-            _effect.send(
-                TodayScreenContract.Effect.Navigate(destination)
-            )
+            is TimelineTapAction.ActivityTapped -> {
+                // future
+            }
+
+            is TimelineTapAction.MealTapped -> {
+                // future
+            }
+
+            TimelineTapAction.NoOp -> Unit
+        }
+    }
+
+    private data class TimelineIdentity(
+        val type: TodayUiRowType,
+        val id: Long,
+        val time: LocalTime
+    )
+
+    private fun TimelineItemUiModel.identity(): TimelineIdentity =
+        TimelineIdentity(
+            type = rowType,
+            id = id,
+            time = time
+        )
+
+    private fun findDomainItemFor(
+        uiItem: TimelineItemUiModel
+    ): TimelineItem? {
+        val identity = uiItem.identity()
+        return state.value.domainTimelineItems.firstOrNull { domainItem ->
+            when {
+                identity.type == TodayUiRowType.SUPPLEMENT &&
+                        domainItem is TimelineItem.SupplementTimelineItem ->
+                    domainItem.supplement.supplement.id == identity.id &&
+                            domainItem.time == identity.time
+
+                identity.type == TodayUiRowType.ACTIVITY &&
+                        domainItem is TimelineItem.ActivityTimelineItem ->
+                    domainItem.activity.id == identity.id &&
+                            domainItem.time == identity.time
+
+                identity.type == TodayUiRowType.MEAL &&
+                        domainItem is TimelineItem.MealTimelineItem ->
+                    domainItem.meal.id == identity.id &&
+                            domainItem.time == identity.time
+
+                else -> false
+            }
         }
     }
 }
