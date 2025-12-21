@@ -252,6 +252,14 @@ class SupplementRepositoryImpl @Inject constructor(
             null
     }
 
+    override suspend fun updateUserPreferredDose(
+        supplementId: Long,
+        dose: Double,
+        unit: SupplementDoseUnit
+    ) {
+        TODO("Not yet implemented")
+    }
+
     override fun getSupplementsForDate(date: String): Flow<List<SupplementWithUserSettings>> {
         TODO("Not yet implemented")
     }
@@ -275,4 +283,12 @@ class SupplementRepositoryImpl @Inject constructor(
     }
 
     override fun isActive(supplement: Supplement): Boolean = supplement.isActive
+
+    override suspend fun setDefaultEventTime(
+        anchor: DoseAnchorType,
+        time: LocalTime
+    ) {
+        // Intentionally no-op.
+        // Default event times are not user-editable yet.
+    }
 }

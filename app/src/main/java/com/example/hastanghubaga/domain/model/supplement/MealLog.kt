@@ -1,7 +1,7 @@
 package com.example.hastanghubaga.domain.model.supplement
 
 import com.example.hastanghubaga.data.local.entity.meal.MealType
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 data class MealLog(
     val mealType: MealType,

@@ -2,15 +2,14 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
-import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
-import com.example.hastanghubaga.feature.today.TodayScreenContract
-import javax.inject.Inject
 import kotlinx.datetime.Clock
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toLocalDateTime
+import javax.inject.Inject
 
 
 /**
@@ -90,15 +89,8 @@ class LogSupplementDoseUseCase @Inject constructor(
     private fun resolveIntent(
         intent: TimeUseIntent
     ): Pair<LocalDate, LocalTime> =
-        when (intent) {
-            TimeUseIntent.ActualNow -> {
-                val now = LocalDateTime.now(TimePolicy.localZoneId)
-                now.toLocalDate() to now.toLocalTime()
-            }
-            is TimeUseIntent.Scheduled ->
-                TimePolicy.todayLocal() to intent.time
-
-            is TimeUseIntent.Explicit ->
-                intent.date to intent.time
-        }
+        DomainTimePolicy.resolveIntent(
+            intent = intent,
+            clock = clock
+        )
 }

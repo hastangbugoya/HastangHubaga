@@ -3,7 +3,7 @@ package com.example.hastanghubaga.domain.usecase.meal
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 
 /**

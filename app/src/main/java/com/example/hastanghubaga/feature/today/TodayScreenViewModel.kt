@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
-import com.example.hastanghubaga.domain.time.TimePolicy
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
@@ -26,8 +26,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -48,13 +49,17 @@ class TodayScreenViewModel @Inject constructor(
 
     private var loadJob: Job? = null
 
+    val timeZone = DomainTimePolicy.localTimeZone
+
     fun onIntent(intent: TodayScreenContract.Intent) {
+        val clock = Clock.System
+        val now = DomainTimePolicy.todayLocal(clock)
         when (intent) {
             is TodayScreenContract.Intent.LoadToday ->
-                loadToday(LocalDate.now())
+                loadToday(now)
 
             is TodayScreenContract.Intent.Refresh ->
-                loadToday(LocalDate.now())
+                loadToday(now)
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
                 handleTimelineItemClicked(intent.item)
@@ -65,7 +70,7 @@ class TodayScreenViewModel @Inject constructor(
                     when {
                         intent.actualTime != null ->
                             TimeUseIntent.Explicit(
-                                date = TimePolicy.todayLocal(),
+                                date = DomainTimePolicy.todayLocal(clock),
                                 time = intent.actualTime
                             )
 
@@ -85,7 +90,7 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-    fun loadToday(date: LocalDate = TimePolicy.todayLocal()) {
+    fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
         loadJob?.cancel()
 
         loadJob = viewModelScope.launch {

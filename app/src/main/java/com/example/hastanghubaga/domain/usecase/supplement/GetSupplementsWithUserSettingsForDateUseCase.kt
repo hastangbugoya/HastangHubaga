@@ -8,11 +8,19 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.MealLog
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapLatest
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import javax.inject.Inject
 
 /**
@@ -39,7 +47,8 @@ import javax.inject.Inject
  */
 class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private val supplementRepository: SupplementRepository,
-    private val eventTimeDao: EventTimeDao
+    private val eventTimeDao: EventTimeDao,
+    private val clock: Clock = Clock.System
 ) {
 
     /**
@@ -77,7 +86,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             } else {
                 val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
                 List(doseCount) { index ->
-                    baseTime.plusMinutes((index * offsetMinutes).toLong())
+                    baseTime.plus((index * offsetMinutes), DateTimeUnit.MINUTE)
                 }
             }
         // Resolve dose state per scheduled time
@@ -123,7 +132,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             .getDefault(effectiveAnchor)
             ?.timeSeconds
             ?.let {
-                LocalTime.ofSecondOfDay(it.toLong())
+                LocalTime.fromSecondOfDay(it)
             }
     }
 
@@ -144,9 +153,17 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private fun SupplementWithUserSettings.shouldTakeEveryXDays(
         date: LocalDate
     ): Boolean {
-        val lastTaken = supplement.lastTakenDate?.let(LocalDate::parse)
-        val interval = supplement.frequencyInterval ?: return false
-        return lastTaken == null || lastTaken.plusDays(interval.toLong()) == date
+        // X Days does not apply
+        val intervalDays = supplement.frequencyInterval ?: return false
+        // Not taken before -> take it
+        val lastTaken = supplement.lastTakenDate
+            ?.let(LocalDate::parse)
+            ?: return true
+        // Get last dose date
+        val nextEligibleDate =
+            lastTaken.plus(intervalDays, DateTimeUnit.DAY)
+        // today is the day or later -> take it
+        return date >= nextEligibleDate
     }
 
     // ---------------------------------------------------------------------
@@ -205,11 +222,26 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
            EMPTY STOMACH CHECK
            ------------------------------------------------------------ */
         if (DoseCondition.EMPTY_STOMACH in doseConditions) {
-
+            val date = DomainTimePolicy.todayLocal(clock)
             val minutesSinceLastMeal =
-                lastMealTime?.let {
-                    java.time.Duration.between(it, scheduledTime).toMinutes()
+                lastMealTime?.let { lastMeal ->
+                    val mealDate =
+                        if (lastMeal > scheduledTime)
+                            date.minus(1, DateTimeUnit.DAY)
+                        else
+                            date
+
+                    val mealDateTime = LocalDateTime(mealDate, lastMeal)
+                    val scheduledDateTime = LocalDateTime(date, scheduledTime)
+
+                    scheduledDateTime
+                        .toInstant(TimeZone.currentSystemDefault())
+                        .minus(
+                            mealDateTime.toInstant(TimeZone.currentSystemDefault())
+                        )
+                        .inWholeMinutes
                 }
+
 
             val isEmptyStomach =
                 lastMealTime == null || (minutesSinceLastMeal ?: 0) >= 120
