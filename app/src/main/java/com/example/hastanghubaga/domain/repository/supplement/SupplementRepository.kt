@@ -51,7 +51,6 @@ interface SupplementRepository {
     // Should this supplement be considered active (user takes it)?
     fun isActive(supplement: Supplement): Boolean
 
-    fun nextDoseDate(supp: SupplementEntity): LocalDate
 
     // Returns the absolute next dose datetime
     suspend fun getNextDoseDateTime(
@@ -72,9 +71,9 @@ interface SupplementRepository {
         date: LocalDate
     ): LocalTime?
 
-    suspend fun getSupplementWithUserSettings(id: Long): SupplementWithSettings?
+//    suspend fun getSupplementWithUserSettings(id: Long): SupplementWithSettings?
 
-    fun observeSupplementWithUserSettings(id: Long): Flow<SupplementWithSettings?>
+//    fun observeSupplement(id: Long): Flow<SupplementWithSettings?>
 
     suspend fun updateUserPreferredDose(
         supplementId: Long,
@@ -90,8 +89,4 @@ interface SupplementRepository {
         supplementId: Long
     ): Flow<SupplementWithUserSettings?>
 
-    suspend fun saveUserSettings(
-        settings: UserSupplementSettings,
-        supplementId: Long
-    )
 }

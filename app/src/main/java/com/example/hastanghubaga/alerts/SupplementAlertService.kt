@@ -1,7 +1,6 @@
 package com.example.hastanghubaga.alerts
 
 import android.Manifest
-import android.R
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.app.Service
@@ -9,8 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.annotation.RequiresPermission
-import androidx.core.app.NotificationCompat
-import com.example.hastanghubaga.data.local.mappers.toLocalTimeLong
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.CoroutineScope

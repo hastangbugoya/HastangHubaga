@@ -8,6 +8,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Instant
+import kotlinx.datetime.toKotlinInstant
 import java.time.ZonedDateTime
 
 class SupplementAlertScheduler(
@@ -16,8 +18,8 @@ class SupplementAlertScheduler(
 
     fun scheduleUpcomingDoses(context: Context) {
 
-        val now = ZonedDateTime.now()
-        val cutoff = now.plusDays(1) // schedule next 24 hours
+        val now = ZonedDateTime.now().toInstant().toKotlinInstant()
+        val cutoff = ZonedDateTime.now().plusDays(1).toInstant().toKotlinInstant()// schedule next 24 hours
 
         runBlocking {
 
@@ -31,7 +33,7 @@ class SupplementAlertScheduler(
 
                     val nextDose = repo.getNextDoseDateTime(supplement)
 
-                    if (nextDose != null && !nextDose.isBefore(now) && nextDose.isBefore(cutoff)) {
+                    if (nextDose != null && nextDose >= now && nextDose < cutoff) {
                         scheduleAlarm(context, supplement, nextDose)
                     }
                 }
@@ -42,12 +44,12 @@ class SupplementAlertScheduler(
     private fun scheduleAlarm(
         context: Context,
         supplement: Supplement,
-        dateTime: ZonedDateTime
+        dateTime: Instant
     ) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
             ?: return
 
-        val triggerMillis = dateTime.toInstant().toEpochMilli()
+        val triggerMillis = dateTime.toEpochMilliseconds()
 
         val intent = Intent(context, SupplementAlertReceiver::class.java).apply {
             putExtra("supplement_id", supplement.id)
