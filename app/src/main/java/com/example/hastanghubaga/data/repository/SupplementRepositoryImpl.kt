@@ -41,6 +41,19 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
+/**
+ * Central repository for Supplements.
+ *
+ * Responsibilities:
+ * - Timeline construction (active supplements + user settings)
+ * - Ingredient aggregation
+ * - Dose logging
+ * - Scheduling / anchor-time resolution
+ *
+ * NOTE:
+ * - Timeline-related flows are intentionally placed FIRST because they are
+ *   performance-sensitive and heavily composed downstream.
+ */
 class SupplementRepositoryImpl @Inject constructor(
     private val supplementDao: SupplementEntityDao,
     private val ingredientDao: IngredientEntityDao,
@@ -50,9 +63,75 @@ class SupplementRepositoryImpl @Inject constructor(
     private val supplementUserSettingsDao: SupplementUserSettingsDao
 ) : SupplementRepository, SupplementDoseLogRepository {
 
-    /* -------------------------------------------------- */
-    /* Supplements                                        */
-    /* -------------------------------------------------- */
+    /* ================================================== */
+    /* TIMELINE FLOW (PRIMARY CONSUMER PATH)               */
+    /* ================================================== */
+
+    /**
+     * Returns all ACTIVE supplements for a given date,
+     * enriched with user settings.
+     *
+     * Important:
+     * - `date` is NOT applied at the SQL level.
+     * - Date-based filtering happens later in the use-case:
+     *   `shouldTakeToday(date)`
+     *
+     * Flow shape:
+     *   Flow<List<SupplementEntity>>
+     *     → flatMapLatest
+     *     → combine(settings per supplement)
+     *     → Flow<List<SupplementWithUserSettings>>
+     *
+     * Intermediary tables:
+     * - supplements
+     * - supplement_user_settings
+     */
+    override fun getSupplementsForDate(
+        date: String
+    ): Flow<List<SupplementWithUserSettings>> {
+        return supplementDao.getActiveSupplementsFlow()
+            .flatMapLatest { supplements ->
+                if (supplements.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    combine(
+                        supplements.map { supplement ->
+                            supplementUserSettingsDao
+                                .observeSettings(supplement.id)
+                                .map { settings ->
+                                    SupplementWithUserSettings(
+                                        supplement = supplement.toDomain(),
+                                        userSettings = settings?.toUserSupplementSettings(),
+                                        doseState = MealAwareDoseState.Unknown
+                                    )
+                                }
+                        }
+                    ) { it.toList() }
+                }
+            }
+    }
+
+    /**
+     * Observe a single supplement with live user settings.
+     * Used by detail screens.
+     */
+    override fun observeSupplement(id: Long): Flow<SupplementWithUserSettings?> =
+        combine(
+            supplementDao.observeSupplementById(id),
+            supplementUserSettingsDao.observeSettings(id)
+        ) { supplement, settings ->
+            supplement?.let {
+                SupplementWithUserSettings(
+                    supplement = it.toDomain(),
+                    userSettings = settings?.toUserSupplementSettings(),
+                    doseState = MealAwareDoseState.Unknown
+                )
+            }
+        }
+
+    /* ================================================== */
+    /* SUPPLEMENT LISTING                                 */
+    /* ================================================== */
 
     override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
@@ -70,31 +149,24 @@ class SupplementRepositoryImpl @Inject constructor(
         supplementDao.getActiveSupplementsFlow()
             .map { it.map(SupplementEntity::toDomain) }
 
-    override fun observeSupplement(id: Long): Flow<SupplementWithUserSettings?> =
-        combine(
-            supplementDao.observeSupplementById(id),
-            supplementUserSettingsDao.observeSettings(id)
-        ) { supplement, settings ->
-            supplement?.let {
-                SupplementWithUserSettings(
-                    supplement = it.toDomain(),
-                    userSettings = settings?.toUserSupplementSettings(),
-                    doseState = MealAwareDoseState.Unknown
-                )
-            }
-        }
+    override fun isActive(supplement: Supplement): Boolean =
+        supplement.isActive
 
-//    override suspend fun getSupplementWithUserSettings(id: Long): SupplementWithUserSettings? =
-//        supplementDao.getSupplementWithSettings(id)?.toDomainSafe()
-
-    /* -------------------------------------------------- */
-    /* Ingredients                                        */
-    /* -------------------------------------------------- */
+    /* ================================================== */
+    /* INGREDIENT AGGREGATION                             */
+    /* ================================================== */
 
     override fun getAllIngredients(): Flow<List<Ingredient>> =
         ingredientDao.getAllIngredientsFlow()
             .map { it.map(IngredientEntity::toDomain) }
 
+    /**
+     * Aggregates ingredient totals for a day by joining:
+     * - supplement_daily_log
+     * - supplements_with_ingredients
+     *
+     * This is a READ-ONLY aggregation.
+     */
     override suspend fun getDailyIngredientSummary(
         date: LocalDate
     ): List<DailyIngredientSummary> {
@@ -128,10 +200,16 @@ class SupplementRepositoryImpl @Inject constructor(
         return totals.values.toList()
     }
 
-    /* -------------------------------------------------- */
-    /* Dose Logging                                       */
-    /* -------------------------------------------------- */
+    /* ================================================== */
+    /* DOSE LOGGING                                       */
+    /* ================================================== */
 
+    /**
+     * Inserts a dose log row.
+     *
+     * Intermediary table:
+     * - supplement_daily_log
+     */
     override suspend fun logDose(
         supplementId: Long,
         date: LocalDate,
@@ -157,9 +235,9 @@ class SupplementRepositoryImpl @Inject constructor(
         )
     }
 
-    /* -------------------------------------------------- */
-    /* Scheduling / Timing                                */
-    /* -------------------------------------------------- */
+    /* ================================================== */
+    /* SCHEDULING / EVENT TIMES                           */
+    /* ================================================== */
 
     override suspend fun setHourZero(date: LocalDate, time: LocalTime) {
         dailyStartTimeDao.upsert(
@@ -174,25 +252,27 @@ class SupplementRepositoryImpl @Inject constructor(
         dailyStartTimeDao.getStartTime(date.toString())
             ?.let { LocalTime.fromSecondOfDay(it.hourZero) }
 
+    /**
+     * Determines if a supplement should be taken on a date.
+     *
+     * NOTE:
+     * This is intentionally domain-level logic, not SQL.
+     */
     override suspend fun shouldTakeToday(
         supplement: Supplement,
         date: LocalDate
     ): Boolean {
-     return when (supplement.frequencyType) {
+        return when (supplement.frequencyType) {
             FrequencyType.DAILY -> true
             FrequencyType.WEEKLY ->
                 supplement.weeklyDays?.contains(date.dayOfWeek) ?: false
 
             FrequencyType.EVERY_X_DAYS -> {
                 val interval = supplement.frequencyInterval ?: return false
-
                 val last = supplement.lastTakenDate?.let(LocalDate::parse)
                 val start = supplement.startDate?.let(LocalDate::parse)
 
-                val due = last
-                    ?.plus(DatePeriod(days = interval))
-                    ?: start
-
+                val due = last?.plus(DatePeriod(days = interval)) ?: start
                 date == due
             }
         }
@@ -204,10 +284,9 @@ class SupplementRepositoryImpl @Inject constructor(
     ): LocalTime? =
         getHourZero(date)?.let { hz ->
             supplement.offsetMinutes?.let { mins ->
-                val seconds =
-                    hz.toSecondOfDay() + (mins * 60)
-
-                LocalTime.fromSecondOfDay(seconds)
+                LocalTime.fromSecondOfDay(
+                    hz.toSecondOfDay() + mins * 60
+                )
             }
         }
 
@@ -253,49 +332,8 @@ class SupplementRepositoryImpl @Inject constructor(
 
         return if (anchor == DoseAnchorType.MIDNIGHT)
             LocalTime.fromSecondOfDay(0)
-        else
-            null
+        else null
     }
-
-    override suspend fun updateUserPreferredDose(
-        supplementId: Long,
-        dose: Double,
-        unit: SupplementDoseUnit
-    ) {
-        Log.d("Meow", "SupplementRepositoryImpl> updateUserPreferredDose NOT IMPLEMENTED: $supplementId, $dose, $unit")
-//        supplementUserSettingsDao.upsert(
-//            supplementId = supplementId,
-//            preferredServingSize = dose,
-//            preferredUnit = unit)
-    }
-
-    override fun getSupplementsForDate(
-        date: String
-    ): Flow<List<SupplementWithUserSettings>> {
-        return supplementDao.getActiveSupplementsFlow()
-            .flatMapLatest { supplements ->
-                if (supplements.isEmpty()) {
-                    flowOf(emptyList())
-                } else {
-                    combine(
-                        supplements.map { supplement ->
-                            supplementUserSettingsDao
-                                .observeSettings(supplement.id)
-                                .map { settings ->
-                                    SupplementWithUserSettings(
-                                        supplement = supplement.toDomain(),
-                                        userSettings = settings?.toUserSupplementSettings(),
-                                        doseState = MealAwareDoseState.Unknown
-                                    )
-                                }
-                        }
-                    ) { it.toList() }
-                }
-            }
-    }
-
-
-
 
     override suspend fun overrideEventTime(
         date: LocalDate,
@@ -311,11 +349,27 @@ class SupplementRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun removeEventOverride(date: LocalDate, anchor: DoseAnchorType) {
+    override suspend fun removeEventOverride(
+        date: LocalDate,
+        anchor: DoseAnchorType
+    ) {
         eventTimeDao.removeOverride(date.toString(), anchor)
     }
 
-    override fun isActive(supplement: Supplement): Boolean = supplement.isActive
+    /* ================================================== */
+    /* USER SETTINGS (FUTURE)                             */
+    /* ================================================== */
+
+    override suspend fun updateUserPreferredDose(
+        supplementId: Long,
+        dose: Double,
+        unit: SupplementDoseUnit
+    ) {
+        Log.d(
+            "Meow",
+            "SupplementRepositoryImpl> updateUserPreferredDose NOT IMPLEMENTED: $supplementId, $dose, $unit"
+        )
+    }
 
     override suspend fun setDefaultEventTime(
         anchor: DoseAnchorType,
