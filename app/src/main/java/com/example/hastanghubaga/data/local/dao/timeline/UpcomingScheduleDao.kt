@@ -4,42 +4,37 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UpcomingScheduleDao {
 
-    /* -------------------------------------------------- */
-    /* Writes                                              */
-    /* -------------------------------------------------- */
+    /** Clear and repopulate atomically */
+    @Transaction
+    suspend fun replaceAll(items: List<UpcomingScheduleEntity>) {
+        clearAll()
+        insertAll(items)
+    }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(items: List<UpcomingScheduleEntity>)
 
-    @Query("DELETE FROM upcoming_schedule WHERE scheduledAt >= :fromUtc")
-    suspend fun clearFrom(fromUtc: Long)
+    @Query("DELETE FROM upcoming_schedule")
+    suspend fun clearAll()
 
-    /* -------------------------------------------------- */
-    /* Reads                                               */
-    /* -------------------------------------------------- */
-
+    /** Used by widget + alerts */
     @Query("""
         SELECT * FROM upcoming_schedule
-        WHERE scheduledAt >= :nowUtc
+        WHERE scheduledAt >= :fromUtc
         ORDER BY scheduledAt ASC
-        LIMIT :limit
     """)
+
     fun observeUpcoming(
-        nowUtc: Long,
-        limit: Int
+        fromUtc: Long
     ): Flow<List<UpcomingScheduleEntity>>
 
-    @Query("""
-        SELECT * FROM upcoming_schedule
-        WHERE scheduledAt >= :nowUtc
-        ORDER BY scheduledAt ASC
-        LIMIT 1
-    """)
-    suspend fun getNextUpcoming(nowUtc: Long): UpcomingScheduleEntity?
+    @Query("SELECT * FROM upcoming_schedule ORDER BY scheduledAt ASC")
+    fun observeAll(): Flow<List<UpcomingScheduleEntity>>
 }

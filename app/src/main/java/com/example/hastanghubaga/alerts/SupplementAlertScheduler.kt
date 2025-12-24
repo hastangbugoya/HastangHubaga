@@ -1,79 +1,125 @@
 package com.example.hastanghubaga.alerts
 
+import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
-import com.example.hastanghubaga.domain.model.supplement.Supplement
-import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
-import kotlinx.coroutines.runBlocking
-import kotlinx.datetime.Instant
-import kotlinx.datetime.toKotlinInstant
-import java.time.ZonedDateTime
+import android.os.Build
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.ZoneId
+import javax.inject.Inject
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 
-class SupplementAlertScheduler(
-    private val repo: SupplementRepository
+class SupplementAlertScheduler @Inject constructor(
+    @ApplicationContext private val context: Context
 ) {
 
-    fun scheduleUpcomingDoses(context: Context) {
+    // ✅ AlarmManager belongs HERE (single owner, app context)
+    private val alarmManager: AlarmManager =
+        context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val now = ZonedDateTime.now().toInstant().toKotlinInstant()
-        val cutoff = ZonedDateTime.now().plusDays(1).toInstant().toKotlinInstant()// schedule next 24 hours
+    private val zoneId: ZoneId = ZoneId.systemDefault()
 
-        runBlocking {
+    /* ---------------------------------------------------------------------- */
+    /* Capability                                                             */
+    /* ---------------------------------------------------------------------- */
 
-            repo.getAllSupplementsOnce()
-                .filter { repo.isActive(it) }
-                .forEach { supplement ->
-
-                    if (supplement.doseAnchorType == DoseAnchorType.ANYTIME) {
-                        return@forEach
-                    }
-
-                    val nextDose = repo.getNextDoseDateTime(supplement)
-
-                    if (nextDose != null && nextDose >= now && nextDose < cutoff) {
-                        scheduleAlarm(context, supplement, nextDose)
-                    }
-                }
+    /**
+     * Whether this app is currently allowed to schedule exact alarms.
+     *
+     * UI layer should observe this and prompt the user if false.
+     */
+    fun canScheduleExactAlarms(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
         }
     }
 
+    /* ---------------------------------------------------------------------- */
+    /* Scheduling API                                                          */
+    /* ---------------------------------------------------------------------- */
 
-    private fun scheduleAlarm(
-        context: Context,
-        supplement: Supplement,
-        dateTime: Instant
+    fun reschedule(items: List<UpcomingSchedule>) {
+        val nowMillis = System.currentTimeMillis()
+
+        items
+            .asSequence()
+            .filter { !it.isCompleted }
+            .map { item ->
+                val triggerAtMillis =
+                    item.scheduledAt
+                        .toInstant(TimeZone.currentSystemDefault())
+                        .toEpochMilliseconds()
+
+                item to triggerAtMillis
+            }
+            .filter { (_, triggerAtMillis) ->
+                triggerAtMillis > nowMillis
+            }
+            .distinctBy { (item, _) -> item.id }
+            .forEach { (item, triggerAtMillis) ->
+                scheduleOne(item, triggerAtMillis)
+            }
+    }
+
+    private fun scheduleOne(
+        item: UpcomingSchedule,
+        triggerAtMillis: Long
     ) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-            ?: return
+        val pendingIntent = buildPendingIntent(item)
 
-        val triggerMillis = dateTime.toEpochMilliseconds()
-
-        val intent = Intent(context, SupplementAlertReceiver::class.java).apply {
-            putExtra("supplement_id", supplement.id)
-            putExtra("supplement_name", supplement.name)
+        when (scheduleExact(triggerAtMillis, pendingIntent)) {
+            ScheduleResult.Scheduled -> {
+                // success — nothing else to do
+            }
+            ScheduleResult.PermissionRequired -> {
+                // intentionally no-op
+                // UI will observe capability and prompt user
+            }
         }
+    }
 
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            supplement.id.toInt(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Android S+ exact alarm permission check
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
-            !alarmManager.canScheduleExactAlarms()
-        ) {
-            return
+    /**
+     * Schedules an exact alarm if permitted.
+     * Never throws.
+     */
+    private fun scheduleExact(
+        triggerAtMillis: Long,
+        pendingIntent: PendingIntent
+    ): ScheduleResult {
+        if (!canScheduleExactAlarms()) {
+            return ScheduleResult.PermissionRequired
         }
 
         alarmManager.setExactAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            triggerMillis,
+            triggerAtMillis,
             pendingIntent
+        )
+
+        return ScheduleResult.Scheduled
+    }
+
+    /* ---------------------------------------------------------------------- */
+    /* PendingIntent                                                           */
+    /* ---------------------------------------------------------------------- */
+
+    private fun buildPendingIntent(
+        item: UpcomingSchedule
+    ): PendingIntent {
+        val intent = SupplementAlertReceiver.createIntent(
+            context = context,
+            schedule = item
+        )
+
+        return PendingIntent.getBroadcast(
+            context,
+            item.id.toInt(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 }

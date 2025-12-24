@@ -22,4 +22,5 @@ sealed interface TimelineItem {
         override val time: LocalTime,
         val meal: Meal
     ) : TimelineItem
+
 }

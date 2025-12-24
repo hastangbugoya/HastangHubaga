@@ -131,8 +131,6 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-    private fun List<TimelineItem>.collectLatest(function: Any) {}
-
     private fun handleTimelineItemClicked(
         uiItem: TimelineItemUiModel
     ) {

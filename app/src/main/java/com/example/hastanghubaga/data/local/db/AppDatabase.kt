@@ -26,8 +26,10 @@ import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
+import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 
 
 @Database(
@@ -45,6 +47,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTime
         MealEntity::class,
         MealNutritionEntity::class,
         UserNutritionGoalsEntity::class,
+        UpcomingScheduleEntity::class
         // add others here later
     ],
     version = 1,
@@ -63,6 +66,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealEntityDao(): MealEntityDao
     abstract fun mealNutritionDao(): MealNutritionDao
     abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
+    abstract fun upcomingScheduleDao(): UpcomingScheduleDao
+
 
     companion object
 
