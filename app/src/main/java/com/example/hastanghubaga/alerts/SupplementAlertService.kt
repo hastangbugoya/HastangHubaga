@@ -2,12 +2,17 @@ package com.example.hastanghubaga.alerts
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import androidx.annotation.RequiresPermission
+import androidx.core.app.NotificationCompat
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
@@ -19,6 +24,9 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import javax.inject.Inject
 import com.example.hastanghubaga.BuildConfig
+import com.example.hastanghubaga.R
+import kotlinx.coroutines.SupervisorJob
+
 /**
  * App-level background service responsible for scheduling system alarms
  * for upcoming supplement doses.
@@ -134,15 +142,66 @@ import com.example.hastanghubaga.BuildConfig
 class SupplementAlertService : Service() {
 
     @Inject lateinit var repo: SupplementRepository
+    val serviceJob = SupervisorJob()
+    val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int
+    ): Int {
+
+        // 1️⃣ MUST happen immediately
+        startForeground(
+            NOTIFICATION_ID,
+            buildForegroundNotification()
+        )
+
+        // 2️⃣ Now you may launch suspend work
+        serviceScope.launch {
+            try {
+                scheduleActiveSupplementAlerts()
+            } finally {
+                stopSelf()
+            }
+        }
+
+
+        // 2️⃣ Now it's safe to do async work
         CoroutineScope(Dispatchers.IO).launch {
             scheduleActiveSupplementAlerts()
+            stopSelf()
         }
-        return START_STICKY
+
+        return START_NOT_STICKY
     }
+
+    private fun buildForegroundNotification(): Notification {
+        // Create channel (safe to call multiple times)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Supplement Alerts",
+                NotificationManager.IMPORTANCE_LOW // no sound/vibration
+            ).apply {
+                description = "Keeps supplement scheduling active"
+            }
+
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_supplement_eye_alert) // must exist
+            .setContentTitle("HastangHubaga")
+            .setContentText("Managing supplement reminders")
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build()
+    }
+
 
     private suspend fun scheduleActiveSupplementAlerts() {
         val context = applicationContext
@@ -193,6 +252,12 @@ class SupplementAlertService : Service() {
             pendingIntent
         )
     }
+
+    private companion object {
+        const val NOTIFICATION_ID = 1001
+        const val CHANNEL_ID = "supplement_alerts"
+    }
 }
+
 
 
