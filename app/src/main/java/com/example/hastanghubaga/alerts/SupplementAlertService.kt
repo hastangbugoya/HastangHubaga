@@ -202,7 +202,6 @@ class SupplementAlertService : Service() {
             .build()
     }
 
-
     private suspend fun scheduleActiveSupplementAlerts() {
         val context = applicationContext
 
