@@ -97,7 +97,6 @@ fun TodayScreen(
                     bannerController.show(effect.message)
 
                 is TodayScreenContract.Effect.ShowDoseInputDialog -> {
-                    Log.d("Meow", "TodayScreen> viewModel.effect.collect>is TodayScreenContract.Effect.ShowDoseInputDialog ")
                     doseSheetData = effect
                 }
 

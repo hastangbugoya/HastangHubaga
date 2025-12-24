@@ -7,4 +7,6 @@ import kotlinx.coroutines.flow.Flow
 interface UpcomingScheduleRepository {
     fun observeUpcoming(): Flow<List<UpcomingSchedule>>
     suspend fun replaceAll(items: List<UpcomingSchedule>)
+
+    fun observeNextUpcoming(): Flow<UpcomingSchedule?>
 }

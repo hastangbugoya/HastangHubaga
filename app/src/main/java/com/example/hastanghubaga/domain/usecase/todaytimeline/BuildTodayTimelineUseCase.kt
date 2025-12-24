@@ -47,9 +47,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
-        mealItems.forEach {
-            Log.d("Meow", "BuildTodayTimelineUseCase> mealItem: $it")
-        }
+//        mealItems.forEach {
+//            Log.d("Meow", "BuildTodayTimelineUseCase> mealItem: $it")
+//        }
         val activityItems =
             activities.map { activity ->
                 TimelineItem.ActivityTimelineItem(
@@ -58,10 +58,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
-        activityItems.forEach {
-            Log.d("Meow", "BuildTodayTimelineUseCase> activityItem: $it")
-        }
-
+//        activityItems.forEach {
+//            Log.d("Meow", "BuildTodayTimelineUseCase> activityItem: $it")
+//        }
         val merged = (supplementItems + mealItems + activityItems)
             .sortedBy { it.time }
 

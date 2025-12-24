@@ -6,7 +6,9 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
+import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import kotlinx.coroutines.flow.Flow
+import java.time.LocalDateTime
 
 @Dao
 interface UpcomingScheduleDao {
@@ -37,4 +39,15 @@ interface UpcomingScheduleDao {
 
     @Query("SELECT * FROM upcoming_schedule ORDER BY scheduledAt ASC")
     fun observeAll(): Flow<List<UpcomingScheduleEntity>>
+
+    @Query("""
+    SELECT *
+    FROM upcoming_schedule
+    WHERE isCompleted = 0
+      AND scheduledAt > :now
+    ORDER BY scheduledAt ASC
+    LIMIT 1
+""")
+    fun observeNextUpcoming(now: LocalDateTime): Flow<UpcomingScheduleEntity?>
+
 }

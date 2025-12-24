@@ -42,7 +42,6 @@ fun TopBanner(
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
-            Log.d("Meow", "TopBanner> message: $message")
             Text(
                 text = message,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
