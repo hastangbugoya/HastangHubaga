@@ -11,6 +11,7 @@ import androidx.annotation.RequiresPermission
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -128,6 +129,7 @@ import javax.inject.Inject
  *
  * Those changes should **not** alter the Instant-based contract.
  */
+@AndroidEntryPoint
 class SupplementAlertService : Service() {
 
     @Inject lateinit var repo: SupplementRepository

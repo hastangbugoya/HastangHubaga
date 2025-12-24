@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.repository
 
+import android.util.Log
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -25,6 +26,7 @@ import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogR
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
@@ -259,12 +261,19 @@ class SupplementRepositoryImpl @Inject constructor(
         dose: Double,
         unit: SupplementDoseUnit
     ) {
-        TODO("Not yet implemented")
+        Log.d("Meow", "SupplementRepositoryImpl> updateUserPreferredDose NOT IMPLEMENTED: $supplementId, $dose, $unit")
+//        supplementUserSettingsDao.upsert(
+//            supplementId = supplementId,
+//            preferredServingSize = dose,
+//            preferredUnit = unit)
     }
 
     override fun getSupplementsForDate(date: String): Flow<List<SupplementWithUserSettings>> {
-        TODO("Not yet implemented")
+        Log.d("Meow", "SupplementRepositoryImpl> getSupplementsForDate NOT IMPLEMENTED: $date")
+        return flowOf(emptyList())
     }
+
+
 
     override suspend fun overrideEventTime(
         date: LocalDate,

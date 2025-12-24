@@ -338,18 +338,15 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         db.execSQL(
             """
         INSERT OR IGNORE INTO event_default_times (anchor, timeSeconds)
-        VALUES
-        (
-            'MIDNIGHT',        ${LocalTime(0, 0).toSecondOfDay()},
-            'WAKEUP',          ${LocalTime(7, 0).toSecondOfDay()},
-            'BREAKFAST',       ${LocalTime(8, 0).toSecondOfDay()},
-            'LUNCH',           ${LocalTime(12, 0).toSecondOfDay()},
-            'DINNER',          ${LocalTime(18, 0).toSecondOfDay()},
-            'BEFORE_WORKOUT',  ${LocalTime(16, 30).toSecondOfDay()},
-            'AFTER_WORKOUT',   ${LocalTime(17, 45).toSecondOfDay()},
-            'SLEEP',           ${LocalTime(21, 0).toSecondOfDay()}
-        )
-        ;
+            VALUES
+            ('MIDNIGHT',        0),
+            ('WAKEUP',          25200),
+            ('BREAKFAST',       28800),
+            ('LUNCH',           43200),
+            ('DINNER',          64800),
+            ('BEFORE_WORKOUT',  59400),
+            ('AFTER_WORKOUT',   63900),
+            ('SLEEP',           75600);
         """.trimIndent()
         )
         db.execSQL(
