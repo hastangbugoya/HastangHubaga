@@ -2,8 +2,10 @@ package com.example.hastanghubaga.ui.tokens.previews
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -38,7 +40,13 @@ fun MotionTokenPreview() {
             modifier = Modifier
                 .size(size)
                 .background(Color.Magenta)
-                .clickable { expanded = !expanded }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = LocalIndication.current,
+                    onClick = {
+                        expanded = !expanded
+                    }
+                )
         )
         Spacer(Modifier.height(8.dp))
         Text("Tap box to animate")

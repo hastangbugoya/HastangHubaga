@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import javax.inject.Inject
+import com.example.hastanghubaga.BuildConfig
 /**
  * App-level background service responsible for scheduling system alarms
  * for upcoming supplement doses.

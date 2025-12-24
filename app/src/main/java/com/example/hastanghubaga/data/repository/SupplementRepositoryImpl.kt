@@ -26,6 +26,7 @@ import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogR
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.DatePeriod
@@ -268,10 +269,31 @@ class SupplementRepositoryImpl @Inject constructor(
 //            preferredUnit = unit)
     }
 
-    override fun getSupplementsForDate(date: String): Flow<List<SupplementWithUserSettings>> {
-        Log.d("Meow", "SupplementRepositoryImpl> getSupplementsForDate NOT IMPLEMENTED: $date")
-        return flowOf(emptyList())
+    override fun getSupplementsForDate(
+        date: String
+    ): Flow<List<SupplementWithUserSettings>> {
+        return supplementDao.getActiveSupplementsFlow()
+            .flatMapLatest { supplements ->
+                if (supplements.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    combine(
+                        supplements.map { supplement ->
+                            supplementUserSettingsDao
+                                .observeSettings(supplement.id)
+                                .map { settings ->
+                                    SupplementWithUserSettings(
+                                        supplement = supplement.toDomain(),
+                                        userSettings = settings?.toUserSupplementSettings(),
+                                        doseState = MealAwareDoseState.Unknown
+                                    )
+                                }
+                        }
+                    ) { it.toList() }
+                }
+            }
     }
+
 
 
 
