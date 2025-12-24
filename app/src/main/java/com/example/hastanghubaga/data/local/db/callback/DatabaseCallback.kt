@@ -3,8 +3,11 @@ package com.example.hastanghubaga.data.local.db.callback
 import android.util.Log
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.hastanghubaga.domain.time.TimePolicy
-import java.time.LocalTime
+import com.example.hastanghubaga.data.time.JavaTimeAdapter
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
 import javax.inject.Inject
 
 /**
@@ -22,14 +25,13 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
         val zoneId = java.time.ZoneId.systemDefault()
-        val today = java.time.LocalDate.now(zoneId)
+        val today: LocalDate =
+            DomainTimePolicy.todayLocal()
 
         fun millisAt(hour: Int, minute: Int): Long =
-            today
-                .atTime(hour, minute)
-                .atZone(zoneId)
-                .toInstant()
-                .toEpochMilli()
+            JavaTimeAdapter.domainLocalDateTimeToUtcMillis(
+                today.atTime(LocalTime(hour, minute))
+            )
         // -------------------------------
         // INGREDIENTS (45)
         // -------------------------------
@@ -337,14 +339,16 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             """
         INSERT OR IGNORE INTO event_default_times (anchor, timeSeconds)
         VALUES
-        ('MIDNIGHT', ${LocalTime.MIDNIGHT.toSecondOfDay()}),
-            ('WAKEUP', ${LocalTime.of(7, 0).toSecondOfDay()}),
-            ('BREAKFAST', ${LocalTime.of(8, 0).toSecondOfDay()}),
-            ('LUNCH', ${LocalTime.of(12, 0).toSecondOfDay()}),
-            ('DINNER', ${LocalTime.of(18, 0).toSecondOfDay()}),
-            ('BEFORE_WORKOUT', ${LocalTime.of(16, 30).toSecondOfDay()}),
-            ('AFTER_WORKOUT', ${LocalTime.of(17, 45).toSecondOfDay()}),
-            ('SLEEP', ${LocalTime.of(21, 0).toSecondOfDay()})
+        (
+            'MIDNIGHT',        ${LocalTime(0, 0).toSecondOfDay()},
+            'WAKEUP',          ${LocalTime(7, 0).toSecondOfDay()},
+            'BREAKFAST',       ${LocalTime(8, 0).toSecondOfDay()},
+            'LUNCH',           ${LocalTime(12, 0).toSecondOfDay()},
+            'DINNER',          ${LocalTime(18, 0).toSecondOfDay()},
+            'BEFORE_WORKOUT',  ${LocalTime(16, 30).toSecondOfDay()},
+            'AFTER_WORKOUT',   ${LocalTime(17, 45).toSecondOfDay()},
+            'SLEEP',           ${LocalTime(21, 0).toSecondOfDay()}
+        )
         ;
         """.trimIndent()
         )
@@ -362,9 +366,9 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             """
             INSERT INTO event_day_of_week_times (anchor, dayOfWeek, timeSeconds)
             VALUES
-                ('BREAKFAST', 'SATURDAY', ${LocalTime.of(10, 0).toSecondOfDay()}),
-                ('BREAKFAST', 'SUNDAY', ${LocalTime.of(6, 0).toSecondOfDay()}),
-                ('BREAKFAST', 'WEDNESDAY', ${LocalTime.of(9, 0).toSecondOfDay()})
+                ('BREAKFAST', 'SATURDAY', ${LocalTime(10, 0).toSecondOfDay()}),
+                ('BREAKFAST', 'SUNDAY', ${LocalTime(6, 0).toSecondOfDay()}),
+                ('BREAKFAST', 'WEDNESDAY', ${LocalTime(9, 0).toSecondOfDay()})
             ;
             """.trimIndent()
                 )
@@ -372,13 +376,16 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         // -------------------------------
         // MEALS ADDED HERE
         // -------------------------------
-        val todayMeals = TimePolicy.todayLocal()
+        val todayMeals = DomainTimePolicy.todayLocal()
 
-        fun mealMillis(h: Int, m: Int) =
-            TimePolicy.localDateTimeToUtcMillis(
-                today, java.time.
-                LocalTime.of(h, m)
-            )
+        fun mealMillis(h: Int, m: Int): Long {
+            val localDateTime =
+                today.atTime(
+                    LocalTime(h, m)
+                )
+
+            return JavaTimeAdapter.domainLocalDateTimeToUtcMillis(localDateTime)
+        }
 
         db.execSQL(
                 """

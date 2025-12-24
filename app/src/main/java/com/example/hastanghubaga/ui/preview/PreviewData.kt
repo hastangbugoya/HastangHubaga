@@ -7,7 +7,7 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.supplement.UserSupplementSettings
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 /**
  * Centralized fake data for Compose previews.
@@ -44,7 +44,7 @@ object PreviewData {
         ),
         userSettings = null,
         doseState = MealAwareDoseState.Ready,
-        scheduledTimes = listOf(LocalTime.of(8, 0)) // ✅ REQUIRED
+        scheduledTimes = listOf(LocalTime(8, 0)) // ✅ REQUIRED
     )
 
 

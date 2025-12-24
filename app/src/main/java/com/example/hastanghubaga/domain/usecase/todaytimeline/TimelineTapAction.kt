@@ -1,7 +1,7 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 /**
  * Represents the **domain-level outcome** of tapping a timeline item

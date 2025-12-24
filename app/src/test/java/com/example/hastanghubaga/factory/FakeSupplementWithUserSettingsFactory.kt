@@ -2,7 +2,7 @@ package com.example.hastanghubaga.factory
 
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 object FakeSupplementWithUserSettingsFactory {
 

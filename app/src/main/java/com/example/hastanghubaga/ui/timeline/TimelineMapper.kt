@@ -1,8 +1,11 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
+import com.example.hastanghubaga.data.time.JavaTimeAdapter
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.ui.util.UiFormatter
 import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
 
 fun SupplementWithUserSettings.toPreviewTimelineItems(): List<TimelineItem> =
@@ -33,7 +36,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
         is TimelineItem.MealTimelineItem ->
             TimelineItemUiModel.Meal(
                 id = meal.id,
-                time = meal.timestamp.toLocalTime(),
+                time = meal.timestamp.time,
                 title = meal.type.name,
                 subtitle = meal.notes,
                 type = meal.type,
@@ -41,11 +44,11 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
         is TimelineItem.ActivityTimelineItem ->
             TimelineItemUiModel.Activity(
                 id = activity.id,
-                time = activity.start.toLocalTime(),
+                time = activity.start.time,
                 title = activity.type.name,
-                subtitle = "${activity.start.toLocalTime()}${activity.end?.let { " to ${it.toLocalTime()}" }}",
+                subtitle = UiFormatter.formatTimeRange(start = activity.start, end = activity.end),
                 activityType = activity.type,
-                endTime = activity.end?.toLocalTime()
+                endTime = activity.end?.time
             )
     }
 

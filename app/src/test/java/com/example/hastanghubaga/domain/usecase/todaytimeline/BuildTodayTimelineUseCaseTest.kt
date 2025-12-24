@@ -8,10 +8,10 @@ import com.example.hastanghubaga.factory.FakeActivityFactory
 import com.example.hastanghubaga.factory.FakeMealFactory
 import com.example.hastanghubaga.factory.FakeSupplementFactory
 import com.example.hastanghubaga.factory.FakeSupplementWithUserSettingsFactory
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import org.junit.Assert
 import org.junit.Test
-import java.time.LocalDateTime
-import java.time.LocalTime
 
 class BuildTodayTimelineUseCaseTest {
 
@@ -65,8 +65,8 @@ class BuildTodayTimelineUseCaseTest {
         val supplement = supplement(
             name = "Vitamin D",
             times = listOf(
-                LocalTime.of(8, 0),
-                LocalTime.of(20, 0)
+                LocalTime(8, 0),
+                LocalTime(20, 0)
             )
         )
 
@@ -82,7 +82,7 @@ class BuildTodayTimelineUseCaseTest {
     fun `meals are mapped correctly`() {
         val meal = meal(
             name = "Lunch",
-            at = LocalDateTime.of(2025, 1, 1, 12, 30)
+            at = LocalDateTime(2025, 1, 1, 12, 30)
         )
 
         val result = useCase(
@@ -91,7 +91,7 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val item = result.single() as TimelineItem.MealTimelineItem
-        Assert.assertEquals(LocalTime.of(12, 30), item.time)
+        Assert.assertEquals(LocalTime(12, 30), item.time)
         Assert.assertEquals(meal, item.meal)
     }
 
@@ -99,7 +99,7 @@ class BuildTodayTimelineUseCaseTest {
     fun `activities are mapped correctly`() {
         val activity = activity(
             name = "Workout",
-            at = LocalDateTime.of(2025, 1, 1, 6, 0)
+            at = LocalDateTime(2025, 1, 1, 6, 0)
         )
 
         val result = useCase(
@@ -108,7 +108,7 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val item = result.single() as TimelineItem.ActivityTimelineItem
-        Assert.assertEquals(LocalTime.of(6, 0), item.time)
+        Assert.assertEquals(LocalTime(6, 0), item.time)
         Assert.assertEquals(activity, item.activity)
     }
 
@@ -116,17 +116,17 @@ class BuildTodayTimelineUseCaseTest {
     fun `mixed inputs are merged and sorted by time`() {
         val supplement = supplement(
             "Magnesium",
-            listOf(LocalTime.of(22, 0))
+            listOf(LocalTime(22, 0))
         )
 
         val meal = meal(
             "Breakfast",
-            LocalDateTime.of(2025, 1, 1, 8, 0)
+            LocalDateTime(2025, 1, 1, 8, 0)
         )
 
         val activity = activity(
             "Run",
-            LocalDateTime.of(2025, 1, 1, 6, 30)
+            LocalDateTime(2025, 1, 1, 6, 30)
         )
 
         val result = useCase(
@@ -137,9 +137,9 @@ class BuildTodayTimelineUseCaseTest {
 
         Assert.assertEquals(
             listOf(
-                LocalTime.of(6, 30),
-                LocalTime.of(8, 0),
-                LocalTime.of(22, 0)
+                LocalTime(6, 30),
+                LocalTime(8, 0),
+                LocalTime(22, 0)
             ),
             result.map { it.time }
         )
@@ -149,12 +149,12 @@ class BuildTodayTimelineUseCaseTest {
     fun `items with same time do not crash`() {
         val supplement = supplement(
             "Zinc",
-            listOf(LocalTime.of(9, 0))
+            listOf(LocalTime(9, 0))
         )
 
         val meal = meal(
             "Snack",
-            LocalDateTime.of(2025, 1, 1, 9, 0)
+            LocalDateTime(2025, 1, 1, 9, 0)
         )
 
         val result = useCase(
@@ -163,7 +163,7 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         Assert.assertEquals(2, result.size)
-        Assert.assertEquals(LocalTime.of(9, 0), result[0].time)
-        Assert.assertEquals(LocalTime.of(9, 0), result[1].time)
+        Assert.assertEquals(LocalTime(9, 0), result[0].time)
+        Assert.assertEquals(LocalTime(9, 0), result[1].time)
     }
 }

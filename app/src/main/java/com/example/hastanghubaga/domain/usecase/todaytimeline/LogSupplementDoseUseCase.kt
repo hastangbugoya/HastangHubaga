@@ -3,7 +3,6 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
-import com.example.hastanghubaga.domain.time.TimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate

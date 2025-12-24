@@ -6,11 +6,11 @@ import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import javax.inject.Inject
-import com.example.hastanghubaga.domain.time.TimePolicy
 
 class ActivityRepositoryImpl @Inject constructor(
     private val dao: ActivityEntityDao
@@ -29,7 +29,7 @@ class ActivityRepositoryImpl @Inject constructor(
         dao.deleteActivity(activity.toEntity())
 
     override fun observeActivitiesForDate(date: LocalDate): Flow<List<Activity>> {
-        val (start, end) = TimePolicy.utcRangeForLocalDate(date)
+        val (start, end) = DomainTimePolicy.utcMillisRangeForLocalDate(date)
 
         return dao.observeActivitiesForDay(start, end)
             .map { it.map(ActivityEntity::toDomain) }

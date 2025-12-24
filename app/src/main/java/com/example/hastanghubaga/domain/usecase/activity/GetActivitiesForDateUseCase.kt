@@ -4,7 +4,7 @@ import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 
 /**

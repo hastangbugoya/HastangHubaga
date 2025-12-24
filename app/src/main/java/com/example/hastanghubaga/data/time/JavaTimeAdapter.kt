@@ -1,5 +1,7 @@
 package com.example.hastanghubaga.data.time
 
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -96,4 +98,41 @@ object JavaTimeAdapter {
             toJavaInstant(instant),
             zoneId
         )
+
+    /* -------------------- UTC MILLIS <-> DOMAIN -------------------- */
+
+    fun utcMillisToDomainLocalDateTime(
+        utcMillis: Long,
+        zoneId: ZoneId = ZoneId.systemDefault()
+    ): kotlinx.datetime.LocalDateTime =
+        kotlinx.datetime.Instant
+            .fromEpochMilliseconds(utcMillis)
+            .toLocalDateTime(
+                kotlinx.datetime.TimeZone.of(zoneId.id)
+            )
+
+    fun domainLocalDateTimeToUtcMillis(
+        localDateTime: kotlinx.datetime.LocalDateTime,
+        zoneId: ZoneId = ZoneId.systemDefault()
+    ): Long =
+        localDateTime
+            .toInstant(
+                kotlinx.datetime.TimeZone.of(zoneId.id)
+            )
+            .toEpochMilliseconds()
+
+
+    /* -------------------- KOTLIN DATETIME -> KOTLIN LOCALTIME -------------------- */
+    fun domainLocalDateTimeToLocalTime(
+        localDateTime: kotlinx.datetime.LocalDateTime
+    ): kotlinx.datetime.LocalTime =
+        kotlinx.datetime.LocalTime(
+            hour = localDateTime.hour,
+            minute = localDateTime.minute,
+            second = localDateTime.second,
+            nanosecond = localDateTime.nanosecond
+        )
+
+
+
 }

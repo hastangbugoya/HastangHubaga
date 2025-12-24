@@ -29,7 +29,7 @@ class BuildTodayTimelineUseCase @Inject constructor() {
         val mealItems =
             meals.map { meal ->
                 TimelineItem.MealTimelineItem(
-                    time = meal.timestamp.toLocalTime(),
+                    time = meal.timestamp.time,
                     meal = meal,
                 )
             }
@@ -40,7 +40,7 @@ class BuildTodayTimelineUseCase @Inject constructor() {
         val activityItems =
             activities.map { activity ->
                 TimelineItem.ActivityTimelineItem(
-                    time = activity.start.toLocalTime(),
+                    time = activity.start.time,
                     activity = activity,
                 )
             }

@@ -34,19 +34,19 @@ class FakeSupplementLogRepository : SupplementDoseLogRepository {
         )
     }
 
-    override suspend fun logDose(
-        supplementId: Long,
-        date: java.time.LocalDate,
-        time: java.time.LocalTime,
-        fractionTaken: Double,
-        doseUnit: SupplementDoseUnit
-    ) {
-        calls += Call(
-            supplementId,
-            date,
-            time,
-            fractionTaken,
-            doseUnit
-        )
-    }
+//    override suspend fun logDose(
+//        supplementId: Long,
+//        date: java.time.LocalDate,
+//        time: java.time.LocalTime,
+//        fractionTaken: Double,
+//        doseUnit: SupplementDoseUnit
+//    ) {
+//        calls += Call(
+//            supplementId,
+//            date,
+//            time,
+//            fractionTaken,
+//            doseUnit
+//        )
+//    }
 }

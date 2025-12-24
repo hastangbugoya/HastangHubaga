@@ -1,7 +1,8 @@
 package com.example.hastanghubaga.domain.model.activity
 
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import java.time.LocalDateTime
+import kotlinx.datetime.LocalDateTime
+
 
 data class Activity(
     val id: Long,

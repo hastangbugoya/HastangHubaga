@@ -4,7 +4,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 /**
  * Represents a **UI-facing model** for a single entry in the Today timeline.

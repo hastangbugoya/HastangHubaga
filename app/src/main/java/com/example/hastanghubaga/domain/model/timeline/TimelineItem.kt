@@ -3,7 +3,7 @@ package com.example.hastanghubaga.domain.model.timeline
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
 
 sealed interface TimelineItem {
     val time: LocalTime

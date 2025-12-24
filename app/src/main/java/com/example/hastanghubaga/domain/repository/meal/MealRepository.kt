@@ -7,6 +7,7 @@ import com.example.hastanghubaga.domain.model.meal.Meal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
+
 interface MealRepository {
 
     fun observeAll(): Flow<List<Meal>>
@@ -24,5 +25,5 @@ interface MealRepository {
 
     suspend fun deleteMeal(meal: MealEntity)
 
-    suspend fun getMealsByType(date: kotlinx.datetime.LocalDate, type: MealType): List<Meal>
+    suspend fun getMealsByType(date: LocalDate, type: MealType): List<Meal>
 }

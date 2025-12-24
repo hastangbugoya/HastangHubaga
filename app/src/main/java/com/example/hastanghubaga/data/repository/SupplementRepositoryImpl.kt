@@ -174,11 +174,12 @@ class SupplementRepositoryImpl @Inject constructor(
     override suspend fun shouldTakeToday(
         supplement: Supplement,
         date: LocalDate
-    ): Boolean =
-        when (supplement.frequencyType) {
+    ): Boolean {
+     return when (supplement.frequencyType) {
             FrequencyType.DAILY -> true
             FrequencyType.WEEKLY ->
                 supplement.weeklyDays?.contains(date.dayOfWeek) ?: false
+
             FrequencyType.EVERY_X_DAYS -> {
                 val interval = supplement.frequencyInterval ?: return false
 
@@ -192,6 +193,7 @@ class SupplementRepositoryImpl @Inject constructor(
                 date == due
             }
         }
+    }
 
     override suspend fun getPredictedNextDoseTime(
         supplement: Supplement,

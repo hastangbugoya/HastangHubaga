@@ -5,10 +5,12 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.Clock
 
 @HiltWorker
 class UpdateSupplementWidgetWorker @AssistedInject constructor(
@@ -19,7 +21,7 @@ class UpdateSupplementWidgetWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            val today = LocalDate.now()
+            val today = DomainTimePolicy.todayLocal(Clock.System)
             val active = repo.getActiveSupplements().first()
             val todaySupps = active.filter { repo.shouldTakeToday(it, today) }
             val names = todaySupps.map { it.name }

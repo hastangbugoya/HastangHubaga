@@ -2,7 +2,7 @@ package com.example.hastanghubaga.domain.repository.activity
 
 import com.example.hastanghubaga.domain.model.activity.Activity
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 interface ActivityRepository {
 

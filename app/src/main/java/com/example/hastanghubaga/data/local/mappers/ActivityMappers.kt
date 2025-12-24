@@ -1,8 +1,9 @@
 package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
+import com.example.hastanghubaga.data.time.JavaTimeAdapter
 import com.example.hastanghubaga.domain.model.activity.Activity
-import com.example.hastanghubaga.domain.time.TimePolicy
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -11,8 +12,8 @@ fun ActivityEntity.toDomain(): Activity =
     Activity(
         id = id,
         type = type,
-        start = TimePolicy.utcMillisToLocalDateTime(startTimestamp),
-        end = endTimestamp?. let {TimePolicy.utcMillisToLocalDateTime(endTimestamp)},
+        start = JavaTimeAdapter.utcMillisToDomainLocalDateTime(startTimestamp),
+        end = endTimestamp?.let(JavaTimeAdapter::utcMillisToDomainLocalDateTime),
         notes = notes
     )
 
@@ -20,10 +21,8 @@ fun Activity.toEntity(): ActivityEntity =
     ActivityEntity(
         id = id,
         type = type,
-        startTimestamp = TimePolicy.localDateTimeToUtcMillis(start),
-        endTimestamp = end?. let {
-            TimePolicy.localDateTimeToUtcMillis(end)
-                                 },
+        startTimestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(start),
+        endTimestamp = end?.let(JavaTimeAdapter::domainLocalDateTimeToUtcMillis),
         notes = notes
     )
 

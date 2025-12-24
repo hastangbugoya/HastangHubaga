@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -22,6 +23,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import javax.inject.Inject
+
 
 /**
  * Returns supplements scheduled for a specific date, enriched with
@@ -76,17 +78,23 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         mealsToday: List<MealLog>
     ): SupplementWithUserSettings {
 
-        val dosesPerDay = resolveDosesPerDay()
+        val dosesPerDay: Double = resolveDosesPerDay()
         val offsetMinutes = supplement.offsetMinutes ?: 0
-        val baseTime = this@GetSupplementsWithUserSettingsForDateUseCase
-            .resolveAnchorTime(supplement.doseAnchorType, eventTimeDao)
-        val scheduledTimes =
+        val baseTime: LocalTime? = resolveAnchorTime(supplement.doseAnchorType, eventTimeDao)
+        val scheduledTimes: List<LocalTime> =
             if (baseTime == null) {
                 emptyList()
             } else {
+                val anchorTime: LocalTime = baseTime
                 val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
+
                 List(doseCount) { index ->
-                    baseTime.plus((index * offsetMinutes), DateTimeUnit.MINUTE)
+                    val totalSeconds =
+                        anchorTime.toSecondOfDay() + (index * offsetMinutes * 60)
+
+                    LocalTime.fromSecondOfDay(
+                        ((totalSeconds % 86_400) + 86_400) % 86_400
+                    )
                 }
             }
         // Resolve dose state per scheduled time
@@ -173,12 +181,12 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private fun fallbackAnchorTime(anchor: DoseAnchorType): LocalTime? =
         when (anchor) {
             DoseAnchorType.MIDNIGHT -> null
-            DoseAnchorType.WAKEUP -> LocalTime.of(7, 0)
-            DoseAnchorType.BREAKFAST -> LocalTime.of(8, 0)
-            DoseAnchorType.LUNCH -> LocalTime.of(12, 0)
-            DoseAnchorType.DINNER -> LocalTime.of(18, 0)
-            DoseAnchorType.BEFORE_WORKOUT -> LocalTime.of(16, 30)
-            DoseAnchorType.AFTER_WORKOUT -> LocalTime.of(17, 45)
+            DoseAnchorType.WAKEUP -> LocalTime(7, 0)
+            DoseAnchorType.BREAKFAST -> LocalTime(8, 0)
+            DoseAnchorType.LUNCH -> LocalTime(12, 0)
+            DoseAnchorType.DINNER -> LocalTime(18, 0)
+            DoseAnchorType.BEFORE_WORKOUT -> LocalTime(16, 30)
+            DoseAnchorType.AFTER_WORKOUT -> LocalTime(17, 45)
             else -> null
         }
 
@@ -256,12 +264,13 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
            WITH FOOD CHECK
            ------------------------------------------------------------ */
         if (DoseCondition.WITH_FOOD in doseConditions) {
+            val minutesBetween =
+                lastMealTime?.let { mealTime ->
+                (scheduledTime.toSecondOfDay() - mealTime.toSecondOfDay()) / 60
+            }
 
             val hasRecentMeal =
-                lastMealTime != null &&
-                        java.time.Duration
-                            .between(lastMealTime, scheduledTime)
-                            .toMinutes() <= 60
+                minutesBetween != null && minutesBetween <= 60
 
             if (!hasRecentMeal) {
                 return MealAwareDoseState.PendingMeal(

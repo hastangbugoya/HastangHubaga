@@ -4,10 +4,10 @@ package com.example.hastanghubaga.data.local.mappers
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.models.MealJoinedRoom
+import com.example.hastanghubaga.data.time.JavaTimeAdapter
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
-import com.example.hastanghubaga.domain.time.TimePolicy
 import java.time.Instant
 import java.time.ZoneId
 
@@ -32,7 +32,7 @@ fun MealJoinedRoom.toDomain(): Meal =
     Meal(
         id = meal.id,
         type = meal.type,
-        timestamp = TimePolicy.utcMillisToLocalDateTime(meal.timestamp),
+        timestamp = JavaTimeAdapter.utcMillisToDomainLocalDateTime(meal.timestamp),
         notes = meal.notes,
         nutrition = nutrition?.toDomain()
     )
@@ -44,7 +44,7 @@ fun Meal.toEntity(): MealEntity =
     MealEntity(
         id = id,
         type = type,
-        timestamp = TimePolicy.localDateTimeToUtcMillis(timestamp),
+        timestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(timestamp),
         notes = notes
     )
 
@@ -67,7 +67,7 @@ fun Meal.toNutritionEntity(): MealNutritionEntity? =
 
 fun Meal.toTimelineItem(): TimelineItem.MealTimelineItem {
     return TimelineItem.MealTimelineItem(
-        time = timestamp.toLocalTime(),
+        time = JavaTimeAdapter.domainLocalDateTimeToLocalTime(timestamp),
         meal = this,
     )
 }
