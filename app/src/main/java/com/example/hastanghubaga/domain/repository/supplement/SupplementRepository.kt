@@ -4,7 +4,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
-import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.widget.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings

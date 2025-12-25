@@ -17,7 +17,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
-import com.example.hastanghubaga.domain.model.supplement.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.widget.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement

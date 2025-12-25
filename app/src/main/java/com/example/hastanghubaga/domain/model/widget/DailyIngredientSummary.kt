@@ -1,7 +1,6 @@
-package com.example.hastanghubaga.domain.model.supplement
+package com.example.hastanghubaga.domain.model.widget
 
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 
 /**
  * Represents a single nutrient’s total intake and safety status for a given day.

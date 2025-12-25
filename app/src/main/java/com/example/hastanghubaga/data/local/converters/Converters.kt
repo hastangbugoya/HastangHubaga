@@ -7,7 +7,10 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 
 class Converters {
     @TypeConverter
@@ -71,4 +74,18 @@ class Converters {
     @TypeConverter
     fun toActivityType(value: String?): ActivityType? =
         value?.let { ActivityType.valueOf(it) }
+
+    @TypeConverter
+    fun fromLocalDateTime(value: LocalDateTime?): Long? =
+        value?.atZone(ZoneId.systemDefault())
+            ?.toInstant()
+            ?.toEpochMilli()
+
+    @TypeConverter
+    fun toLocalDateTime(value: Long?): LocalDateTime? =
+        value?.let {
+            Instant.ofEpochMilli(it)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime()
+        }
 }

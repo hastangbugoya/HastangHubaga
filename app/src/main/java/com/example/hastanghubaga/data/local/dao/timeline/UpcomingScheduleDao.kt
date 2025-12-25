@@ -6,7 +6,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
-import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 
@@ -32,7 +31,6 @@ interface UpcomingScheduleDao {
         WHERE scheduledAt >= :fromUtc
         ORDER BY scheduledAt ASC
     """)
-
     fun observeUpcoming(
         fromUtc: Long
     ): Flow<List<UpcomingScheduleEntity>>
