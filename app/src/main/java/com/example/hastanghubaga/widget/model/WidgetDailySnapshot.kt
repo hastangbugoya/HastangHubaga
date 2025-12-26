@@ -1,4 +1,7 @@
 package com.example.hastanghubaga.widget.model
+
+import kotlinx.serialization.Serializable
+
 /**
  * Immutable snapshot representing all data required to render the daily app widget.
  *
@@ -14,6 +17,7 @@ package com.example.hastanghubaga.widget.model
  *
  * Schema evolution is handled explicitly via [schemaVersion].
  */
+@Serializable
 data class WidgetDailySnapshot(
 
     /**

@@ -28,19 +28,19 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
     ) {
         // 1. Load totals (facts)
         val totals = nutrientTotalsRepository.getDailyTotals(day)
-
+        Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke totals: ${totals.size}")
         // 2. Load goals (constraints)
         val goalsByIngredientId =
             nutritionPlanRepository.getGoalsForIngredientIds(
                 totals.map { it.ingredientId }
             )
-
+        Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke goalsByIngredientId: ${goalsByIngredientId.size}")
         // 3. Load markers (favorites, etc.)
         val markersByIngredientId =
             ingredientPreferenceRepository.getForIngredientIds(
                 totals.map { it.ingredientId }
             )
-
+        Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke markersByIngredientId: ${markersByIngredientId.size}")
         // 4. Build widget ingredient snapshots
         val ingredientSnapshots = totals.map { total ->
             WidgetIngredientSnapshot(
@@ -56,6 +56,7 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
                 }
             )
         }
+        Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke ingredientSnapshots: ${ingredientSnapshots.size}")
 
         // 5. Assemble final snapshot
         val snapshot = WidgetDailySnapshot(
@@ -68,9 +69,7 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
             upNext = null, // wired later
             ingredients = ingredientSnapshots
         )
-        Log.d("Meow" ,
-            "WidgetSnapshot > Saved snapshot:\n${snapshot.toString()}"
-        )
+        Log.d("Meow" ,"WidgetSnapshot > Saved snapshot: ${snapshot.toString()}")
         // 6. Persist atomically
         widgetSnapshotStore.save(snapshot)
         val loaded = widgetSnapshotStore.load()

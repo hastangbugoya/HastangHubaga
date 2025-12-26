@@ -1,5 +1,8 @@
 package com.example.hastanghubaga.widget.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class WidgetIngredientProgress(
     val current: Double,
     val target: Double?,
