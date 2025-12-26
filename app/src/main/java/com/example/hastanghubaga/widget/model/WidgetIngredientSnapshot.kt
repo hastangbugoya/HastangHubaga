@@ -4,6 +4,6 @@ data class WidgetIngredientSnapshot(
     val ingredientId: Long,
     val name: String,
     val unit: String,
-    val progress: WidgetIngredientProgress,
+    val progress: WidgetIngredientProgress?,
     val markers: WidgetIngredientMarkers?
 )

@@ -1,28 +1,24 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import android.util.Log
-import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
-import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
-import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
-import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModel
-import kotlinx.datetime.Clock
+import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshotUseCase
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 
 /**
  * Builds a single, chronologically ordered timeline for "Today".
  */
 class BuildTodayTimelineUseCase @Inject constructor(
-    private val upcomingScheduleRepository: UpcomingScheduleRepository
+    private val upcomingScheduleRepository: UpcomingScheduleRepository,
+    private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshotUseCase
 ) {
     suspend operator fun invoke(
         supplements: List<SupplementWithUserSettings>,
@@ -70,6 +66,10 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 item.toUpcomingSchedule(date = date)
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> upcomingItems: ${upcomingItems.size}")
+
+
+
+        buildWidgetDailySnapshotUseCase()
         upcomingScheduleRepository.replaceAll(upcomingItems)
 
         return merged

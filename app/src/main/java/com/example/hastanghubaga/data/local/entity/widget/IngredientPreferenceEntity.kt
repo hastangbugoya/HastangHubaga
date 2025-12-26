@@ -14,5 +14,5 @@ import java.time.Instant
 data class IngredientPreferenceEntity(
     val ingredientId: Long,
     val isFavorite: Boolean = false,
-    val updatedAt: Instant = Instant.now()
+    val updatedAt: Long = System.currentTimeMillis()
 )

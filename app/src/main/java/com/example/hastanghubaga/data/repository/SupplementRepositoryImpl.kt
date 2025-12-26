@@ -17,7 +17,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
-import com.example.hastanghubaga.domain.model.widget.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.nutrition.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement
@@ -185,15 +185,14 @@ class SupplementRepositoryImpl @Inject constructor(
 
                 val entry = totals.getOrPut(key) {
                     DailyIngredientSummary(
+                        ingredientId = item.ingredient.ingredientId,
                         name = key,
-                        totalAmount = 0.0,
+                        amount = 0.0,
                         unit = item.ingredient.unit,
-                        rda = item.info.rdaValue,
-                        upperLimit = item.info.upperLimitValue
                     )
                 }
 
-                entry.totalAmount += taken
+                entry.amount += taken
             }
         }
 

@@ -26,10 +26,16 @@ import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
+import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
 import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
+import com.example.hastanghubaga.data.local.entity.user.NutrientGoalEntity
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanEntity
+import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEntity
 
 
 @Database(
@@ -47,7 +53,10 @@ import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
         MealEntity::class,
         MealNutritionEntity::class,
         UserNutritionGoalsEntity::class,
-        UpcomingScheduleEntity::class
+        UpcomingScheduleEntity::class,
+        UserNutritionPlanEntity::class,
+        NutrientGoalEntity::class,
+        IngredientPreferenceEntity::class,
         // add others here later
     ],
     version = 1,
@@ -67,6 +76,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealNutritionDao(): MealNutritionDao
     abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao
     abstract fun upcomingScheduleDao(): UpcomingScheduleDao
+    abstract fun nutritionPlanEntityDao(): NutritionPlanEntityDao
+    abstract fun nutrientGoalDao(): NutrientGoalDao
+    abstract fun ingredientPreferenceDao(): IngredientPreferenceDao
+
 
 
     companion object
