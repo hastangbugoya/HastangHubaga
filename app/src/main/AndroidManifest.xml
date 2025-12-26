@@ -30,18 +30,30 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".widget.SupplementWidgetReceiver"
+            android:name=".widget.ui.WidgetDebugProvider"
             android:exported="false">
-
             <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
             </intent-filter>
 
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/supplement_widget_info" />
-
+                android:resource="@xml/widget_debug_info"/>
         </receiver>
+
+        <!--        <receiver-->
+<!--            android:name=".widget.SupplementWidgetReceiver"-->
+<!--            android:exported="false">-->
+
+<!--            <intent-filter>-->
+<!--                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />-->
+<!--            </intent-filter>-->
+
+<!--            <meta-data-->
+<!--                android:name="android.appwidget.provider"-->
+<!--                android:resource="@xml/supplement_widget_info" />-->
+
+<!--        </receiver>-->
         <receiver
             android:name=".alerts.SupplementAlertReceiver"
             android:exported="false" />
