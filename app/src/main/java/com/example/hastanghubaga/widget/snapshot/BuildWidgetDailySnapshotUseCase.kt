@@ -5,11 +5,16 @@ import com.example.hastanghubaga.domain.repository.nutrition.NutrientTotalsRepos
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionPlanRepository
 import com.example.hastanghubaga.domain.repository.widget.IngredientPreferenceRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.widget.calculator.NutritionProgressCalculator
+import com.example.hastanghubaga.widget.model.UpNextSnapshot
 import com.example.hastanghubaga.widget.model.WidgetDailySnapshot
 import com.example.hastanghubaga.widget.model.WidgetDailySummary
 import com.example.hastanghubaga.widget.model.WidgetIngredientMarkers
 import com.example.hastanghubaga.widget.model.WidgetIngredientSnapshot
+import com.example.hastanghubaga.widget.model.placeholderIngredientSnapshot
+import com.example.hastanghubaga.widget.model.toUpNextSnapshot
+import com.example.hastanghubaga.widget.nextup.ObserveNextUpcomingUseCase
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
@@ -20,6 +25,7 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
     private val progressCalculator: NutritionProgressCalculator,
     private val ingredientPreferenceRepository: IngredientPreferenceRepository,
     private val widgetSnapshotStore: WidgetSnapshotStore,
+    private val observeNextUpcomingUseCase: ObserveNextUpcomingUseCase,
     private val clock: Clock
 ) {
 
@@ -41,21 +47,30 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
                 totals.map { it.ingredientId }
             )
         Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke markersByIngredientId: ${markersByIngredientId.size}")
+
+        val upNext = observeNextUpcomingUseCase()?.toUpNextSnapshot()
+
         // 4. Build widget ingredient snapshots
-        val ingredientSnapshots = totals.map { total ->
-            WidgetIngredientSnapshot(
-                ingredientId = total.ingredientId,
-                name = total.name,
-                unit = total.unit.name,
-                progress = progressCalculator.calculate(
-                    consumed = total.amount,
-                    goal = goalsByIngredientId[total.ingredientId]
-                ),
-                markers = markersByIngredientId[total.ingredientId]?.let {
-                    WidgetIngredientMarkers(favorite = it.isFavorite)
+        val ingredientSnapshots =
+            if (totals.isEmpty()) {
+                listOf(placeholderIngredientSnapshot())
+            }
+            else {
+                totals.map { total ->
+                    WidgetIngredientSnapshot(
+                        ingredientId = total.ingredientId,
+                        name = total.name,
+                        unit = total.unit.name,
+                        progress = progressCalculator.calculate(
+                            consumed = total.amount,
+                            goal = goalsByIngredientId[total.ingredientId]
+                        ),
+                        markers = markersByIngredientId[total.ingredientId]?.let {
+                            WidgetIngredientMarkers(favorite = it.isFavorite)
+                        }
+                    )
                 }
-            )
-        }
+            }
         Log.d("Meow","BuildWidgetDailySnapshotUseCase> invoke ingredientSnapshots: ${ingredientSnapshots.size}")
 
         // 5. Assemble final snapshot
@@ -66,7 +81,7 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
             summary = WidgetDailySummary(
                 totalIngredients = ingredientSnapshots.size
             ),
-            upNext = null, // wired later
+            upNext = upNext, // wired later
             ingredients = ingredientSnapshots
         )
         Log.d("Meow" ,"WidgetSnapshot > Saved snapshot: ${snapshot.toString()}")

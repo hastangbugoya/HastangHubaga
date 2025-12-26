@@ -1,6 +1,8 @@
 package com.example.hastanghubaga.widget.di
 
 import com.example.hastanghubaga.data.repository.IngredientPreferenceRepositoryImpl
+import com.example.hastanghubaga.data.repository.UpcomingScheduleRepositoryImpl
+import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.repository.widget.IngredientPreferenceRepository
 import com.example.hastanghubaga.widget.snapshot.WidgetSnapshotStore
 import com.example.hastanghubaga.widget.snapshot.WidgetSnapshotStoreImpl
