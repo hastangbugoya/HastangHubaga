@@ -24,7 +24,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
-        val zoneId = java.time.ZoneId.systemDefault()
+        java.time.ZoneId.systemDefault()
         val today: LocalDate =
             DomainTimePolicy.todayLocal()
 
@@ -373,7 +373,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         // -------------------------------
         // MEALS ADDED HERE
         // -------------------------------
-        val todayMeals = DomainTimePolicy.todayLocal()
+        DomainTimePolicy.todayLocal()
 
         fun mealMillis(h: Int, m: Int): Long {
             val localDateTime =

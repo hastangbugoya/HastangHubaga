@@ -105,7 +105,7 @@ object JavaTimeAdapter {
         utcMillis: Long,
         zoneId: ZoneId = ZoneId.systemDefault()
     ): kotlinx.datetime.LocalDateTime =
-        kotlinx.datetime.Instant
+        KxInstant
             .fromEpochMilliseconds(utcMillis)
             .toLocalDateTime(
                 kotlinx.datetime.TimeZone.of(zoneId.id)
@@ -125,7 +125,7 @@ object JavaTimeAdapter {
     /* -------------------- KOTLIN DATETIME -> KOTLIN LOCALTIME -------------------- */
     fun domainLocalDateTimeToLocalTime(
         localDateTime: kotlinx.datetime.LocalDateTime
-    ): kotlinx.datetime.LocalTime =
+    ): KxLocalTime =
         kotlinx.datetime.LocalTime(
             hour = localDateTime.hour,
             minute = localDateTime.minute,

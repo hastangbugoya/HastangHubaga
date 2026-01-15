@@ -128,18 +128,17 @@ object DomainTimePolicy {
                 intent.date to intent.time
         }
 
-    fun utcMillisRangeForLocalDate(date: LocalDate): Pair<Long, Long> {
-        val start = date
-            .atTime(LocalTime(0, 0))
-            .toInstant(localTimeZone)
-            .toEpochMilliseconds()
+    fun utcMillisRangeForLocalDate(date: LocalDate?): Pair<Long, Long> {
+        val start = date?.atTime(LocalTime(0, 0))
+            ?.toInstant(localTimeZone)
+            ?.toEpochMilliseconds()
 
         // inclusive end-of-day (23:59:59.999)
         val end = date
-            .atTime(LocalTime(23, 59, 59, 999_000_000))
-            .toInstant(localTimeZone)
-            .toEpochMilliseconds()
+            ?.atTime(LocalTime(23, 59, 59, 999_000_000))
+            ?.toInstant(localTimeZone)
+            ?.toEpochMilliseconds()
 
-        return start to end
+        return (start to end) as Pair<Long, Long>
     }
 }

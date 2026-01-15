@@ -65,10 +65,10 @@ fun Meal.toNutritionEntity(): MealNutritionEntity? =
         )
     }
 
-fun Meal.toTimelineItem(): TimelineItem.MealTimelineItem {
-    return TimelineItem.MealTimelineItem(
-        time = JavaTimeAdapter.domainLocalDateTimeToLocalTime(timestamp),
-        meal = this,
-    )
-}
+//fun Meal.toTimelineItem(): TimelineItem.MealTimelineItem {
+//    return TimelineItem.MealTimelineItem(
+//        time = JavaTimeAdapter.domainLocalDateTimeToLocalTime(timestamp),
+//        meal = this,
+//    )
+//}
 

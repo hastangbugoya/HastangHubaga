@@ -55,6 +55,10 @@ fun TodayScreen(
     var doseSheetData by remember {
         mutableStateOf<TodayScreenContract.Effect.ShowDoseInputDialog?>(null)
     }
+
+    // ✅ NEW: store the clicked item's title (supplement name for supplement rows)
+    var doseSheetTitle by remember { mutableStateOf<String?>(null) }
+
     val doseSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -98,28 +102,44 @@ fun TodayScreen(
 
                 is TodayScreenContract.Effect.ShowDoseInputDialog -> {
                     doseSheetData = effect
+                    // (Title is captured on click; see onItemClick below)
                 }
-
             }
         }
     }
 
     TodayScreenContent(
         state = state,
-        onItemClick = {
+        onItemClick = { item ->
+            // ✅ NEW: capture name from clicked item so we can show it in the dose sheet
+            doseSheetTitle = item.title
+
             viewModel.onIntent(
-                TodayScreenContract.Intent.TimelineItemClicked(it)
+                TodayScreenContract.Intent.TimelineItemClicked(item)
             )
         },
         onRefresh = {
             viewModel.onIntent(TodayScreenContract.Intent.Refresh)
         }
     )
+
     doseSheetData?.let { data ->
         ModalBottomSheet(
             sheetState = doseSheetState,
-            onDismissRequest = { doseSheetData = null }
+            onDismissRequest = {
+                doseSheetData = null
+                doseSheetTitle = null
+            }
         ) {
+            // ✅ NEW: show supplement name/title above the content
+            doseSheetTitle?.let { name ->
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+
             DoseInputSheetContent(
                 defaultAmount = data.suggestedDose,
                 defaultUnit = data.defaultUnit,
@@ -134,6 +154,7 @@ fun TodayScreen(
                         )
                     )
                     doseSheetData = null
+                    doseSheetTitle = null
                 }
             )
         }
@@ -210,8 +231,6 @@ fun TimelineRow(
     }
 }
 
-
-
 @Preview(showBackground = true)
 @Composable
 private fun TimelineRowPreview() {
@@ -226,7 +245,7 @@ private fun TimelineRowPreview() {
             LazyColumn {
                 items(
                     items = uiItems,
-                    key = {it.key}
+                    key = { it.key }
                 ) { item ->
                     TimelineRow(item)
                 }

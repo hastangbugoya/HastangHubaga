@@ -31,6 +31,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
@@ -91,6 +92,46 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
+//    fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
+//        loadJob?.cancel()
+//
+//        loadJob = viewModelScope.launch {
+//            _state.update { it.copy(isLoading = true, errorMessage = null) }
+//
+//            try {
+//                combine(
+//                    getSupplementsForDate(date),
+//                    getMealsForDate(date),       // can return emptyList() for now
+//                    getActivitiesForDate(date)
+//                ) { supplements, meals, activities ->
+//
+//                    buildTodayTimeline(
+//                        supplements = supplements,
+//                        meals = meals,
+//                        activities = activities
+//                    )
+//                }
+//                    .collectLatest { timeline ->
+//                        _state.update {
+//                            it.copy(
+//                                isLoading = false,
+//                                domainTimelineItems = timeline,
+//                                uiTimelineItems = timeline.toTimelineItemUiModels()
+//                            )
+//                        }
+//                    }
+//
+//            } catch (e: Exception) {
+//                _state.update {
+//                    it.copy(
+//                        isLoading = false,
+//                        errorMessage = e.message ?: "Failed to load timeline"
+//                    )
+//                }
+//            }
+//        }
+//    }
+
     fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
         loadJob?.cancel()
 
@@ -120,6 +161,9 @@ class TodayScreenViewModel @Inject constructor(
                         }
                     }
 
+            } catch (e: CancellationException) {
+                // ✅ Expected when switching panels / refreshing
+                throw e
             } catch (e: Exception) {
                 _state.update {
                     it.copy(
@@ -130,11 +174,10 @@ class TodayScreenViewModel @Inject constructor(
             }
         }
     }
-
     private fun handleTimelineItemClicked(
         uiItem: TimelineItemUiModel
     ) {
-        val domainItem = findDomainItemFor(uiItem) ?: return
+        findDomainItemFor(uiItem) ?: return
         when (
             val action = handleTimelineItemTapUseCase.resolve(uiItem)
         ) {

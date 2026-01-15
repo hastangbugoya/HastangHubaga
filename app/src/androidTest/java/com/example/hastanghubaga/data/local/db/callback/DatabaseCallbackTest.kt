@@ -18,6 +18,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.SentinelAnchors
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -90,7 +91,7 @@ class DatabaseCallbackTest {
     @Test
     fun callback_insertsSupplements() = runBlocking {
         val activeSupps = supplementDao.getActiveSupplements().first()
-        Assert.assertTrue("Expected prepopulated active supplements", activeSupps.isNotEmpty())
+        assertTrue("Expected prepopulated active supplements", activeSupps.isNotEmpty())
     }
 
     @Test
@@ -105,7 +106,7 @@ class DatabaseCallbackTest {
     @Test
     fun callback_insertsIngredients() = runBlocking {
         val ingredients = ingredientDao.getAllIngredients()
-        Assert.assertTrue("Expected prepopulated ingredients", ingredients.isNotEmpty())
+        assertTrue("Expected prepopulated ingredients", ingredients.isNotEmpty())
     }
 
     // -----------------------------------------------------------
@@ -114,7 +115,7 @@ class DatabaseCallbackTest {
     @Test
     fun callback_insertsSupplementIngredientLinks() = runBlocking {
         val links = linkDao.getAllLinks()
-        Assert.assertTrue("Expected linking table rows from callback", links.isNotEmpty())
+        assertTrue("Expected linking table rows from callback", links.isNotEmpty())
     }
 
     // -----------------------------------------------------------
@@ -124,7 +125,7 @@ class DatabaseCallbackTest {
     fun callback_insertsDefaultEventTimes() = runBlocking {
         val rows = eventTimeDao.getAllDefaults()
 
-        Assert.assertTrue(
+        assertTrue(
             "Expected default event times to be inserted",
             rows.isNotEmpty()
         )
@@ -141,14 +142,14 @@ class DatabaseCallbackTest {
     @Test
     fun callback_insertsSupplementUserSettings() = runBlocking {
         val firstTableRow = supplementUserSettingsDao.getSettings(1)
-        Assert.assertTrue("Expected supplement user settings is not empty", firstTableRow != null)
+        assertTrue("Expected supplement user settings is not empty", firstTableRow != null)
     }
 
     @Test
     fun dayOfWeekOverrides_areSeeded() = runTest {
         val overrides = eventTimeDao.getAllDayOfWeekOverrides()
 
-        Assert.assertTrue(
+        assertTrue(
             overrides.any {
                 it.anchor == DoseAnchorType.BREAKFAST &&
                         it.dayOfWeek == DayOfWeek.SATURDAY
@@ -160,7 +161,7 @@ class DatabaseCallbackTest {
     fun meals_are_seeded_for_today_onDatabaseCreate() = runTest {
         // WHEN
         val range: Pair<Long, Long> =
-            TimePolicy.utcRangeForLocalDate(LocalDate.now())
+            DomainTimePolicy.utcMillisRangeForLocalDate(DomainTimePolicy.todayLocal())
 
         val startUtc = range.first
         val endUtc = range.second

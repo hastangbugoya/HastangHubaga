@@ -11,10 +11,12 @@ import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Clock
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -133,15 +135,19 @@ class GetSupplementsWithUserSettingsForDateUseCaseTest {
      */
     @Test
     fun happyPath_singleDailyBreakfastSupplement_schedulesAtEightAm() = runTest {
-        val today = LocalDate.now()
+        // ✅ kotlinx.datetime.LocalDate
+        DomainTimePolicy.todayLocal(Clock.System)
 
-        val result = useCase(today).first()
-
+        val result = useCase(
+            DomainTimePolicy.todayLocal(Clock.System)
+        ).first()
         assertThat(result).hasSize(1)
 
         val scheduledTimes = result.first().scheduledTimes
 
         assertThat(scheduledTimes).hasSize(1)
-        assertThat(scheduledTimes.first()).isEqualTo(LocalTime.of(8, 0))
+
+        // ✅ kotlinx.datetime.LocalTime
+        assertThat(scheduledTimes.first()).isEqualTo(kotlinx.datetime.LocalTime(8, 0))
     }
 }

@@ -13,6 +13,8 @@ import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.google.common.truth.Truth.assertThat
+import org.hamcrest.MatcherAssert.assertThat
+
 import org.junit.runner.RunWith
 
 @HiltAndroidTest

@@ -5,14 +5,18 @@ import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
+import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
+import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
 import dagger.Module
 import dagger.Provides
@@ -96,10 +100,6 @@ object TestDatabaseModule {
         db.ingredientEntityDao()
 
     @Provides
-    fun provideSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
-        db.supplementDailyLogDao()
-
-    @Provides
     fun provideDailyStartTimeDao(db: AppDatabase): DailyStartTimeDao =
         db.dailyStartTimeDao()
 
@@ -130,4 +130,24 @@ object TestDatabaseModule {
     @Provides
     fun provideSupplementIngredientDao(db: AppDatabase): SupplementIngredientDao =
         db.supplementIngredientDao()
+
+    @Provides
+    fun providesIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
+        db.ingredientPreferenceDao()
+
+    @Provides
+    fun providesUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
+        db.upcomingScheduleDao()
+    @Provides
+    fun providesSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
+        db.supplementDailyLogDao()
+
+    @Provides
+    fun providesNutritionPlanEntityDao(db: AppDatabase): NutritionPlanEntityDao =
+        db.nutritionPlanEntityDao()
+
+    @Provides
+    fun provideNutrientGoalDao(db: AppDatabase): NutrientGoalDao =
+        db.nutrientGoalDao()
 }
+

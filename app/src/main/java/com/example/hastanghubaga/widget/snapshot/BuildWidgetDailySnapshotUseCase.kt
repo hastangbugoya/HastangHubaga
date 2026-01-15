@@ -84,7 +84,7 @@ class BuildWidgetDailySnapshotUseCase @Inject constructor(
             upNext = upNext, // wired later
             ingredients = ingredientSnapshots
         )
-        Log.d("Meow" ,"WidgetSnapshot > Saved snapshot: ${snapshot.toString()}")
+        Log.d("Meow" ,"WidgetSnapshot > Saved snapshot: $snapshot")
         // 6. Persist atomically
         widgetSnapshotStore.save(snapshot)
         val loaded = widgetSnapshotStore.load()
