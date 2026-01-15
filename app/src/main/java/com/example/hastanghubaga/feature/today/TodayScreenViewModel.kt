@@ -92,46 +92,6 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-//    fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
-//        loadJob?.cancel()
-//
-//        loadJob = viewModelScope.launch {
-//            _state.update { it.copy(isLoading = true, errorMessage = null) }
-//
-//            try {
-//                combine(
-//                    getSupplementsForDate(date),
-//                    getMealsForDate(date),       // can return emptyList() for now
-//                    getActivitiesForDate(date)
-//                ) { supplements, meals, activities ->
-//
-//                    buildTodayTimeline(
-//                        supplements = supplements,
-//                        meals = meals,
-//                        activities = activities
-//                    )
-//                }
-//                    .collectLatest { timeline ->
-//                        _state.update {
-//                            it.copy(
-//                                isLoading = false,
-//                                domainTimelineItems = timeline,
-//                                uiTimelineItems = timeline.toTimelineItemUiModels()
-//                            )
-//                        }
-//                    }
-//
-//            } catch (e: Exception) {
-//                _state.update {
-//                    it.copy(
-//                        isLoading = false,
-//                        errorMessage = e.message ?: "Failed to load timeline"
-//                    )
-//                }
-//            }
-//        }
-//    }
-
     fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
         loadJob?.cancel()
 

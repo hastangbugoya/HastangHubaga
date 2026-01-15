@@ -5,6 +5,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.data.local.entity.user.ScheduleTypeEntity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import java.time.DayOfWeek
 import java.time.Instant
@@ -88,4 +89,11 @@ class Converters {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime()
         }
+
+    @TypeConverter
+    fun scheduleTypeToString(type: ScheduleTypeEntity): String = type.name
+
+    @TypeConverter
+    fun stringToScheduleType(value: String): ScheduleTypeEntity =
+        ScheduleTypeEntity.valueOf(value)
 }

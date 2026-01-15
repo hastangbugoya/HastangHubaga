@@ -52,3 +52,5 @@ fun UserSupplementSettings.toEntity(supplementId: Long): SupplementUserSettingsE
         isEnabled = isEnabled,
         userNotes = notes
     )
+
+

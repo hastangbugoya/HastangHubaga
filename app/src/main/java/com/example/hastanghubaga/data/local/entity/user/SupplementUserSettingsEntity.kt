@@ -53,10 +53,58 @@ data class SupplementUserSettingsEntity(
 
     val preferredServingPerDay: Double? = null,
 
-
     /** Whether the user wants this supplement active */
     val isEnabled: Boolean = true,
 
     /** Optional note the user adds */
-    val userNotes: String? = null
+    val userNotes: String? = null,
+
+    /**
+     * Determines how this supplement's schedule should be interpreted.
+     *
+     * This is the persistence-layer representation of the domain concept
+     * `SupplementScheduleSpec` (e.g., FixedTimes vs MealAnchored).
+     *
+     * ### Rules
+     * - If [scheduleType] is [ScheduleTypeEntity.FIXED_TIMES], then [fixedTimesCsv] should be non-null
+     *   and [mealTypesCsv]/[mealOffsetMinutes] should be null.
+     * - If [scheduleType] is [ScheduleTypeEntity.MEAL_ANCHORED], then [mealTypesCsv] may be non-null
+     *   (one or more meal types) and [mealOffsetMinutes] may be non-null (defaults to 0),
+     *   and [fixedTimesCsv] should be null.
+     *
+     * Defaulting to FIXED_TIMES keeps backwards compatibility for older rows/migrations.
+     */
+    val scheduleType: ScheduleTypeEntity = ScheduleTypeEntity.FIXED_TIMES,
+
+    /**
+     * CSV-encoded local times for fixed schedules.
+     *
+     * Format: "HH:mm,HH:mm,HH:mm" (24-hour time).
+     * Example: "07:00,12:00,16:00"
+     *
+     * Only meaningful when [scheduleType] is [ScheduleTypeEntity.FIXED_TIMES].
+     */
+    val fixedTimesCsv: String? = null,
+
+    /**
+     * CSV-encoded meal types for meal-anchored schedules.
+     *
+     * Format: enum names joined by commas.
+     * Example: "BREAKFAST,DINNER"
+     *
+     * Only meaningful when [scheduleType] is [ScheduleTypeEntity.MEAL_ANCHORED].
+     */
+    val mealTypesCsv: String? = null,
+
+    /**
+     * Offset in minutes applied to the resolved meal time.
+     *
+     * Example:
+     * - 0   → exactly at the meal time
+     * - 15  → 15 minutes after meal
+     * - -30 → 30 minutes before meal
+     *
+     * Only meaningful when [scheduleType] is [ScheduleTypeEntity.MEAL_ANCHORED].
+     */
+    val mealOffsetMinutes: Int? = null
 )
