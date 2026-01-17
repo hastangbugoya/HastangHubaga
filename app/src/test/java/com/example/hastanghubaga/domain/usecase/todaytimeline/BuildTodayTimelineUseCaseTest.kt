@@ -8,6 +8,10 @@ import com.example.hastanghubaga.factory.FakeActivityFactory
 import com.example.hastanghubaga.factory.FakeMealFactory
 import com.example.hastanghubaga.factory.FakeSupplementFactory
 import com.example.hastanghubaga.factory.FakeSupplementWithUserSettingsFactory
+import com.example.hastanghubaga.factory.FakeUpcomingSchedule
+import com.example.hastanghubaga.testing.FakeUpcomingScheduleRepository
+import com.example.hastanghubaga.testing.TestTimestamps
+import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import org.junit.Assert
@@ -15,7 +19,20 @@ import org.junit.Test
 
 class BuildTodayTimelineUseCaseTest {
 
-    private val useCase = BuildTodayTimelineUseCase()
+    val TEST_DATE_TIME = LocalDateTime.parse("2026-01-15T12:00:00")
+    private val upcomingSchedules = listOf(
+        FakeUpcomingSchedule.create(
+            name  = "Next Activity",
+            at = TEST_DATE_TIME
+        )
+    )
+    private val upcomingScheduleRepository =
+        FakeUpcomingScheduleRepository(upcomingSchedules)
+
+    private val useCase = BuildTodayTimelineUseCase(
+        upcomingScheduleRepository = upcomingScheduleRepository,
+        buildWidgetDailySnapshotUseCase = TODO()
+    )
 
     // ---------- helpers ----------
 
@@ -50,7 +67,7 @@ class BuildTodayTimelineUseCaseTest {
     // ---------- tests ----------
 
     @Test
-    fun `empty inputs returns empty list`() {
+    fun `empty inputs returns empty list`() = runTest {
         val result = useCase(
             supplements = emptyList(),
             meals = emptyList(),
@@ -61,7 +78,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `supplements expand into multiple timeline items`() {
+    fun `supplements expand into multiple timeline items`() = runTest {
         val supplement = supplement(
             name = "Vitamin D",
             times = listOf(
@@ -79,7 +96,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `meals are mapped correctly`() {
+    fun `meals are mapped correctly`() = runTest {
         val meal = meal(
             name = "Lunch",
             at = LocalDateTime(2025, 1, 1, 12, 30)
@@ -96,7 +113,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `activities are mapped correctly`() {
+    fun `activities are mapped correctly`()  = runTest {
         val activity = activity(
             name = "Workout",
             at = LocalDateTime(2025, 1, 1, 6, 0)
@@ -113,7 +130,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `mixed inputs are merged and sorted by time`() {
+    fun `mixed inputs are merged and sorted by time`() = runTest {
         val supplement = supplement(
             "Magnesium",
             listOf(LocalTime(22, 0))
@@ -146,7 +163,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `items with same time do not crash`() {
+    fun `items with same time do not crash`() = runTest {
         val supplement = supplement(
             "Zinc",
             listOf(LocalTime(9, 0))

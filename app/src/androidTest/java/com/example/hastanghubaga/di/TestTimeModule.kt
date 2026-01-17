@@ -3,11 +3,11 @@ package com.example.hastanghubaga.di
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
+import dagger.hilt.testing.TestInstallIn
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import javax.inject.Singleton
-import dagger.hilt.testing.TestInstallIn
 
 @Module
 @TestInstallIn(
