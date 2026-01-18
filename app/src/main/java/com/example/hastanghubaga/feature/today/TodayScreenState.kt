@@ -12,3 +12,6 @@ data class TodayScreenState(
     val uiTimelineItems: List<TimelineItemUiModel> = emptyList(),
     val domainTimelineItems: List<TimelineItem> = emptyList()
 )
+
+
+val exerciseDraft: TodayScreenContract.ExerciseDraft? = null

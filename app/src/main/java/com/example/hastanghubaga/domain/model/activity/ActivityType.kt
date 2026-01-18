@@ -15,3 +15,15 @@ enum class ActivityType {
     MEAL,
     OTHER
 }
+
+val ActivityType.isExercise: Boolean
+    get() = when (this) {
+        ActivityType.WALKING,
+        ActivityType.RUNNING,
+        ActivityType.CYCLING,
+        ActivityType.STRENGTH_TRAINING,
+        ActivityType.YOGA,
+        ActivityType.SWIMMING,
+        ActivityType.SPORTS -> true
+        else -> false
+    }

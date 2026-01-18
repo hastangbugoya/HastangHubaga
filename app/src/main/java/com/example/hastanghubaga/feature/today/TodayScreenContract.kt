@@ -2,6 +2,7 @@ package com.example.hastanghubaga.feature.today
 
 import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import kotlinx.datetime.LocalTime
@@ -15,7 +16,8 @@ object TodayScreenContract {
         val isLoading: Boolean = false,
         val uiTimelineItems: List<TimelineItemUiModel> = emptyList(),
         val domainTimelineItems: List<TimelineItem> = emptyList(),
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val exerciseDraft: ExerciseDraft? = null
     )
 
     /**
@@ -33,6 +35,20 @@ object TodayScreenContract {
             val scheduledTime: LocalTime,
             val actualTime: LocalTime?
         ) : Intent
+
+        data class ExerciseTapped(val item: TimelineItemUiModel) : Intent
+
+        data object ExerciseStartPressed : Intent
+
+        data object ExerciseConfirmPressed : Intent
+
+        data class ExerciseNotesChanged(val value: String) : Intent
+
+        data class ExerciseIntensityChanged(val value: Int?) : Intent
+
+        data class ExerciseEndTimeChanged(val value: LocalTime?) : Intent
+
+        data object DismissExerciseSheet : Intent
     }
 
     /**
@@ -54,13 +70,6 @@ object TodayScreenContract {
         data class Navigate(
             val destination: Destination
         ) : Effect
-//        data class ShowTimelineItemInfo(
-//            val title: String,
-//            val subtitle: String,
-//            val time: String,
-//            val key: String
-//        ) : Effect
-
         data class ShowDoseInputDialog(
             val supplementId: Long,
             val title: String,
@@ -76,4 +85,16 @@ object TodayScreenContract {
         data class Meal(val id: Long) : Destination
         data class Activity(val id: Long) : Destination
     }
+
+    data class ExerciseDraft(
+        val activityType: ActivityType,
+        val startTime: LocalTime,
+        val endTime: LocalTime?,      // if you have it
+        val notes: String,
+        val intensity: Int?,          // your new field
+        val phase: Phase
+    ) {
+        enum class Phase { Draft, Running }
+    }
+
 }

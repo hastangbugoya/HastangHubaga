@@ -69,7 +69,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
 
 
-        buildWidgetDailySnapshotUseCase()
+        buildWidgetDailySnapshotUseCase(date)
         upcomingScheduleRepository.replaceAll(upcomingItems)
 
         return merged

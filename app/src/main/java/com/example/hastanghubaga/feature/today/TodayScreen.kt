@@ -7,14 +7,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -24,10 +29,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hastanghubaga.domain.model.activity.isExercise
 import com.example.hastanghubaga.ui.common.BannerController
 import com.example.hastanghubaga.ui.common.BottomSheetController
 import com.example.hastanghubaga.ui.common.ErrorView
@@ -35,10 +42,30 @@ import com.example.hastanghubaga.ui.common.LoadingView
 import com.example.hastanghubaga.ui.common.SnackbarController
 import com.example.hastanghubaga.ui.preview.PreviewData
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
+import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel.Activity as ActivityUi
 import com.example.hastanghubaga.ui.timeline.toPreviewTimelineItems
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModel
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
+
+/**
+ * Local sheet host:
+ * - Dose sheet
+ * - Exercise sheet
+ *
+ * This pattern scales: add another subtype in [ActiveLocalSheet] and handle it in the effect collector.
+ */
+sealed interface ActiveLocalSheet {
+    data class Dose(
+        val data: TodayScreenContract.Effect.ShowDoseInputDialog,
+        val title: String?
+    ) : ActiveLocalSheet
+
+    data class Exercise(
+        val draft: TodayScreenContract.ExerciseDraft,
+        val title: String
+    ) : ActiveLocalSheet
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,29 +78,16 @@ fun TodayScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // 🔴 Today-local bottom sheet state
-    var doseSheetData by remember {
-        mutableStateOf<TodayScreenContract.Effect.ShowDoseInputDialog?>(null)
-    }
+    var activeSheet by remember { mutableStateOf<ActiveLocalSheet?>(null) }
 
-    // ✅ NEW: store the clicked item's title (supplement name for supplement rows)
-    var doseSheetTitle by remember { mutableStateOf<String?>(null) }
+    val localSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val doseSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
-
-    LaunchedEffect(
-        state.isLoading,
-        state.uiTimelineItems.size
-    ) {
+    // Existing “loaded banner” effect remains unchanged
+    LaunchedEffect(state.isLoading, state.uiTimelineItems.size) {
         if (!state.isLoading && state.uiTimelineItems.isNotEmpty()) {
             val count = state.uiTimelineItems.size
             bannerController.show(
-                if (count == 1)
-                    "Loaded 1 timeline item"
-                else
-                    "Loaded $count timeline items"
+                if (count == 1) "Loaded 1 timeline item" else "Loaded $count timeline items"
             )
         }
     }
@@ -82,6 +96,16 @@ fun TodayScreen(
         viewModel.onIntent(TodayScreenContract.Intent.LoadToday)
     }
 
+    /**
+     * One collector for all Effects.
+     *
+     * Bottom sheets:
+     * 1) Global sheet via BottomSheetController (Effect.ShowBottomSheet)
+     * 2) Local dose sheet (ActiveLocalSheet.Dose)
+     * 3) Local exercise sheet (ActiveLocalSheet.Exercise) driven by state.exerciseDraft
+     *
+     * Adding a 4th local sheet = add a new ActiveLocalSheet subtype + set activeSheet here.
+     */
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
@@ -101,8 +125,11 @@ fun TodayScreen(
                     bannerController.show(effect.message)
 
                 is TodayScreenContract.Effect.ShowDoseInputDialog -> {
-                    doseSheetData = effect
-                    // (Title is captured on click; see onItemClick below)
+                    // Keep old behavior, but route to the unified local sheet host
+                    activeSheet = ActiveLocalSheet.Dose(
+                        data = effect,
+                        title = effect.title
+                    )
                 }
             }
         }
@@ -111,76 +138,174 @@ fun TodayScreen(
     TodayScreenContent(
         state = state,
         onItemClick = { item ->
-            // ✅ NEW: capture name from clicked item so we can show it in the dose sheet
-            doseSheetTitle = item.title
+            // Keep existing behavior: VM decides what to do on click (dose, etc.)
+            viewModel.onIntent(TodayScreenContract.Intent.TimelineItemClicked(item))
 
-            viewModel.onIntent(
-                TodayScreenContract.Intent.TimelineItemClicked(item)
-            )
+            // NEW: if this is an exercise activity, open the exercise draft flow via VM
+            val activity = item as? ActivityUi
+            if (activity != null && activity.activityType.isExercise) {
+                viewModel.onIntent(TodayScreenContract.Intent.ExerciseTapped(item))
+            }
         },
         onRefresh = {
             viewModel.onIntent(TodayScreenContract.Intent.Refresh)
         }
     )
 
-    doseSheetData?.let { data ->
+    // Drive exercise sheet from state so it shows even in the Draft/Start-only phase
+    LaunchedEffect(state.exerciseDraft) {
+        val draft = state.exerciseDraft
+        if (draft != null) {
+            activeSheet = ActiveLocalSheet.Exercise(
+                draft = draft,
+                title = draft.activityType.name.replace('_', ' ')
+            )
+        } else {
+            // If draft cleared, close local sheet if it was Exercise
+            if (activeSheet is ActiveLocalSheet.Exercise) activeSheet = null
+        }
+    }
+
+    // One local ModalBottomSheet host for multiple sheet content types
+    activeSheet?.let { sheet ->
         ModalBottomSheet(
-            sheetState = doseSheetState,
+            sheetState = localSheetState,
             onDismissRequest = {
-                doseSheetData = null
-                doseSheetTitle = null
+                when (sheet) {
+                    is ActiveLocalSheet.Dose -> {
+                        activeSheet = null
+                    }
+                    is ActiveLocalSheet.Exercise -> {
+                        viewModel.onIntent(TodayScreenContract.Intent.DismissExerciseSheet)
+                        activeSheet = null
+                    }
+                }
             }
         ) {
-            // ✅ NEW: show supplement name/title above the content
-            doseSheetTitle?.let { name ->
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            DoseInputSheetContent(
-                defaultAmount = data.suggestedDose,
-                defaultUnit = data.defaultUnit,
-                onConfirm = { amount, unit ->
-                    viewModel.onIntent(
-                        TodayScreenContract.Intent.ConfirmDose(
-                            supplementId = data.supplementId,
-                            amount = amount,
-                            unit = unit,
-                            scheduledTime = data.scheduledTime,
-                            actualTime = null
+            when (sheet) {
+                is ActiveLocalSheet.Dose -> {
+                    sheet.title?.let { title ->
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
+                    }
+                    DoseInputSheetContent(
+                        defaultAmount = sheet.data.suggestedDose,
+                        defaultUnit = sheet.data.defaultUnit,
+                        onConfirm = { amount, unit ->
+                            viewModel.onIntent(
+                                TodayScreenContract.Intent.ConfirmDose(
+                                    supplementId = sheet.data.supplementId,
+                                    amount = amount,
+                                    unit = unit,
+                                    scheduledTime = sheet.data.scheduledTime,
+                                    actualTime = null
+                                )
+                            )
+                            activeSheet = null
+                        }
                     )
-                    doseSheetData = null
-                    doseSheetTitle = null
                 }
-            )
+
+                is ActiveLocalSheet.Exercise -> {
+                    ExerciseBottomSheetContent(
+                        title = sheet.title,
+                        draft = sheet.draft,
+                        onNotesChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseNotesChanged(it)) },
+                        onIntensityChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseIntensityChanged(it)) },
+                        onEndTimeChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseEndTimeChanged(it)) },
+                        onPrimaryAction = {
+                            when (sheet.draft.phase) {
+                                TodayScreenContract.ExerciseDraft.Phase.Draft ->
+                                    viewModel.onIntent(TodayScreenContract.Intent.ExerciseStartPressed)
+
+                                TodayScreenContract.ExerciseDraft.Phase.Running ->
+                                    viewModel.onIntent(TodayScreenContract.Intent.ExerciseConfirmPressed)
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 }
 
+/**
+ * Full Exercise bottom sheet UI.
+ *
+ * Requirements met:
+ * - Start time is shown (prefilled by VM on ExerciseTapped)
+ * - End time is shown (from Activity UI model; editable hook included)
+ * - Notes + intensity inputs are always visible
+ * - Button switches Start -> Save/Confirm based on phase
+ * - Shows even when only "Start" exists (Draft phase)
+ */
 @Composable
-fun TimelineList(
-    items: List<TimelineItemUiModel>,
-    onItemClick: (TimelineItemUiModel) -> Unit
+private fun ExerciseBottomSheetContent(
+    title: String,
+    draft: TodayScreenContract.ExerciseDraft,
+    onNotesChange: (String) -> Unit,
+    onIntensityChange: (Int?) -> Unit,
+    onEndTimeChange: (kotlinx.datetime.LocalTime?) -> Unit,
+    onPrimaryAction: () -> Unit,
 ) {
-    Log.d("TimelineList", "Rendering ${items.size} items")
-    items.forEach {
-        Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
-    }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        items(
-            items = items,
-            key = { it.key } // stable UI key (correct)
-        ) { item ->
-            TimelineRow(
-                item = item,
-                onClick = onItemClick
-            )
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge)
+
+        Spacer(Modifier.height(12.dp))
+
+        Text(
+            text = "Start: ${draft.startTime}",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = "End: ${draft.endTime ?: "—"}",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        // (Optional) later replace with a time picker; for now just a hook point
+        // onEndTimeChange(...)
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = draft.notes,
+            onValueChange = onNotesChange,
+            label = { Text("Notes") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        val intensityText = draft.intensity?.toString() ?: ""
+        OutlinedTextField(
+            value = intensityText,
+            onValueChange = { raw ->
+                val trimmed = raw.trim()
+                val parsed = trimmed.toIntOrNull()
+                onIntensityChange(parsed)
+            },
+            label = { Text("Intensity (optional)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        val buttonText =
+            when (draft.phase) {
+                TodayScreenContract.ExerciseDraft.Phase.Draft -> "Start"
+                TodayScreenContract.ExerciseDraft.Phase.Running -> "Save"
+            }
+
+        Button(
+            onClick = onPrimaryAction,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(buttonText)
         }
     }
 }
@@ -193,15 +318,27 @@ fun TodayScreenContent(
 ) {
     when {
         state.isLoading -> LoadingView()
+        state.errorMessage != null -> ErrorView(state.errorMessage)
+        else -> TimelineList(
+            items = state.uiTimelineItems,
+            onItemClick = onItemClick
+        )
+    }
+}
 
-        state.errorMessage != null ->
-            ErrorView(state.errorMessage)
-
-        else ->
-            TimelineList(
-                items = state.uiTimelineItems,
-                onItemClick = onItemClick
-            )
+@Composable
+fun TimelineList(
+    items: List<TimelineItemUiModel>,
+    onItemClick: (TimelineItemUiModel) -> Unit
+) {
+    Log.d("TimelineList", "Rendering ${items.size} items")
+    items.forEach {
+        Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        items(items = items, key = { it.key }) { item ->
+            TimelineRow(item = item, onClick = onItemClick)
+        }
     }
 }
 
@@ -221,7 +358,7 @@ fun TimelineRow(
                 interactionSource = remember { MutableInteractionSource() },
                 enabled = true,
                 onClick = { onClick(item) }
-            ),
+            )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(text = item.time.toString(), style = MaterialTheme.typography.titleMedium)
@@ -231,62 +368,3 @@ fun TimelineRow(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun TimelineRowPreview() {
-    val uiItems =
-        PreviewData.supplementList
-            .flatMap { it.toPreviewTimelineItems() }
-            .map { it.toTimelineItemUiModel() }
-            .sortedBy { it.time }
-
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn {
-                items(
-                    items = uiItems,
-                    key = { it.key }
-                ) { item ->
-                    TimelineRow(item)
-                }
-            }
-        }
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun SupplementRowPreviewDark() {
-    val uiItems =
-        PreviewData.supplementList
-            .flatMap { it.toPreviewTimelineItems() }
-            .map { it.toTimelineItemUiModel() }
-            .sortedBy { it.time }
-
-    MaterialTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn {
-                items(uiItems) { item ->
-                    TimelineRow(item)
-                }
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun TimelineListPreview() {
-    val uiItems =
-        PreviewData.supplementList
-            .flatMap { it.toPreviewTimelineItems() }
-            .map { it.toTimelineItemUiModel() }
-            .sortedBy { it.time }
-
-    MaterialTheme {
-        TimelineList(
-            items = uiItems,
-            onItemClick = {}
-        )
-    }
-}

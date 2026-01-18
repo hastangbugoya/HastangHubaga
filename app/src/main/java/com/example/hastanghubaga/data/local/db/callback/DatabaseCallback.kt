@@ -351,13 +351,22 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         )
         db.execSQL(
             """
-                INSERT INTO supplement_user_settings 
-                    (supplementId, preferredServingSize, preferredUnit, preferredServingPerDay, isEnabled)
-                VALUES
-                    (1, 2.0, 'CAPSULE', 1, 1),   -- Multivitamin: user prefers 2 capsules
-                    (3, 5.0, 'GRAM', 1, 1),      -- Creatine: prefer 5g
-                    (7, 1.0, 'TABLET', 2, 0);    -- Melatonin disabled by user
-                """)
+        INSERT INTO supplement_user_settings 
+            (
+                supplementId,
+                preferredServingSize,
+                preferredUnit,
+                preferredServingPerDay,
+                isEnabled,
+                scheduleType
+            )
+        VALUES
+            (1, 2.0, 'CAPSULE', 1, 1, 'FIXED_TIMES'),   -- Multivitamin: user prefers 2 capsules
+            (3, 5.0, 'GRAM',    1, 1, 'FIXED_TIMES'),  -- Creatine: prefer 5g
+            (7, 1.0, 'TABLET',  2, 0, 'FIXED_TIMES');  -- Melatonin disabled by user
+    """.trimIndent()
+        )
+
 
         db.execSQL(
             """

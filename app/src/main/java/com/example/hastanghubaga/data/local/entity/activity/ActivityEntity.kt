@@ -17,5 +17,18 @@ data class ActivityEntity(
     val startTimestamp: Long,
     val endTimestamp: Long?,
 
-    val notes: String? = null
+    val notes: String? = null,
+    /**
+     * Optional user-reported intensity for the activity.
+     *
+     * Convention (example, you can document this later):
+     * 1 = very light
+     * 5 = moderate
+     * 10 = maximal effort
+     *
+     * Nullable because:
+     * - many activities won’t have intensity
+     * - historical data won’t have it
+     */
+    val intensity: Int? = null
 )
