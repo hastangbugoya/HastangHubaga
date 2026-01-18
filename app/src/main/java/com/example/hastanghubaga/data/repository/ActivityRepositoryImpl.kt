@@ -5,6 +5,7 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,25 @@ class ActivityRepositoryImpl @Inject constructor(
 
         return dao.observeActivitiesForDay(start, end)
             .map { it.map(ActivityEntity::toDomain) }
+    }
+
+    override suspend fun insertActivity(
+        type: ActivityType,
+        startTimestamp: Long,
+        endTimestamp: Long?,
+        notes: String?,
+        intensity: Int?
+    ): Long {
+        return dao.insertActivity(
+            ActivityEntity(
+                id = 0L, // auto-generate
+                type = type,
+                startTimestamp = startTimestamp,
+                endTimestamp = endTimestamp,
+                notes = notes,
+                intensity = intensity
+            )
+        )
     }
 
     /*

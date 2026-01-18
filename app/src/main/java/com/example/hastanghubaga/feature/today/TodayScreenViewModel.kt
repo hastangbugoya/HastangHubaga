@@ -5,9 +5,12 @@ package com.example.hastanghubaga.feature.today
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.model.timeline.TimelineItem
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
+import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
@@ -30,7 +33,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toInstant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -42,6 +47,7 @@ class TodayScreenViewModel @Inject constructor(
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
     private val savedStateHandle: SavedStateHandle,
+    private val savedExerciseActivityUseCase: SaveExerciseActivityUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TodayScreenContract.State())
@@ -81,54 +87,124 @@ class TodayScreenViewModel @Inject constructor(
         val today = DomainTimePolicy.todayLocal(clock)
 
         when (intent) {
-            is TodayScreenContract.Intent.LoadToday -> loadToday(today)
-            is TodayScreenContract.Intent.Refresh -> loadToday(today)
-            is TodayScreenContract.Intent.TimelineItemClicked -> handleTimelineItemClicked(intent.item)
+            is TodayScreenContract.Intent.LoadToday ->
+                loadToday(today)
 
-            // ---- exercise sheet intents ----
-            is TodayScreenContract.Intent.ExerciseTapped -> openExerciseDraft(intent.item, clock)
+            is TodayScreenContract.Intent.Refresh ->
+                loadToday(today)
+
+            is TodayScreenContract.Intent.TimelineItemClicked -> {
+                handleTimelineItemClicked(intent.item)
+            }
+
+            is TodayScreenContract.Intent.ConfirmDose -> {
+                viewModelScope.launch {
+                    val timeUseIntent =
+                        when {
+                            intent.actualTime != null ->
+                                TimeUseIntent.Explicit(
+                                    date = DomainTimePolicy.todayLocal(clock),
+                                    time = intent.actualTime
+                                )
+                            else ->
+                                TimeUseIntent.Scheduled(intent.scheduledTime)
+                        }
+
+                    logSupplementDoseUseCase(
+                        LogDoseInput(
+                            supplementId = intent.supplementId,
+                            fractionTaken = intent.amount,
+                            unit = intent.unit,
+                            timeUseIntent = timeUseIntent
+                        )
+                    )
+                }
+            }
+
+            is TodayScreenContract.Intent.ExerciseTapped -> {
+                val activityUi = intent.item as? ActivityUi ?: return
+                val start = nowLocalTime(clock)
+
+                _state.update {
+                    it.copy(
+                        exerciseDraft = TodayScreenContract.ExerciseDraft(
+                            activityType = activityUi.activityType,
+                            startTime = start,
+                            endTime = null,
+                            notes = "",
+                            intensity = null,
+                            phase = TodayScreenContract.ExerciseDraft.Phase.Draft
+                        )
+                    )
+                }
+            }
 
             TodayScreenContract.Intent.ExerciseStartPressed -> {
-                val current = _state.value.exerciseDraft ?: return
-                val updated = current.copy(phase = TodayScreenContract.ExerciseDraft.Phase.Running)
-                setExerciseDraft(updated)
+                val existing = state.value.exerciseDraft ?: return
+                if (existing.phase == TodayScreenContract.ExerciseDraft.Phase.Running) return
+
+                // startTime is already prefilled, but keep it “now” if you want it to refresh on Start.
+                val start = existing.startTime
+
+                _state.update {
+                    it.copy(
+                        exerciseDraft = existing.copy(
+                            startTime = start,
+                            endTime = null,
+                            phase = TodayScreenContract.ExerciseDraft.Phase.Running
+                        )
+                    )
+                }
             }
 
             is TodayScreenContract.Intent.ExerciseNotesChanged -> {
-                val current = _state.value.exerciseDraft ?: return
-                setExerciseDraft(current.copy(notes = intent.value))
+                val existing = state.value.exerciseDraft ?: return
+                _state.update { it.copy(exerciseDraft = existing.copy(notes = intent.value)) }
             }
 
             is TodayScreenContract.Intent.ExerciseIntensityChanged -> {
-                val current = _state.value.exerciseDraft ?: return
-                setExerciseDraft(current.copy(intensity = intent.value))
+                val existing = state.value.exerciseDraft ?: return
+                _state.update { it.copy(exerciseDraft = existing.copy(intensity = intent.value)) }
             }
 
             is TodayScreenContract.Intent.ExerciseEndTimeChanged -> {
-                val current = _state.value.exerciseDraft ?: return
-                setExerciseDraft(current.copy(endTime = intent.value))
+                val existing = state.value.exerciseDraft ?: return
+                // Optional manual edit support; keep it clamped if provided.
+                val clamped =
+                    intent.value?.let { clampEndTimeNotBeforeStart(existing.startTime, it) }
+                _state.update { it.copy(exerciseDraft = existing.copy(endTime = clamped)) }
             }
 
             TodayScreenContract.Intent.ExerciseConfirmPressed -> {
-                // TODO: Insert/update Activity via a use case.
-                // For now, just close the sheet and show a banner so you can verify the flow works.
-                clearExerciseDraft()
+                val draft = state.value.exerciseDraft ?: return
+                if (draft.phase != TodayScreenContract.ExerciseDraft.Phase.Running) return
+
                 viewModelScope.launch {
-                    _effect.send(TodayScreenContract.Effect.ShowBanner("Exercise saved (TODO: insert into DB)"))
+                    val now = nowLocalTime(clock)
+                    val endTime = clampEndTimeNotBeforeStart(draft.startTime, now)
+
+                    val startMillis = localTimeToEpochMillis(today, draft.startTime)
+                    val endMillis = localTimeToEpochMillis(today, endTime)
+
+                    savedExerciseActivityUseCase(
+                        type = draft.activityType,
+                        startTimestamp = startMillis,
+                        endTimestamp = endMillis,
+                        notes = draft.notes.ifBlank { null },
+                        intensity = draft.intensity
+                    )
+
+                    // close sheet
+                    _state.update { it.copy(exerciseDraft = null) }
                 }
             }
 
             TodayScreenContract.Intent.DismissExerciseSheet -> {
-                clearExerciseDraft()
-            }
-
-            // ---- existing dose flow ----
-            is TodayScreenContract.Intent.ConfirmDose -> {
-                // (your existing code left unchanged)
-                // ...
+                _state.update { it.copy(exerciseDraft = null) }
             }
         }
     }
+
 
     private fun handleTimelineItemClicked(
         uiItem: TimelineItemUiModel
@@ -324,6 +400,25 @@ class TodayScreenViewModel @Inject constructor(
     private fun LocalTime.toMinutesOfDay(): Int = (hour * 60) + minute
     private fun minutesToLocalTime(m: Int): LocalTime = LocalTime(m / 60, m % 60)
 
-    // ---- rest of your VM (loadToday, handleTimelineItemClicked, etc.) unchanged ----
-    // ...
+    private fun nowLocalTime(clock: Clock): LocalTime =
+        DomainTimePolicy.nowLocalDateTime(clock).time
+
+    private fun localTimeToEpochMillis(
+        date: LocalDate,
+        time: LocalTime
+    ): Long {
+        val ldt = LocalDateTime(date = date, time = time)
+        return ldt.toInstant(DomainTimePolicy.localTimeZone).toEpochMilliseconds()
+    }
+
+    /**
+     * Ensures endTime is never earlier than startTime.
+     * If "now" is earlier (rare but possible with manual edits / clock changes),
+     * clamp to startTime.
+     */
+    private fun clampEndTimeNotBeforeStart(
+        start: LocalTime,
+        endCandidate: LocalTime
+    ): LocalTime = if (endCandidate < start) start else endCandidate
+
 }
