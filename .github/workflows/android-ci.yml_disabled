@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------------------
+# CI PERFORMANCE NOTE (FUTURE IMPROVEMENT)
+#
+# When the test suite grows, consider splitting CI into TWO jobs:
+#
+# 1) FAST PATH (always run)
+#    - Unit tests (JVM)
+#    - Pure domain + TimePolicy + DST regression tests
+#
+# 2) SLOW PATH (selective)
+#    - Instrumented tests (emulator)
+#    - Run only:
+#        • Nightly (schedule)
+#        • On PRs touching DB / time / Room / scheduling code
+#
+# Goal:
+# - Keep feedback fast for most changes
+# - Still protect against time-zone, DST, and persistence regressions
+#
+# Current state:
+# - Test count is low → single-job CI is acceptable
+# - Revisit once emulator time becomes a bottleneck
+# ---------------------------------------------------------------------------
+name: Android CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *'   # every night at 3am UTC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run unit tests
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
+
+      - name: Run instrumented tests (emulator)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect
+          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
