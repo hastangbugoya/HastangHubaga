@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -47,6 +48,7 @@ import com.example.hastanghubaga.ui.timeline.toPreviewTimelineItems
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModel
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
+import kotlin.math.roundToInt
 
 /**
  * Local sheet host:
@@ -280,18 +282,30 @@ private fun ExerciseBottomSheetContent(
 
         Spacer(Modifier.height(12.dp))
 
-        val intensityText = draft.intensity?.toString() ?: ""
-        OutlinedTextField(
-            value = intensityText,
-            onValueChange = { raw ->
-                val trimmed = raw.trim()
-                val parsed = trimmed.toIntOrNull()
-                onIntensityChange(parsed)
-            },
-            label = { Text("Intensity (optional)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column {
+            Text(
+                text = "Intensity",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val intensityValue = draft.intensity?.toFloat() ?: 5f
+
+            Slider(
+                value = intensityValue,
+                onValueChange = { newValue ->
+                    onIntensityChange(newValue.roundToInt())
+                },
+                valueRange = 1f..10f,
+                steps = 8
+            )
+
+            Text(
+                text = "Level: ${draft.intensity ?: "—"}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
