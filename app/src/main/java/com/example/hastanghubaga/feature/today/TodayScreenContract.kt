@@ -32,7 +32,7 @@ object TodayScreenContract {
             val supplementId: Long,
             val amount: Double,
             val unit: SupplementDoseUnit,
-            val scheduledTime: LocalTime,
+            val scheduledTime: LocalTime?,
             val actualTime: LocalTime?
         ) : Intent
 
@@ -49,6 +49,15 @@ object TodayScreenContract {
         data class ExerciseEndTimeChanged(val value: LocalTime?) : Intent
 
         data object DismissExerciseSheet : Intent
+
+        data class SupplementLogOptionSelected(
+            val supplementId: Long,
+            val title: String,
+            val defaultUnit: SupplementDoseUnit,
+            val suggestedDose: Double?,
+            val scheduledTime: LocalTime?,
+            val option: SupplementLogOption
+        ) : Intent
     }
 
     /**
@@ -73,9 +82,21 @@ object TodayScreenContract {
         data class ShowDoseInputDialog(
             val supplementId: Long,
             val title: String,
-            val scheduledTime: LocalTime,
+            val scheduledTime: LocalTime? = null,
             val defaultUnit: SupplementDoseUnit,
-            val suggestedDose: Double,
+            val suggestedDose: Double? = null,
+        ) : Effect
+
+        /**
+         * Shows a small choice sheet when user taps a scheduled supplement row.
+         * Lets the user decide whether they are logging the scheduled dose or an extra/now dose.
+         */
+        data class ShowSupplementLogChoice(
+            val supplementId: Long,
+            val title: String,
+            val defaultUnit: SupplementDoseUnit,
+            val suggestedDose: Double?,
+            val scheduledTime: LocalTime? = null
         ) : Effect
     }
 
@@ -95,6 +116,11 @@ object TodayScreenContract {
         val phase: Phase
     ) {
         enum class Phase { Draft, Running }
+    }
+
+    enum class SupplementLogOption {
+        Scheduled, // “Log scheduled dose”
+        NowExtra   // “Log now / extra dose”
     }
 
 }

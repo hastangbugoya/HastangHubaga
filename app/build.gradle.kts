@@ -22,7 +22,10 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
         testInstrumentationRunner = "com.example.hastanghubaga.HiltTestRunner"
+
+        // If you really want to disable verifyDatabase in builds:
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments += mapOf(
@@ -46,6 +49,7 @@ android {
         buildConfig = true
     }
 
+    // You are using the "old" compose compiler wiring. Keep BOM compatible.
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
@@ -55,21 +59,22 @@ kotlin {
     jvmToolchain(17)
 }
 
+/**
+ * You pinned kotlinx.serialization because of Kotlin 1.9.25 compatibility issues in your project.
+ * Keep this if you know you need it.
+ */
 configurations.all {
     resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlinx"
-            && requested.name.startsWith("kotlinx-serialization")
+        if (requested.group == "org.jetbrains.kotlinx" &&
+            requested.name.startsWith("kotlinx-serialization")
         ) {
             useVersion("1.6.3")
-            because("Kotlin 1.9.25 is incompatible with kotlinx.serialization 1.7.x")
+            because("Pinned to 1.6.3 for project compatibility")
         }
     }
 }
 
-
-
 dependencies {
-
     /* ----------------------------- */
     /* Core Android / Kotlin         */
     /* ----------------------------- */
@@ -78,23 +83,32 @@ dependencies {
     implementation(libs.androidx.activity.compose)
 
     implementation(libs.kotlinx.datetime)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
+    // ✅ only once (you had it twice)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     /* ----------------------------- */
     /* Jetpack Compose (BOM-managed) */
     /* ----------------------------- */
-    implementation(platform(libs.androidx.compose.bom))
+    // ✅ Use a specific BOM to prevent skew across compose artifacts.
+    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.00"))
 
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.runtime)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
 
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.testManifest)
+    // ✅ Foundation explicit helps ensure clickable/indication code paths align
+    implementation("androidx.compose.foundation:foundation")
 
+    // Material3
+    implementation("androidx.compose.material3:material3")
+
+    // ✅ Important for your crash: ensure ripple artifact is aligned via BOM
+    implementation("androidx.compose.material:material-ripple")
+
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     /* ----------------------------- */
     /* Dependency Injection (Hilt)   */
@@ -102,29 +116,23 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.52")
     kapt("com.google.dagger:hilt-compiler:2.52")
 
-    // Hilt + Compose navigation
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Hilt + WorkManager
     implementation("androidx.hilt:hilt-work:1.2.0")
     kapt("androidx.hilt:hilt-compiler:1.2.0")
 
-
     /* ----------------------------- */
     /* WorkManager                   */
     /* ----------------------------- */
     implementation("androidx.work:work-runtime-ktx:2.9.1")
-
 
     /* ----------------------------- */
     /* Room (Database)               */
     /* ----------------------------- */
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-
-    // Room annotation processor (KSP)
     ksp("androidx.room:room-compiler:2.6.1")
-
 
     /* ----------------------------- */
     /* App Widgets (Glance)          */
@@ -132,40 +140,33 @@ dependencies {
     implementation("androidx.glance:glance:1.1.1")
     implementation("androidx.glance:glance-appwidget:1.1.1")
 
-
     /* ----------------------------- */
     /* Security                      */
     /* ----------------------------- */
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
-
     /* ----------------------------- */
     /* Testing                       */
     /* ----------------------------- */
     testImplementation(libs.junit)
+
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.52")
     kaptTest("com.google.dagger:hilt-compiler:2.52")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation("com.google.truth:truth:1.4.2")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
 
 kapt {
+    correctErrorTypes = true
     arguments {
         arg("room.schemaLocation", "$projectDir/schemas")
         arg("room.incremental", "true")
         arg("room.expandProjection", "true")
-//        arg("room.verifyDatabase", "false")
     }
 }
-
-//kapt {
-//    correctErrorTypes = true
-//}
-

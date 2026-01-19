@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.isExercise
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.*
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.*
 import com.example.hastanghubaga.ui.common.BannerController
 import com.example.hastanghubaga.ui.common.BottomSheetController
 import com.example.hastanghubaga.ui.common.ErrorView
@@ -41,6 +44,7 @@ import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
+import kotlinx.datetime.LocalTime
 import kotlin.math.roundToInt
 
 /**
@@ -53,6 +57,12 @@ import kotlin.math.roundToInt
 sealed interface ActiveLocalSheet {
     data class Dose(
         val data: TodayScreenContract.Effect.ShowDoseInputDialog,
+        val title: String?
+    ) : ActiveLocalSheet
+
+
+    data class SupplementLogChoice(
+        val data: TodayScreenContract.Effect.ShowSupplementLogChoice,
         val title: String?
     ) : ActiveLocalSheet
 
@@ -76,6 +86,11 @@ fun TodayScreen(
     var activeSheet by remember { mutableStateOf<ActiveLocalSheet?>(null) }
 
     val localSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+//
+//    var supplementChoiceData by remember {
+//        mutableStateOf<TodayScreenContract.Effect.ShowSupplementLogChoice?>(null)
+//    }
+//    val choiceSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Existing “loaded banner” effect remains unchanged
     LaunchedEffect(state.isLoading, state.uiTimelineItems.size) {
@@ -121,7 +136,14 @@ fun TodayScreen(
 
                 is TodayScreenContract.Effect.ShowDoseInputDialog -> {
                     // Keep old behavior, but route to the unified local sheet host
-                    activeSheet = ActiveLocalSheet.Dose(
+                    activeSheet = Dose(
+                        data = effect,
+                        title = effect.title
+                    )
+                }
+
+                is TodayScreenContract.Effect.ShowSupplementLogChoice -> {
+                    activeSheet = ActiveLocalSheet.SupplementLogChoice(
                         data = effect,
                         title = effect.title
                     )
@@ -136,17 +158,16 @@ fun TodayScreen(
             // Keep existing behavior: VM decides what to do on click (dose, etc.)
             viewModel.onIntent(TodayScreenContract.Intent.TimelineItemClicked(item))
 
-            // NEW: if this is an exercise activity, open the exercise draft flow via VM
+            // NEW: only for exercise activities
             val activity = item as? ActivityUiModel
             if (activity != null && activity.activityType.isExercise) {
-                viewModel.onIntent(TodayScreenContract.Intent.ExerciseTapped(item))
+                viewModel.onIntent(TodayScreenContract.Intent.ExerciseTapped(activity))
             }
         },
         onRefresh = {
             viewModel.onIntent(TodayScreenContract.Intent.Refresh)
         }
     )
-
     // Drive exercise sheet from state so it shows even in the Draft/Start-only phase
     LaunchedEffect(state.exerciseDraft) {
         val draft = state.exerciseDraft
@@ -167,18 +188,23 @@ fun TodayScreen(
             sheetState = localSheetState,
             onDismissRequest = {
                 when (sheet) {
-                    is ActiveLocalSheet.Dose -> {
+                    is Dose -> {
                         activeSheet = null
                     }
-                    is ActiveLocalSheet.Exercise -> {
-                        viewModel.onIntent(TodayScreenContract.Intent.DismissExerciseSheet)
+
+                    is Exercise -> {
+                        viewModel.onIntent(DismissExerciseSheet)
+                        activeSheet = null
+                    }
+
+                    is SupplementLogChoice -> {
                         activeSheet = null
                     }
                 }
             }
         ) {
             when (sheet) {
-                is ActiveLocalSheet.Dose -> {
+                is Dose -> {
                     sheet.title?.let { title ->
                         Text(
                             text = title,
@@ -187,11 +213,11 @@ fun TodayScreen(
                         )
                     }
                     DoseInputSheetContent(
-                        defaultAmount = sheet.data.suggestedDose,
+                        defaultAmount = sheet.data.suggestedDose ?: 0.0,
                         defaultUnit = sheet.data.defaultUnit,
                         onConfirm = { amount, unit ->
                             viewModel.onIntent(
-                                TodayScreenContract.Intent.ConfirmDose(
+                                ConfirmDose(
                                     supplementId = sheet.data.supplementId,
                                     amount = amount,
                                     unit = unit,
@@ -204,13 +230,13 @@ fun TodayScreen(
                     )
                 }
 
-                is ActiveLocalSheet.Exercise -> {
+                is Exercise -> {
                     ExerciseBottomSheetContent(
                         title = sheet.title,
                         draft = sheet.draft,
-                        onNotesChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseNotesChanged(it)) },
-                        onIntensityChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseIntensityChanged(it)) },
-                        onEndTimeChange = { viewModel.onIntent(TodayScreenContract.Intent.ExerciseEndTimeChanged(it)) },
+                        onNotesChange = { viewModel.onIntent(ExerciseNotesChanged(it)) },
+                        onIntensityChange = { viewModel.onIntent(ExerciseIntensityChanged(it)) },
+                        onEndTimeChange = { viewModel.onIntent(ExerciseEndTimeChanged(it)) },
                         onPrimaryAction = {
                             when (sheet.draft.phase) {
                                 TodayScreenContract.ExerciseDraft.Phase.Draft ->
@@ -219,6 +245,39 @@ fun TodayScreen(
                                 TodayScreenContract.ExerciseDraft.Phase.Running ->
                                     viewModel.onIntent(TodayScreenContract.Intent.ExerciseConfirmPressed)
                             }
+                        }
+                    )
+                }
+
+                is SupplementLogChoice -> {
+                    SupplementLogChoiceSheetContent(
+                        title = sheet.title,
+                        scheduledTime = sheet.data.scheduledTime,
+                        onLogScheduled = {
+                            viewModel.onIntent(
+                                TodayScreenContract.Intent.SupplementLogOptionSelected(
+                                    supplementId = sheet.data.supplementId,
+                                    title = sheet.data.title,
+                                    defaultUnit = sheet.data.defaultUnit,
+                                    suggestedDose = sheet.data.suggestedDose,
+                                    scheduledTime = sheet.data.scheduledTime,
+                                    option = TodayScreenContract.SupplementLogOption.Scheduled
+                                )
+                            )
+                            activeSheet = null
+                        },
+                        onLogNowExtra = {
+                            viewModel.onIntent(
+                                TodayScreenContract.Intent.SupplementLogOptionSelected(
+                                    supplementId = sheet.data.supplementId,
+                                    title = sheet.data.title,
+                                    defaultUnit = sheet.data.defaultUnit,
+                                    suggestedDose = sheet.data.suggestedDose,
+                                    scheduledTime = sheet.data.scheduledTime,
+                                    option = TodayScreenContract.SupplementLogOption.NowExtra
+                                )
+                            )
+                            activeSheet = null
                         }
                     )
                 }
@@ -246,7 +305,9 @@ private fun ExerciseBottomSheetContent(
     onEndTimeChange: (kotlinx.datetime.LocalTime?) -> Unit,
     onPrimaryAction: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)) {
         Text(text = title, style = MaterialTheme.typography.titleLarge)
 
         Spacer(Modifier.height(12.dp))
@@ -372,6 +433,52 @@ fun TimelineRow(
             Text(text = item.title, style = MaterialTheme.typography.titleLarge)
             item.subtitle?.let { Text(text = it) }
         }
+    }
+}
+
+@Composable
+private fun SupplementLogChoiceSheetContent(
+    title: String?,
+    scheduledTime: LocalTime?,
+    onLogScheduled: () -> Unit,
+    onLogNowExtra: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = title ?: "Log supplement dose",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Choose how you want to log:",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        // Option: scheduled
+        val scheduledLabel = scheduledTime?.toString() ?: "scheduled time"
+        Text(
+            text = "Log scheduled dose ($scheduledLabel)",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onLogScheduled() }
+                .padding(vertical = 12.dp)
+        )
+
+        // Option: now/extra
+        Text(
+            text = "Log now / extra dose",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onLogNowExtra() }
+                .padding(vertical = 12.dp)
+        )
     }
 }
 

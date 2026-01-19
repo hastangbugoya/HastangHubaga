@@ -6,7 +6,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
-import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
@@ -17,7 +16,9 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimeline
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
+import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
@@ -101,13 +102,9 @@ class TodayScreenViewModel @Inject constructor(
                 viewModelScope.launch {
                     val timeUseIntent =
                         when {
-                            intent.actualTime != null ->
-                                TimeUseIntent.Explicit(
-                                    date = DomainTimePolicy.todayLocal(clock),
-                                    time = intent.actualTime
-                                )
-                            else ->
-                                TimeUseIntent.Scheduled(intent.scheduledTime)
+                            intent.actualTime != null -> TimeUseIntent.Explicit(today, intent.actualTime)
+                            intent.scheduledTime != null -> TimeUseIntent.Scheduled(intent.scheduledTime)
+                            else -> TimeUseIntent.ActualNow
                         }
 
                     logSupplementDoseUseCase(
@@ -127,7 +124,7 @@ class TodayScreenViewModel @Inject constructor(
 
                 _state.update {
                     it.copy(
-                        exerciseDraft = TodayScreenContract.ExerciseDraft(
+                        exerciseDraft = ExerciseDraft(
                             activityType = activityUi.activityType,
                             startTime = start,
                             endTime = null,
@@ -202,6 +199,27 @@ class TodayScreenViewModel @Inject constructor(
             TodayScreenContract.Intent.DismissExerciseSheet -> {
                 _state.update { it.copy(exerciseDraft = null) }
             }
+
+            is TodayScreenContract.Intent.SupplementLogOptionSelected -> {
+                viewModelScope.launch {
+                    val scheduledOrNull =
+                        when (intent.option) {
+                            TodayScreenContract.SupplementLogOption.Scheduled -> intent.scheduledTime
+                            TodayScreenContract.SupplementLogOption.NowExtra -> null
+                        }
+
+                    _effect.send(
+                        TodayScreenContract.Effect.ShowDoseInputDialog(
+                            supplementId = intent.supplementId,
+                            title = intent.title,
+                            defaultUnit = intent.defaultUnit,
+                            suggestedDose = intent.suggestedDose,
+                            scheduledTime = scheduledOrNull
+                        )
+                    )
+                }
+            }
+
         }
     }
 
@@ -216,7 +234,7 @@ class TodayScreenViewModel @Inject constructor(
             is TimelineTapAction.RequestDoseInput -> {
                 viewModelScope.launch {
                     _effect.send(
-                        TodayScreenContract.Effect.ShowDoseInputDialog(
+                        TodayScreenContract.Effect.ShowSupplementLogChoice(
                             supplementId = action.supplementId,
                             title = action.title,
                             defaultUnit = action.defaultUnit,
@@ -236,6 +254,8 @@ class TodayScreenViewModel @Inject constructor(
             }
 
             TimelineTapAction.NoOp -> Unit
+
+
         }
     }
     private data class TimelineIdentity(
