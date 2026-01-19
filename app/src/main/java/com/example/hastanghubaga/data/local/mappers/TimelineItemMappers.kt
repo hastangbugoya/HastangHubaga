@@ -2,7 +2,7 @@ package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.time.JavaTimeAdapter
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import kotlinx.datetime.Clock
@@ -50,6 +50,8 @@ fun TimelineItem.toUpcomingSchedule(
                 title = activity.type.name,
                 subtitle = "later"
             )
+
+        is TimelineItem.SupplementDoseLogTimelineItem -> null
     }
 }
 

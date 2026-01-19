@@ -9,5 +9,6 @@ data class Activity(
     val type: ActivityType,
     val start: LocalDateTime,
     val end: LocalDateTime?,
-    val notes: String? = null
+    val notes: String? = null,
+    val intensity: Int? = null
 )

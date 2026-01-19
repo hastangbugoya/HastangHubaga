@@ -3,7 +3,7 @@ package com.example.hastanghubaga.feature.today
 import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import kotlinx.datetime.LocalTime
 

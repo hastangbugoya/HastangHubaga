@@ -3,6 +3,7 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 import android.util.Log
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import javax.inject.Inject
 /**
@@ -76,7 +77,7 @@ class HandleTimelineItemTapUseCase @Inject constructor(
      */
     fun resolve(item: TimelineItemUiModel): TimelineTapAction {
         return when (item) {
-            is TimelineItemUiModel.Supplement ->
+            is SupplementUiModel ->
                 TimelineTapAction.RequestDoseInput(
                     supplementId = item.id,
                     defaultUnit = item.defaultUnit,
@@ -90,7 +91,7 @@ class HandleTimelineItemTapUseCase @Inject constructor(
         }
     }
 
-    private suspend fun logSupplement(item: TimelineItemUiModel.Supplement) {
+    private suspend fun logSupplement(item: SupplementUiModel) {
         Log.d(
             "TimelineTap",
             "Logging supplement intake → supplementId=${item.id}"

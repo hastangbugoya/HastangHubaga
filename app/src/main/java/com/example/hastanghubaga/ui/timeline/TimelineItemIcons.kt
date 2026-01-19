@@ -1,9 +1,8 @@
 package com.example.hastanghubaga.ui.timeline
 
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.hastanghubaga.R
-import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 
 /**
@@ -13,12 +12,13 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
  */
 fun TimelineItemUiModel.icon(): Int =
     when (this) {
-        is TimelineItemUiModel.Supplement -> supplementIcon()
-        is TimelineItemUiModel.Meal -> mealIcon()
-        is TimelineItemUiModel.Activity -> activityIcon()
+        is SupplementUiModel -> supplementIcon()
+        is MealUiModel -> mealIcon()
+        is ActivityUiModel -> activityIcon()
+        is TimelineItem.SupplementDoseLog -> doseLogIcon()
     }
 
-private fun TimelineItemUiModel.Supplement.supplementIcon(): Int =
+private fun SupplementUiModel.supplementIcon(): Int =
     when (doseState) {
         is MealAwareDoseState.PendingMeal -> R.drawable.ic_supplement_with_food_utensils
         is MealAwareDoseState.Ready -> R.drawable.ic_supplement_ready_medicine
@@ -26,8 +26,8 @@ private fun TimelineItemUiModel.Supplement.supplementIcon(): Int =
         else -> R.drawable.ic_supplement_eye_alert
     }
 
-private fun TimelineItemUiModel.Meal.mealIcon(): Int =
-    when (type) {
+private fun MealUiModel.mealIcon(): Int =
+    when (mealType) {
         MealType.BREAKFAST -> R.drawable.ic_meal_breakfast_egg
         MealType.LUNCH -> R.drawable.ic_meal_lunch_sandwich
         MealType.DINNER -> R.drawable.ic_meal_dinner_plate_fork
@@ -37,10 +37,13 @@ private fun TimelineItemUiModel.Meal.mealIcon(): Int =
         MealType.CUSTOM -> R.drawable.ic_meal_rice_bowl
     }
 
-private fun TimelineItemUiModel.Activity.activityIcon(): Int =
+private fun ActivityUiModel.activityIcon(): Int =
     when (activityType) {
         ActivityType.STRENGTH_TRAINING -> R.drawable.ic_activity_strength
         ActivityType.WALKING -> R.drawable.ic_activity_walking
         ActivityType.SLEEP -> R.drawable.ic_activity_sleeping
         else -> R.drawable.ic_activity_default
     }
+
+private fun TimelineItem.SupplementDoseLog.doseLogIcon(): Int =
+    R.drawable.ic_supplement_avoid_caffeine

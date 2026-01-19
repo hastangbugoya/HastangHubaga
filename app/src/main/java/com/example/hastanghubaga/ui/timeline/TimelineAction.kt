@@ -1,4 +1,7 @@
 package com.example.hastanghubaga.ui.timeline
+
+import com.example.hastanghubaga.ui.timeline.TimelineAction.*
+
 /**
  * Represents user interactions with timeline rows.
  *
@@ -17,6 +20,8 @@ sealed interface TimelineAction {
     data class OpenActivity(
         val activityId: Long
     ) : TimelineAction
+
+    data object NoOp : TimelineAction
 }
 
 
@@ -25,12 +30,14 @@ sealed interface TimelineAction {
  */
 fun TimelineItemUiModel.toClickAction(): TimelineAction =
     when (this) {
-        is TimelineItemUiModel.Supplement ->
-            TimelineAction.OpenSupplement(id)
+        is SupplementUiModel ->
+            OpenSupplement(id)
 
-        is TimelineItemUiModel.Meal ->
-            TimelineAction.OpenMeal(id)
+        is MealUiModel ->
+            OpenMeal(id)
 
-        is TimelineItemUiModel.Activity ->
-            TimelineAction.OpenActivity(id)
+        is ActivityUiModel ->
+            OpenActivity(id)
+
+        is TimelineItem.SupplementDoseLog -> NoOp
     }

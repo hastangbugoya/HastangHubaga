@@ -1,7 +1,7 @@
 package com.example.hastanghubaga.feature.today
 
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 
 

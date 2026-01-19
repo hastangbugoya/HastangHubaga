@@ -7,7 +7,7 @@ import com.example.hastanghubaga.data.local.models.MealJoinedRoom
 import com.example.hastanghubaga.data.time.JavaTimeAdapter
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import java.time.Instant
 import java.time.ZoneId
 

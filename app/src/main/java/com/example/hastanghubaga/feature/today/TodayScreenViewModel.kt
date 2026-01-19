@@ -6,7 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
-import com.example.hastanghubaga.domain.model.timeline.TimelineItem
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
@@ -17,9 +17,9 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimeline
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
+import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
-import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel.Activity as ActivityUi
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -122,7 +122,7 @@ class TodayScreenViewModel @Inject constructor(
             }
 
             is TodayScreenContract.Intent.ExerciseTapped -> {
-                val activityUi = intent.item as? ActivityUi ?: return
+                val activityUi = intent.item as? ActivityUiModel ?: return
                 val start = nowLocalTime(clock)
 
                 _state.update {
@@ -320,7 +320,7 @@ class TodayScreenViewModel @Inject constructor(
 
 
     private fun openExerciseDraft(item: TimelineItemUiModel, clock: Clock) {
-        val ui = item as? ActivityUi ?: return
+        val ui = item as? ActivityUiModel ?: return
         val now = DomainTimePolicy.nowLocalDateTime(clock).time
 
         val draft = TodayScreenContract.ExerciseDraft(

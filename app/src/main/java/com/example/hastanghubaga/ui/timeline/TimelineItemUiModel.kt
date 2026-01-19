@@ -1,8 +1,10 @@
 package com.example.hastanghubaga.ui.timeline
 
-import com.example.hastanghubaga.data.local.entity.meal.MealType
+
+
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import kotlinx.datetime.LocalTime
 
@@ -57,59 +59,154 @@ import kotlinx.datetime.LocalTime
  * It also enables the timeline to evolve visually
  * without impacting persistence or business rules.
  */
-sealed interface TimelineItemUiModel {
 
-    /** Stable UI key for LazyColumn */
+sealed interface TimelineItemUiModel {
+    val id: Long
+    val time: LocalTime
+    val rowType: TodayUiRowType
     val key: String
 
-    /** Source entity ID (supplementId, mealId, activityId) */
-    val id: Long
-
-    /** Time this item occurs */
-    val time: LocalTime
-
-    /** Primary display text */
     val title: String
-
-    /** Optional secondary text */
     val subtitle: String?
-
-    /** Row category for styling & behavior */
-    val rowType: TodayUiRowType
-
-    data class Supplement(
-        override val id: Long,
-        override val time: LocalTime,
-        override val title: String,
-        override val subtitle: String?,
-        val doseState: MealAwareDoseState?,
-        val suggestedDose: Double,
-        val defaultUnit: SupplementDoseUnit
-    ) : TimelineItemUiModel {
-        override val rowType = TodayUiRowType.SUPPLEMENT
-        override val key = "${rowType.name}-$id-$time"
-    }
-
-    data class Meal(
-        override val id: Long,
-        override val time: LocalTime,
-        override val title: String,
-        override val subtitle: String?,
-        val type: MealType
-    ) : TimelineItemUiModel {
-        override val rowType = TodayUiRowType.MEAL
-        override val key = "${rowType.name}-$id-$time"
-    }
-
-    data class Activity(
-        override val id: Long,
-        override val time: LocalTime,
-        override val title: String,
-        override val subtitle: String?,
-        val activityType: ActivityType,
-        val endTime: LocalTime?
-    ) : TimelineItemUiModel {
-        override val rowType = TodayUiRowType.ACTIVITY
-        override val key = "${rowType.name}-$id-$time"
-    }
+    val isCompleted: Boolean
 }
+
+
+data class SupplementUiModel(
+    override val id: Long,
+    override val time: LocalTime,
+    override val title: String,
+    override val subtitle: String?,
+    override val isCompleted: Boolean,
+
+    val supplementId: Long,
+    val scheduledTime: LocalTime,
+    val doseState: MealAwareDoseState?,
+    val defaultUnit: SupplementDoseUnit,
+    val suggestedDose: Double
+) : TimelineItemUiModel {
+
+    override val rowType: TodayUiRowType =
+        TodayUiRowType.SUPPLEMENT
+
+    override val key: String =
+        "SUPPLEMENT-$supplementId-$scheduledTime"
+}
+
+data class ActivityUiModel(
+    override val id: Long,
+    override val time: LocalTime,
+    override val title: String,
+    override val subtitle: String?,
+    override val isCompleted: Boolean,
+
+    val activityId: Long,
+    val activityType: ActivityType,
+    val startTime: LocalTime,
+    val endTime: LocalTime?,
+    val intensity: Int?
+) : TimelineItemUiModel {
+
+    override val rowType: TodayUiRowType =
+        TodayUiRowType.ACTIVITY
+
+    override val key: String =
+        "ACTIVITY-$activityId-$startTime"
+}
+
+
+
+data class MealUiModel(
+    override val id: Long,
+    override val time: LocalTime,
+    override val title: String,
+    override val subtitle: String?,
+    override val isCompleted: Boolean,
+
+    val mealId: Long,
+    val mealType: MealType
+) : TimelineItemUiModel {
+
+    override val rowType: TodayUiRowType =
+        TodayUiRowType.MEAL
+
+    override val key: String =
+        "MEAL-$mealId-$time"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//sealed interface TimelineItemUiModel {
+//
+//    /** Stable UI key for LazyColumn */
+//    val key: String
+//
+//    /** Source entity ID (supplementId, mealId, activityId) */
+//    val id: Long
+//
+//    /** Time this item occurs */
+//    val time: LocalTime
+//
+//    /** Primary display text */
+//    val title: String
+//
+//    /** Optional secondary text */
+//    val subtitle: String?
+//
+//    /** Row category for styling & behavior */
+//    val rowType: TodayUiRowType
+//
+//    data class Supplement(
+//        override val id: Long,
+//        override val time: LocalTime,
+//        override val title: String,
+//        override val subtitle: String?,
+//        val doseState: MealAwareDoseState?,
+//        val suggestedDose: Double,
+//        val defaultUnit: SupplementDoseUnit
+//    ) : TimelineItemUiModel {
+//        override val rowType = TodayUiRowType.SUPPLEMENT
+//        override val key = "${rowType.name}-$id-$time"
+//    }
+//
+//    data class Meal(
+//        override val id: Long,
+//        override val time: LocalTime,
+//        override val title: String,
+//        override val subtitle: String?,
+//        val type: MealType
+//    ) : TimelineItemUiModel {
+//        override val rowType = TodayUiRowType.MEAL
+//        override val key = "${rowType.name}-$id-$time"
+//    }
+//
+//    data class Activity(
+//        override val id: Long,
+//        override val time: LocalTime,
+//        override val title: String,
+//        override val subtitle: String?,
+//        val activityType: ActivityType,
+//        val endTime: LocalTime?
+//    ) : TimelineItemUiModel {
+//        override val rowType = TodayUiRowType.ACTIVITY
+//        override val key = "${rowType.name}-$id-$time"
+//    }
+//}
