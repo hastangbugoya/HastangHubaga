@@ -15,7 +15,8 @@ fun TimelineItemUiModel.icon(): Int =
         is SupplementUiModel -> supplementIcon()
         is MealUiModel -> mealIcon()
         is ActivityUiModel -> activityIcon()
-        is TimelineItem.SupplementDoseLog -> doseLogIcon()
+//        is TimelineItem.SupplementDoseLog -> doseLogIcon()
+        is SupplementDoseLogUiModel -> R.drawable.badge_check
     }
 
 private fun SupplementUiModel.supplementIcon(): Int =
@@ -45,5 +46,5 @@ private fun ActivityUiModel.activityIcon(): Int =
         else -> R.drawable.ic_activity_default
     }
 
-private fun TimelineItem.SupplementDoseLog.doseLogIcon(): Int =
-    R.drawable.ic_supplement_avoid_caffeine
+//private fun TimelineItem.SupplementDoseLog.doseLogIcon(): Int =
+//    R.drawable.ic_supplement_avoid_caffeine

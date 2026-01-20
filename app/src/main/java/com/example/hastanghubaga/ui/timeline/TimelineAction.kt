@@ -39,5 +39,8 @@ fun TimelineItemUiModel.toClickAction(): TimelineAction =
         is ActivityUiModel ->
             OpenActivity(id)
 
-        is TimelineItem.SupplementDoseLog -> NoOp
+//        is TimelineItem.SupplementDoseLog -> NoOp
+
+        is SupplementDoseLogUiModel ->
+            OpenSupplement(id)
     }

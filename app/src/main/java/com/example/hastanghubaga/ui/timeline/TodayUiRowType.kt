@@ -3,5 +3,6 @@ package com.example.hastanghubaga.ui.timeline
 enum class TodayUiRowType {
     SUPPLEMENT,
     MEAL,
-    ACTIVITY
+    ACTIVITY,
+    SUPPLEMENT_DOSE_LOG
 }

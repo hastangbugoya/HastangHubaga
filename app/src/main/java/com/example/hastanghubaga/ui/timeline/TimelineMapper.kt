@@ -76,7 +76,29 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 intensity = activity.intensity
             )
 
-        is TimelineItem.SupplementDoseLogTimelineItem -> TODO()
+        is TimelineItem.SupplementDoseLogTimelineItem ->
+            SupplementDoseLogUiModel(
+            id = this.doseLogId, /* doseLogId WHEN AVAILABLE, else temporary synthetic */
+            time = time,
+            title = title,
+            subtitle = buildString {
+                amount?.let { append(it) }
+                unit?.let {
+                    if (isNotEmpty()) append(" ")
+                    append(it)
+                }
+                scheduledTime?.let {
+                    if (isNotEmpty()) append(" ")
+                    append("(scheduled $it)")
+                }
+            }.ifBlank { null },
+            isCompleted = true,
+
+            supplementId = supplementId,
+            scheduledTime = scheduledTime,
+            amountText = amount?.toString(),
+            unitText = unit
+        )
     }
 
 
@@ -106,3 +128,87 @@ private fun com.example.hastanghubaga.data.local.entity.meal.MealType.toDomain()
         com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM ->
             MealType.CUSTOM
     }
+
+//fun List<TimelineItem>.toTimelineItemUiModelsWithIsCompleted(): List<TimelineItemUiModel> =
+//    map { domainItem ->
+//        when (domainItem) {
+//
+//            is TimelineItem.SupplementTimelineItem -> {
+//                val supplement = domainItem.supplement
+//                val time = domainItem.time
+//
+//                SupplementUiModel(
+//                    id = supplement.supplement.id,
+//                    time = time,
+//                    title = supplement.supplement.name,
+//                    subtitle =
+//                        "${supplement.effectiveServingSize.asDisplayTextNonComposable()} " +
+//                                supplement.effectiveDoseUnit.toDisplayCase(
+//                                    supplement.effectiveServingSize
+//                                ),
+//
+//                    // ✅ this now works because isTaken exists
+//                    isCompleted = domainItem.isTaken,
+//
+//                    supplementId = supplement.supplement.id,
+//                    scheduledTime = time,
+//                    doseState = supplement.doseState,
+//                    defaultUnit = supplement.supplement.recommendedDoseUnit,
+//                    suggestedDose = supplement.supplement.recommendedServingSize
+//                )
+//            }
+//
+//            is TimelineItem.MealTimelineItem -> {
+//                val meal = domainItem.meal
+//                MealUiModel(
+//                    id = meal.id,
+//                    time = domainItem.time,
+//                    title = meal.type.name, // or however you display it
+//                    subtitle = meal.notes,
+//                    // ✅ if meal row exists, it’s done
+//                    isCompleted = true,
+//
+//                    mealId = meal.id,
+//                    mealType = meal.type.toDomain()
+//                )
+//            }
+//
+//            is TimelineItem.ActivityTimelineItem -> {
+//                val activity = domainItem.activity
+//                ActivityUiModel(
+//                    id = activity.id,
+//                    time = domainItem.time,
+//                    title = activity.type.name, // or display mapping
+//                    subtitle = "${activity.start.time} - ${activity.end?.time ?: "…"}",
+//                    // ✅ done when ended
+//                    isCompleted = activity.end != null,
+//
+//                    activityId = activity.id,
+//                    activityType = activity.type,
+//                    intensity = activity.intensity,
+//                    startTime = activity.start.time,
+//                    endTime = null
+//                )
+//            }
+//
+//            is TimelineItem.SupplementDoseLogTimelineItem -> {
+//                // If you’re not ready to show “extra dose” rows yet,
+//                // do NOT leave TODO() (it will crash if one appears).
+//                SupplementDoseLogUiModel(
+//                    id = -1L,
+//                    time = domainItem.time,
+//                    title = domainItem.title,
+//                    subtitle = buildString {
+//                        domainItem.amount?.let { append(it) }
+//                        domainItem.unit?.let { append(" "); append(it) }
+//                        domainItem.scheduledTime?.let { append(" (scheduled "); append(it); append(")") }
+//                    }.ifBlank { null },
+//                    isCompleted = true,
+//                    supplementId = domainItem.supplementId,
+//                    scheduledTime = TODO(),
+//                    amountText = TODO(),
+//                    unitText = TODO()
+//                )
+//            }
+//        }
+//    }

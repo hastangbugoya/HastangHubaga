@@ -236,7 +236,7 @@ class TodayScreenViewModel @Inject constructor(
                             mealType = intent.input.mealType,
                             notes = intent.input.notes,
                             nutrition = intent.input.nutrition?.toDomain(),
-                            timeUseIntent = intent.input.timeUseIntent,
+                            timeUseIntent = TimeUseIntent.ActualNow,
                         ),
                         clock = Clock.System
                     )

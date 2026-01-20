@@ -115,7 +115,6 @@ data class ActivityUiModel(
 }
 
 
-
 data class MealUiModel(
     override val id: Long,
     override val time: LocalTime,
@@ -134,6 +133,32 @@ data class MealUiModel(
         "MEAL-$mealId-$time"
 }
 
+
+/**
+ * A UI row representing an actual recorded supplement dose event.
+ *
+ * This is NOT the scheduled supplement row.
+ * It exists so the timeline can show multiple logged doses (e.g., "extra dose")
+ * as distinct rows, even if the supplement is scheduled only once.
+ */
+data class SupplementDoseLogUiModel(
+    override val id: Long,                // doseLogId if you have one; otherwise synthetic
+    override val time: LocalTime,          // when the dose was taken
+    override val title: String,            // supplement name
+    override val subtitle: String?,        // "1 cap" / "extra dose" / etc.
+    override val isCompleted: Boolean,     // usually true (a log row is "done")
+
+    val supplementId: Long,
+    val scheduledTime: LocalTime?,         // null if this was "Log now/extra"
+    val amountText: String?,               // optional display like "1.0"
+    val unitText: String?                  // optional display like "capsule"
+) : TimelineItemUiModel {
+
+    override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT_DOSE_LOG
+
+    override val key: String =
+        "SUPPLEMENT_DOSE_LOG-$supplementId-$time-$id"
+}
 
 
 

@@ -10,6 +10,7 @@ sealed interface TimelineItem {
 
     data class SupplementTimelineItem(
         override val time: LocalTime,
+        val isTaken: Boolean = false,
         val supplement: SupplementWithUserSettings
     ) : TimelineItem
 
@@ -24,6 +25,7 @@ sealed interface TimelineItem {
     ) : TimelineItem
 
     data class SupplementDoseLogTimelineItem(
+        val doseLogId: Long,
         val supplementId: Long,
         val title: String,                 // display name
         override val time: LocalTime, // actual taken time
@@ -32,17 +34,15 @@ sealed interface TimelineItem {
         val scheduledTime: LocalTime? = null // optional
     ) : TimelineItem
 
-    data class SupplementDoseLog(
-        override val id: Long, // logId if you have it, otherwise synthetic
-        override val time: LocalTime,
-        override val title: String,
-        override val subtitle: String?,
-        val supplementId: Long,
-        override val isCompleted: Boolean
-    ) : TimelineItemUiModel {
-        override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT
-        override val key: String = "SUPPLEMENT_LOG-$supplementId-$time-$id"
-    }
-
-
+//    data class SupplementDoseLog(
+//        override val id: Long, // logId if you have it, otherwise synthetic
+//        override val time: LocalTime,
+//        override val title: String,
+//        override val subtitle: String?,
+//        val supplementId: Long,
+//        override val isCompleted: Boolean
+//    ) : TimelineItemUiModel {
+//        override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT
+//        override val key: String = "SUPPLEMENT_LOG-$supplementId-$time-$id"
+//    }
 }

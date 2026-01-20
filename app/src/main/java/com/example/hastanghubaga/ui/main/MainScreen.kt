@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.hastanghubaga.feature.calendar.CalendarScreen
+import com.example.hastanghubaga.feature.calendar.ui.MonthCalendarPanel
 import com.example.hastanghubaga.feature.today.TodayScreen
 import com.example.hastanghubaga.feature.today.TodayScreenContract
 import com.example.hastanghubaga.ui.common.BannerController
@@ -30,7 +32,6 @@ import com.example.hastanghubaga.ui.common.sheets.TimelineItemInfoSheet
 import com.example.hastanghubaga.ui.components.BottomNavigationBar
 import com.example.hastanghubaga.ui.components.TopBanner
 import com.example.hastanghubaga.ui.screens.SettingsScreen
-import com.example.hastanghubaga.ui.screens.SupplementsScreen
 import kotlinx.coroutines.delay
 
 
@@ -171,11 +172,15 @@ fun MainScreen() {
                         }
                     )
                 }
-
                 composable(NavItem.MANAGE.route) {
-                    SupplementsScreen {}
-                }
+                    CalendarScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        snackbarHostState = snackbarHostState,
+                        onNavigateToDate = {
 
+                        }
+                    )
+                }
                 composable(NavItem.SETTINGS.route) {
                     SettingsScreen {}
                 }

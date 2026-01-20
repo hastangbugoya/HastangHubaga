@@ -52,6 +52,8 @@ fun TimelineItem.toUpcomingSchedule(
             )
 
         is TimelineItem.SupplementDoseLogTimelineItem -> null
+
+        else -> null
     }
 }
 
