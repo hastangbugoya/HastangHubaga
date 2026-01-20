@@ -4,6 +4,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
@@ -20,10 +21,18 @@ interface MealRepository {
 
     suspend fun addMeal(
         meal: MealEntity,
-        nutrition: MealNutritionEntity
+        nutrition: MealNutritionEntity,
+        type: com.example.hastanghubaga.domain.model.meal.MealType
     ): Long
 
     suspend fun deleteMeal(meal: MealEntity)
 
     suspend fun getMealsByType(date: LocalDate, type: MealType): List<Meal>
+
+    suspend fun logMeal(
+        type: MealType,
+        timestampMillis: Long,
+        notes: String?,
+        nutrition: NutritionInput?
+    )
 }

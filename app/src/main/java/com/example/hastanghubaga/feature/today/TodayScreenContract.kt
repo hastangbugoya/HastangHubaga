@@ -3,9 +3,13 @@ package com.example.hastanghubaga.feature.today
 import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.meal.MealType
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toLocalDateTime
 
 object TodayScreenContract {
 
@@ -58,6 +62,15 @@ object TodayScreenContract {
             val scheduledTime: LocalTime?,
             val option: SupplementLogOption
         ) : Intent
+
+        data class LogMealConfirmed (
+            val input: MealLogInput
+        ): Intent
+
+        data class LogMealTapped(
+            val mealType: MealType,
+        ): Intent
+
     }
 
     /**
@@ -122,5 +135,53 @@ object TodayScreenContract {
         Scheduled, // “Log scheduled dose”
         NowExtra   // “Log now / extra dose”
     }
+
+    /**
+     * UI-level input for logging a meal.
+     * Represents user-entered data, not DB entities.
+     */
+    data class MealLogInput(
+        val mealType: MealType,
+        val notes: String? = null,
+        val nutrition: NutritionInput? = null,
+        val timeUseIntent: TimeUseIntent = TimeUseIntent.ActualNow
+    )
+
+    fun MealLogInput.toDomain() = com.example.hastanghubaga.domain.model.meal.LogMealInput(
+        mealType = mealType,
+        timeUseIntent = timeUseIntent,
+        notes = notes,
+        nutrition = nutrition?.toDomain()
+    )
+
+    /**
+     * Optional nutrition input from UI.
+     */
+    data class NutritionInput(
+        val calories: Double?,
+        val proteinGrams: Double?,
+        val carbsGrams: Double?,
+        val fatGrams: Double?,
+        val sodiumMg: Double?,
+        val cholesterolMg: Double?,
+        val fiberGrams: Double?
+    )
+
+    fun NutritionInput.toDomain() = com.example.hastanghubaga.domain.model.meal.NutritionInput(
+        calories = calories?.toInt() ?: 0,
+        proteinGrams = proteinGrams,
+        carbsGrams = carbsGrams,
+        fatGrams = fatGrams,
+        sodiumMg = sodiumMg,
+        cholesterolMg = cholesterolMg,
+        fiberGrams = fiberGrams
+    )
+
+    fun epochMillisToLocalDateTime(
+        utcMillis: Long
+    ): kotlinx.datetime.LocalDateTime =
+        kotlinx.datetime.Instant
+            .fromEpochMilliseconds(utcMillis)
+            .toLocalDateTime(DomainTimePolicy.localTimeZone)
 
 }

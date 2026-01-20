@@ -16,8 +16,8 @@ data class MealNutritionEntity(
     val protein: Double,
     val carbs: Double,
     val fat: Double,
-    val calories: Double?,
-    val sodium: Double?,
-    val cholesterol: Double?,
-    val fiber: Double?
+    val calories: Int,
+    val sodium: Double? = null,
+    val cholesterol: Double? = null,
+    val fiber: Double? = null
 )

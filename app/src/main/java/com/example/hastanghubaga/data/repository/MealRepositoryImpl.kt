@@ -3,6 +3,7 @@ package com.example.hastanghubaga.data.repository
 import android.util.Log
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
@@ -10,12 +11,15 @@ import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import com.example.hastanghubaga.data.time.DateRangeConverter
+import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
+import androidx.room.withTransaction
 
 class MealRepositoryImpl @Inject constructor(
+    private val db: AppDatabase,
     private val mealEntityDao: MealEntityDao,
     private val nutritionDao: MealNutritionDao
 ) : MealRepository {
@@ -49,7 +53,8 @@ class MealRepositoryImpl @Inject constructor(
 
     override suspend fun addMeal(
         meal: MealEntity,
-        nutrition: MealNutritionEntity
+        nutrition: MealNutritionEntity,
+        type: com.example.hastanghubaga.domain.model.meal.MealType
     ): Long {
         val mealId = mealEntityDao.insertMeal(meal)
         nutritionDao.insertNutrition(nutrition.copy(mealId = mealId))
@@ -70,4 +75,39 @@ class MealRepositoryImpl @Inject constructor(
             .map { it.toDomain() }
             .filter { it.type == type }
     }
+
+    override suspend fun logMeal(
+        type: MealType,
+        timestampMillis: Long,
+        notes: String?,
+        nutrition: NutritionInput?
+    ) {
+        return db.withTransaction {
+            val mealId = mealEntityDao.insertMeal(
+                MealEntity(
+                    id = 0L,
+                    type = type,
+                    timestamp = timestampMillis,
+                    notes = notes
+                )
+            )
+
+            if (nutrition != null) {
+                nutritionDao.insertNutrition(
+                    MealNutritionEntity(
+                        mealId = mealId,
+                        calories = nutrition.calories ?: 0,
+                        protein = nutrition.proteinGrams ?: 0.0,
+                        carbs = nutrition.carbsGrams ?: 0.0,
+                        fat = nutrition.fatGrams ?: 0.0,
+                    )
+                )
+            }
+        }
+    }
+
+
+
+
+
 }

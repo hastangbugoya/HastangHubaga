@@ -5,17 +5,23 @@ package com.example.hastanghubaga.feature.today
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.meal.LogMealInput
+import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
+import com.example.hastanghubaga.domain.time.TimeUseIntent.*
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
+import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.*
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItem
@@ -33,10 +39,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -48,7 +56,8 @@ class TodayScreenViewModel @Inject constructor(
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
     private val savedStateHandle: SavedStateHandle,
-    private val savedExerciseActivityUseCase: SaveExerciseActivityUseCase
+    private val savedExerciseActivityUseCase: SaveExerciseActivityUseCase,
+    private val logMealUseCase: LogMealUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TodayScreenContract.State())
@@ -102,9 +111,9 @@ class TodayScreenViewModel @Inject constructor(
                 viewModelScope.launch {
                     val timeUseIntent =
                         when {
-                            intent.actualTime != null -> TimeUseIntent.Explicit(today, intent.actualTime)
-                            intent.scheduledTime != null -> TimeUseIntent.Scheduled(intent.scheduledTime)
-                            else -> TimeUseIntent.ActualNow
+                            intent.actualTime != null -> Explicit(today, intent.actualTime)
+                            intent.scheduledTime != null -> Scheduled(intent.scheduledTime)
+                            else -> ActualNow
                         }
 
                     logSupplementDoseUseCase(
@@ -130,7 +139,7 @@ class TodayScreenViewModel @Inject constructor(
                             endTime = null,
                             notes = "",
                             intensity = null,
-                            phase = TodayScreenContract.ExerciseDraft.Phase.Draft
+                            phase = ExerciseDraft.Phase.Draft
                         )
                     )
                 }
@@ -138,7 +147,7 @@ class TodayScreenViewModel @Inject constructor(
 
             TodayScreenContract.Intent.ExerciseStartPressed -> {
                 val existing = state.value.exerciseDraft ?: return
-                if (existing.phase == TodayScreenContract.ExerciseDraft.Phase.Running) return
+                if (existing.phase == ExerciseDraft.Phase.Running) return
 
                 // startTime is already prefilled, but keep it “now” if you want it to refresh on Start.
                 val start = existing.startTime
@@ -148,7 +157,7 @@ class TodayScreenViewModel @Inject constructor(
                         exerciseDraft = existing.copy(
                             startTime = start,
                             endTime = null,
-                            phase = TodayScreenContract.ExerciseDraft.Phase.Running
+                            phase = ExerciseDraft.Phase.Running
                         )
                     )
                 }
@@ -174,7 +183,7 @@ class TodayScreenViewModel @Inject constructor(
 
             TodayScreenContract.Intent.ExerciseConfirmPressed -> {
                 val draft = state.value.exerciseDraft ?: return
-                if (draft.phase != TodayScreenContract.ExerciseDraft.Phase.Running) return
+                if (draft.phase != ExerciseDraft.Phase.Running) return
 
                 viewModelScope.launch {
                     val now = nowLocalTime(clock)
@@ -209,7 +218,7 @@ class TodayScreenViewModel @Inject constructor(
                         }
 
                     _effect.send(
-                        TodayScreenContract.Effect.ShowDoseInputDialog(
+                        ShowDoseInputDialog(
                             supplementId = intent.supplementId,
                             title = intent.title,
                             defaultUnit = intent.defaultUnit,
@@ -220,9 +229,41 @@ class TodayScreenViewModel @Inject constructor(
                 }
             }
 
+            is TodayScreenContract.Intent.LogMealConfirmed -> {
+                viewModelScope.launch {
+                    logMealUseCase(
+                        input = LogMealInput(
+                            mealType = intent.input.mealType,
+                            notes = intent.input.notes,
+                            nutrition = intent.input.nutrition?.toDomain(),
+                            timeUseIntent = intent.input.timeUseIntent,
+                        ),
+                        clock = Clock.System
+                    )
+                }
+            }
+
+            is TodayScreenContract.Intent.LogMealTapped -> TODO()
         }
     }
 
+    private fun epochMillisToLocalDateTime(
+        utcMillis: Long
+    ): LocalDateTime =
+        Instant
+            .fromEpochMilliseconds(utcMillis)
+            .toLocalDateTime(DomainTimePolicy.localTimeZone)
+
+    fun TodayScreenContract.NutritionInput.toDomain(): NutritionInput =
+        NutritionInput(
+            calories = calories?.toInt(),
+            proteinGrams = proteinGrams,
+            carbsGrams = carbsGrams,
+            fatGrams = fatGrams,
+            sodiumMg = sodiumMg,
+            cholesterolMg = cholesterolMg,
+            fiberGrams = fiberGrams
+        )
 
     private fun handleTimelineItemClicked(
         uiItem: TimelineItemUiModel
@@ -234,7 +275,7 @@ class TodayScreenViewModel @Inject constructor(
             is TimelineTapAction.RequestDoseInput -> {
                 viewModelScope.launch {
                     _effect.send(
-                        TodayScreenContract.Effect.ShowSupplementLogChoice(
+                        ShowSupplementLogChoice(
                             supplementId = action.supplementId,
                             title = action.title,
                             defaultUnit = action.defaultUnit,
@@ -343,13 +384,13 @@ class TodayScreenViewModel @Inject constructor(
         val ui = item as? ActivityUiModel ?: return
         val now = DomainTimePolicy.nowLocalDateTime(clock).time
 
-        val draft = TodayScreenContract.ExerciseDraft(
+        val draft = ExerciseDraft(
             activityType = ui.activityType,
             startTime = now,
             endTime = ui.endTime,
             notes = "",
             intensity = null,
-            phase = TodayScreenContract.ExerciseDraft.Phase.Draft
+            phase = ExerciseDraft.Phase.Draft
         )
         setExerciseDraft(draft)
     }
@@ -359,7 +400,7 @@ class TodayScreenViewModel @Inject constructor(
      * 1) State (to drive the Compose UI), and
      * 2) SavedStateHandle (to survive process recreation).
      */
-    private fun setExerciseDraft(draft: TodayScreenContract.ExerciseDraft) {
+    private fun setExerciseDraft(draft: ExerciseDraft) {
         _state.update { it.copy(exerciseDraft = draft) }
         persistExerciseDraft(draft)
     }
@@ -385,20 +426,20 @@ class TodayScreenViewModel @Inject constructor(
         val notes = savedStateHandle.get<String>(ExerciseSavedStateKeys.NOTES) ?: ""
         val intensity = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.INTENSITY)
 
-        val draft = TodayScreenContract.ExerciseDraft(
-            activityType = com.example.hastanghubaga.domain.model.activity.ActivityType.valueOf(type),
+        val draft = ExerciseDraft(
+            activityType = ActivityType.valueOf(type),
             startTime = minutesToLocalTime(startMin),
             endTime = endMin?.let(::minutesToLocalTime),
             notes = notes,
             intensity = intensity,
-            phase = TodayScreenContract.ExerciseDraft.Phase.valueOf(phaseRaw)
+            phase = ExerciseDraft.Phase.valueOf(phaseRaw)
         )
 
         _state.update { it.copy(exerciseDraft = draft) }
     }
 
     /** Persists the draft into small primitives so Android can restore it after process recreation. */
-    private fun persistExerciseDraft(draft: TodayScreenContract.ExerciseDraft) {
+    private fun persistExerciseDraft(draft: ExerciseDraft) {
         savedStateHandle[ExerciseSavedStateKeys.TYPE] = draft.activityType.name
         savedStateHandle[ExerciseSavedStateKeys.START_MIN] = draft.startTime.toMinutesOfDay()
         savedStateHandle[ExerciseSavedStateKeys.END_MIN] = draft.endTime?.toMinutesOfDay()
