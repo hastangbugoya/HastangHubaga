@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.local.entity.activity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.hastanghubaga.domain.model.activity.ActivityType
@@ -30,5 +31,9 @@ data class ActivityEntity(
      * - many activities won’t have intensity
      * - historical data won’t have it
      */
-    val intensity: Int? = null
+    val intensity: Int? = null,
+
+    @ColumnInfo(defaultValue = "0")
+    val sendAlert: Boolean = false,
+    val alertOffsetMinutes: Int? = null
 )

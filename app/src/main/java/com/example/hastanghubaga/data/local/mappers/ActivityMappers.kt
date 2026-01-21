@@ -14,7 +14,9 @@ fun ActivityEntity.toDomain(): Activity =
         type = type,
         start = JavaTimeAdapter.utcMillisToDomainLocalDateTime(startTimestamp),
         end = endTimestamp?.let(JavaTimeAdapter::utcMillisToDomainLocalDateTime),
-        notes = notes
+        notes = notes,
+        sendAlert = sendAlert,
+        alertOffsetMinutes = alertOffsetMinutes
     )
 
 fun Activity.toEntity(): ActivityEntity =
@@ -23,6 +25,8 @@ fun Activity.toEntity(): ActivityEntity =
         type = type,
         startTimestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(start),
         endTimestamp = end?.let(JavaTimeAdapter::domainLocalDateTimeToUtcMillis),
-        notes = notes
+        notes = notes,
+        sendAlert = sendAlert,
+        alertOffsetMinutes = alertOffsetMinutes
     )
 

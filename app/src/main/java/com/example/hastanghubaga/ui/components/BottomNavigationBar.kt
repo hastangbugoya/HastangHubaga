@@ -10,7 +10,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.hastanghubaga.ui.main.NavItem
 
 @Composable
-fun BottomNavigationBar(navController: NavHostController) {
+fun BottomNavigationBar(
+    navController: NavHostController,
+    onNavigate: (String) -> Unit = { route ->
+        navController.navigate(route)
+    }
+) {
 
     val items = NavItem.entries
 
@@ -23,12 +28,13 @@ fun BottomNavigationBar(navController: NavHostController) {
                 selected = currentRoute == item.route,
                 onClick = {
                     if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            // Avoid backstack piling
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
+                        onNavigate(item.route)
+//                        navController.navigate(item.route) {
+//                            // Avoid backstack piling
+//                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+//                            launchSingleTop = true
+//                            restoreState = true
+//                        }
                     }
                 },
                 label = { Text(item.label) },

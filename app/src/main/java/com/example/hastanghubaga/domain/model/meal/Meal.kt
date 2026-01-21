@@ -9,5 +9,7 @@ data class Meal(
     val type: MealType,
     val timestamp: LocalDateTime,
     val nutrition: MealNutrition?,
-    val notes: String? = null
+    val notes: String? = null,
+    val sendAlert: Boolean = false,
+    val alertOffsetMinutes: Int? = null
 )

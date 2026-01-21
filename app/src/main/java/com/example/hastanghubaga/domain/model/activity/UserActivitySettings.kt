@@ -13,5 +13,7 @@ data class UserActivitySettings(
     val remindersEnabled: Boolean = false,
 
     /** Reminder offset in minutes */
-    val reminderOffsetMinutes: Int? = null
+    val reminderOffsetMinutes: Int? = null,
+
+    val sendAlert: Boolean = false,
 )

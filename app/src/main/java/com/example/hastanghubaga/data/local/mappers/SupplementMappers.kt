@@ -34,8 +34,40 @@ fun SupplementEntity.toDomain(): Supplement =
         ingredients = emptyList(),
         isActive = isActive,
         doseAnchorType = doseAnchorType,
-        startDate = startDate
+        startDate = startDate,
+        sendAlert = sendAlert,
+        alertOffsetMinutes = alertOffsetMinutes
     )
+
+fun com.example.hastanghubaga.domain.model.supplement.Supplement.toDomain(): com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity =
+    SupplementEntity(
+        id = id,
+        name = name,
+        brand = brand,
+        notes = notes,
+
+        recommendedServingSize = recommendedServingSize,
+        recommendedDoseUnit = recommendedDoseUnit,
+        servingsPerDay = servingsPerDay,
+        recommendedWithFood = recommendedWithFood,
+        recommendedLiquidInOz = recommendedLiquidInOz,
+        recommendedTimeBetweenDailyDosesMinutes = recommendedTimeBetweenDailyDosesMinutes,
+        avoidCaffeine = avoidCaffeine,
+
+        frequencyType = frequencyType,
+        frequencyInterval = frequencyInterval,
+        weeklyDays = weeklyDays,
+        offsetMinutes = offsetMinutes,
+        lastTakenDate = lastTakenDate,
+        isActive = isActive,
+        doseAnchorType = doseAnchorType,
+        startDate = startDate,
+        sendAlert = sendAlert,
+        alertOffsetMinutes = alertOffsetMinutes
+    )
+
+
+
 
 // Ingredient
 fun IngredientEntity.toDomain() = Ingredient(

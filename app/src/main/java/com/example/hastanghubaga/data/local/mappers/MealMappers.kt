@@ -35,7 +35,9 @@ fun MealJoinedRoom.toDomain(): Meal =
         type = meal.type,
         timestamp = JavaTimeAdapter.utcMillisToDomainLocalDateTime(meal.timestamp),
         notes = meal.notes,
-        nutrition = nutrition?.toDomain()
+        nutrition = nutrition?.toDomain(),
+        sendAlert = meal.sendAlert,
+        alertOffsetMinutes = meal.alertOffsetMinutes
     )
 
 // ------------------------------------------------------------
@@ -46,7 +48,9 @@ fun Meal.toEntity(): MealEntity =
         id = id,
         type = type,
         timestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(timestamp),
-        notes = notes
+        notes = notes,
+        sendAlert = sendAlert,
+        alertOffsetMinutes = alertOffsetMinutes
     )
 
 // ------------------------------------------------------------

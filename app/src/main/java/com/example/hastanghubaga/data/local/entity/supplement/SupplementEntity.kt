@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.local.entity.supplement
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -81,6 +82,7 @@ import java.time.DayOfWeek
 data class SupplementEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+
     val name: String,
     val brand: String?,
     val notes: String? = null,
@@ -104,5 +106,8 @@ data class SupplementEntity(
     val startDate: String? = null, // ISO-8601 "YYYY-MM-DD"
     val lastTakenDate: String? = null, // ISO-8601 "YYYY-MM-DD"
 
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    @ColumnInfo(defaultValue = "0")
+    val sendAlert: Boolean = false,
+    val alertOffsetMinutes: Int? = null
 )

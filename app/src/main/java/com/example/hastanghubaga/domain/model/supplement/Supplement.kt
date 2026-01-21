@@ -107,5 +107,8 @@ data class Supplement(
     val lastTakenDate: String?,
 
     val ingredients: List<Ingredient>,
-    val isActive: Boolean
+    val isActive: Boolean,
+
+    val sendAlert: Boolean = false,
+    val alertOffsetMinutes: Int? = null
 )

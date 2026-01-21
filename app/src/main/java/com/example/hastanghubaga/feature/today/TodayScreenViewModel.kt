@@ -1,7 +1,6 @@
-// TodayScreenViewModel.kt
-
 package com.example.hastanghubaga.feature.today
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,7 +10,6 @@ import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
-import com.example.hastanghubaga.domain.time.TimeUseIntent.*
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
@@ -21,20 +19,26 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimeline
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
-import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.*
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowDoseInputDialog
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
+import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -47,6 +51,35 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 
+/**
+ * TodayScreenViewModel drives the Today timeline UI (supplements, meals, activities, dose logs)
+ * and the sheet-based interaction flows (supplement logging, exercise start/confirm, meal logging).
+ *
+ * ---
+ * ## Problem solved (2026-01)
+ * The timeline would intermittently render as empty (e.g. "Rendering 0 items") and feel "broken",
+ * especially after switching panels/screens.
+ *
+ * Root cause:
+ * - A previous implementation cancelled a long-lived Flow collection job and then relied on
+ *   recomposition/navigation timing to restart it. In some cases the upstream flows did not
+ *   re-emit, leaving state stuck empty.
+ *
+ * Fix:
+ * - The timeline is collected exactly once in [init] via a single pipeline driven by a
+ *   [selectedDate] StateFlow.
+ * - Changing dates (or "refresh") updates [selectedDate] only; it does not create new collectors.
+ * - Heavy timeline building runs off the main thread via [flowOn] to avoid jank / skipped frames.
+ *
+ * ---
+ * ## Tips to avoid reintroducing this bug
+ * - Do NOT cancel and restart terminal Flow collections unless you are done forever.
+ * - Avoid starting new `viewModelScope.launch { flow.collect { ... } }` inside user intents.
+ *   Prefer a single long-lived collector (or explicit `shareIn/stateIn`) and drive it with state.
+ * - If you must catch exceptions around flows, rethrow kotlinx.coroutines.CancellationException so
+ *   cancellation remains cooperative.
+ * - Keep heavy sorting/mapping/building off main (`Dispatchers.Default`), and IO on `Dispatchers.IO`.
+ */
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
     private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
@@ -63,21 +96,18 @@ class TodayScreenViewModel @Inject constructor(
     private val _state = MutableStateFlow(TodayScreenContract.State())
     val state: StateFlow<TodayScreenContract.State> = _state
 
-    private val _effect = Channel<TodayScreenContract.Effect>(Channel.BUFFERED)
+    private val _effect = Channel<Effect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
-    private var loadJob: Job? = null
+    /**
+     * Single source of truth for which day the Today timeline is displaying.
+     * Changing this updates the long-lived timeline collector via `flatMapLatest`.
+     */
+    private val selectedDate = MutableStateFlow(DomainTimePolicy.todayLocal())
 
     /**
      * SavedStateHandle keys for persisting the “in-progress exercise draft”.
-     *
-     * Why persist at all?
-     * - If the process is killed (low memory) while the sheet is open,
-     *   the user can come back and see the same draft rather than losing it.
-     *
-     * What we persist:
-     * - Only small primitive fields (Strings/Ints/Longs), not entire screen state.
-     * - Times are stored as "minutes since midnight" for stability.
+     * Times are stored as "minutes since midnight" for stability.
      */
     private object ExerciseSavedStateKeys {
         const val TYPE = "exercise.type"
@@ -90,6 +120,13 @@ class TodayScreenViewModel @Inject constructor(
 
     init {
         restoreExerciseDraftIfPresent()
+        observeTimeline()
+        Log.d("Meow", "TodayVM init: ${hashCode()}")
+    }
+
+    override fun onCleared() {
+        Log.d("Meow", "TodayVM cleared: ${hashCode()}")
+        super.onCleared()
     }
 
     fun onIntent(intent: TodayScreenContract.Intent) {
@@ -97,11 +134,8 @@ class TodayScreenViewModel @Inject constructor(
         val today = DomainTimePolicy.todayLocal(clock)
 
         when (intent) {
-            is TodayScreenContract.Intent.LoadToday ->
-                loadToday(today)
-
-            is TodayScreenContract.Intent.Refresh ->
-                loadToday(today)
+            is TodayScreenContract.Intent.LoadToday -> loadToday(today)
+            is TodayScreenContract.Intent.Refresh -> loadToday(today)
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
                 handleTimelineItemClicked(intent.item)
@@ -111,9 +145,12 @@ class TodayScreenViewModel @Inject constructor(
                 viewModelScope.launch {
                     val timeUseIntent =
                         when {
-                            intent.actualTime != null -> Explicit(today, intent.actualTime)
-                            intent.scheduledTime != null -> Scheduled(intent.scheduledTime)
-                            else -> ActualNow
+                            intent.actualTime != null ->
+                                TimeUseIntent.Explicit(today, intent.actualTime)
+                            intent.scheduledTime != null ->
+                                TimeUseIntent.Scheduled(intent.scheduledTime)
+                            else ->
+                                TimeUseIntent.ActualNow
                         }
 
                     logSupplementDoseUseCase(
@@ -131,54 +168,45 @@ class TodayScreenViewModel @Inject constructor(
                 val activityUi = intent.item as? ActivityUiModel ?: return
                 val start = nowLocalTime(clock)
 
-                _state.update {
-                    it.copy(
-                        exerciseDraft = ExerciseDraft(
-                            activityType = activityUi.activityType,
-                            startTime = start,
-                            endTime = null,
-                            notes = "",
-                            intensity = null,
-                            phase = ExerciseDraft.Phase.Draft
-                        )
+                setExerciseDraft(
+                    ExerciseDraft(
+                        activityType = activityUi.activityType,
+                        startTime = start,
+                        endTime = null,
+                        notes = "",
+                        intensity = null,
+                        phase = ExerciseDraft.Phase.Draft
                     )
-                }
+                )
             }
 
             TodayScreenContract.Intent.ExerciseStartPressed -> {
                 val existing = state.value.exerciseDraft ?: return
                 if (existing.phase == ExerciseDraft.Phase.Running) return
 
-                // startTime is already prefilled, but keep it “now” if you want it to refresh on Start.
-                val start = existing.startTime
-
-                _state.update {
-                    it.copy(
-                        exerciseDraft = existing.copy(
-                            startTime = start,
-                            endTime = null,
-                            phase = ExerciseDraft.Phase.Running
-                        )
+                setExerciseDraft(
+                    existing.copy(
+                        endTime = null,
+                        phase = ExerciseDraft.Phase.Running
                     )
-                }
+                )
             }
 
             is TodayScreenContract.Intent.ExerciseNotesChanged -> {
                 val existing = state.value.exerciseDraft ?: return
-                _state.update { it.copy(exerciseDraft = existing.copy(notes = intent.value)) }
+                setExerciseDraft(existing.copy(notes = intent.value))
             }
 
             is TodayScreenContract.Intent.ExerciseIntensityChanged -> {
                 val existing = state.value.exerciseDraft ?: return
-                _state.update { it.copy(exerciseDraft = existing.copy(intensity = intent.value)) }
+                setExerciseDraft(existing.copy(intensity = intent.value))
             }
 
             is TodayScreenContract.Intent.ExerciseEndTimeChanged -> {
                 val existing = state.value.exerciseDraft ?: return
-                // Optional manual edit support; keep it clamped if provided.
                 val clamped =
                     intent.value?.let { clampEndTimeNotBeforeStart(existing.startTime, it) }
-                _state.update { it.copy(exerciseDraft = existing.copy(endTime = clamped)) }
+                setExerciseDraft(existing.copy(endTime = clamped))
             }
 
             TodayScreenContract.Intent.ExerciseConfirmPressed -> {
@@ -200,14 +228,11 @@ class TodayScreenViewModel @Inject constructor(
                         intensity = draft.intensity
                     )
 
-                    // close sheet
-                    _state.update { it.copy(exerciseDraft = null) }
+                    clearExerciseDraft()
                 }
             }
 
-            TodayScreenContract.Intent.DismissExerciseSheet -> {
-                _state.update { it.copy(exerciseDraft = null) }
-            }
+            TodayScreenContract.Intent.DismissExerciseSheet -> clearExerciseDraft()
 
             is TodayScreenContract.Intent.SupplementLogOptionSelected -> {
                 viewModelScope.launch {
@@ -247,14 +272,53 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-    private fun epochMillisToLocalDateTime(
-        utcMillis: Long
-    ): LocalDateTime =
+    /**
+     * Public entry point for changing which day is displayed.
+     * This does not create new collectors; it only updates [selectedDate].
+     */
+    fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
+        Log.d("Meow", "TodayVM loadToday(day=$date)")
+        _state.update { it.copy(isLoading = true, errorMessage = null) }
+        selectedDate.value = date
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeTimeline() {
+        viewModelScope.launch {
+            selectedDate
+                .flatMapLatest { date ->
+                    combine(
+                        getSupplementsForDate(date),
+                        getMealsForDate(date),
+                        getActivitiesForDate(date)
+                    ) { supplements, meals, activities ->
+                        buildTodayTimeline(
+                            supplements = supplements,
+                            meals = meals,
+                            activities = activities
+                        )
+                    }
+                        .flowOn(Dispatchers.Default)
+                }
+                .collect { timeline ->
+                    Log.d("Meow", "Timeline update size=${timeline.size}")
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            domainTimelineItems = timeline,
+                            uiTimelineItems = timeline.toTimelineItemUiModels()
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun epochMillisToLocalDateTime(utcMillis: Long): LocalDateTime =
         Instant
             .fromEpochMilliseconds(utcMillis)
             .toLocalDateTime(DomainTimePolicy.localTimeZone)
 
-    fun TodayScreenContract.NutritionInput.toDomain(): NutritionInput =
+    private fun TodayScreenContract.NutritionInput.toDomain(): NutritionInput =
         NutritionInput(
             calories = calories?.toInt(),
             proteinGrams = proteinGrams,
@@ -265,13 +329,11 @@ class TodayScreenViewModel @Inject constructor(
             fiberGrams = fiberGrams
         )
 
-    private fun handleTimelineItemClicked(
-        uiItem: TimelineItemUiModel
-    ) {
-        val domainItem = findDomainItemFor(uiItem) ?: return
+    private fun handleTimelineItemClicked(uiItem: TimelineItemUiModel) {
+        // Domain lookup retained for continuity (even if not used yet).
+        findDomainItemFor(uiItem) ?: return
 
         when (val action = handleTimelineItemTapUseCase.resolve(uiItem)) {
-
             is TimelineTapAction.RequestDoseInput -> {
                 viewModelScope.launch {
                     _effect.send(
@@ -286,19 +348,12 @@ class TodayScreenViewModel @Inject constructor(
                 }
             }
 
-            is TimelineTapAction.ActivityTapped -> {
-                // future activity handling (was intentionally empty)
-            }
-
-            is TimelineTapAction.MealTapped -> {
-                // future meal handling (was intentionally empty)
-            }
-
+            is TimelineTapAction.ActivityTapped -> Unit
+            is TimelineTapAction.MealTapped -> Unit
             TimelineTapAction.NoOp -> Unit
-
-
         }
     }
+
     private data class TimelineIdentity(
         val type: TodayUiRowType,
         val id: Long,
@@ -312,10 +367,22 @@ class TodayScreenViewModel @Inject constructor(
             time = time
         )
 
-    private fun findDomainItemFor(
-        uiItem: TimelineItemUiModel
-    ): TimelineItem? {
+    /**
+     * Resolves a UI row back to its corresponding domain timeline item.
+     *
+     * For scheduled items (supplement/activity/meal), (id + time) is enough.
+     *
+     * For dose log rows, the domain item currently has no `doseLogId`, so we match using:
+     * - supplementId
+     * - time
+     * - scheduledTime (nullable)
+     * - amount/unit when parseable
+     *
+     * If you later add a real doseLogId to the domain item, update this method to match on it.
+     */
+    private fun findDomainItemFor(uiItem: TimelineItemUiModel): TimelineItem? {
         val identity = uiItem.identity()
+
         return state.value.domainTimelineItems.firstOrNull { domainItem ->
             when {
                 identity.type == TodayUiRowType.SUPPLEMENT &&
@@ -333,90 +400,48 @@ class TodayScreenViewModel @Inject constructor(
                     domainItem.meal.id == identity.id &&
                             domainItem.time == identity.time
 
+                identity.type == TodayUiRowType.SUPPLEMENT_DOSE_LOG &&
+                        uiItem is SupplementDoseLogUiModel &&
+                        domainItem is TimelineItem.SupplementDoseLogTimelineItem -> {
+                    val uiAmount = uiItem.amountText?.toDoubleOrNull()
+                    val domainAmount = domainItem.amount
+
+                    val amountMatches =
+                        when {
+                            uiAmount == null || domainAmount == null -> true
+                            else -> kotlin.math.abs(uiAmount - domainAmount) < 0.0001
+                        }
+
+                    val unitMatches =
+                        when {
+                            uiItem.unitText.isNullOrBlank() || domainItem.unit.isNullOrBlank() -> true
+                            else -> uiItem.unitText.equals(domainItem.unit, ignoreCase = true)
+                        }
+
+                    domainItem.supplementId == uiItem.supplementId &&
+                            domainItem.time == uiItem.time &&
+                            domainItem.scheduledTime == uiItem.scheduledTime &&
+                            amountMatches &&
+                            unitMatches
+                }
+
                 else -> false
             }
         }
     }
 
+    // ---- Exercise draft helpers (State + SavedStateHandle) ----
 
-
-    private var loadTodayJob: Job? = null
-
-    fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
-        loadTodayJob?.cancel()
-
-        loadTodayJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, errorMessage = null) }
-
-            try {
-                combine(
-                    getSupplementsForDate(date),
-                    getMealsForDate(date),
-                    getActivitiesForDate(date)
-                ) { supplements, meals, activities ->
-                    buildTodayTimeline(
-                        supplements = supplements,
-                        meals = meals,
-                        activities = activities
-                    )
-                }.collectLatest { timeline ->
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            domainTimelineItems = timeline,
-                            uiTimelineItems = timeline.toTimelineItemUiModels()
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = e.message ?: "Failed to load timeline"
-                    )
-                }
-            }
-        }
-    }
-
-
-    private fun openExerciseDraft(item: TimelineItemUiModel, clock: Clock) {
-        val ui = item as? ActivityUiModel ?: return
-        val now = DomainTimePolicy.nowLocalDateTime(clock).time
-
-        val draft = ExerciseDraft(
-            activityType = ui.activityType,
-            startTime = now,
-            endTime = ui.endTime,
-            notes = "",
-            intensity = null,
-            phase = ExerciseDraft.Phase.Draft
-        )
-        setExerciseDraft(draft)
-    }
-
-    /**
-     * Writes the exercise draft into:
-     * 1) State (to drive the Compose UI), and
-     * 2) SavedStateHandle (to survive process recreation).
-     */
     private fun setExerciseDraft(draft: ExerciseDraft) {
         _state.update { it.copy(exerciseDraft = draft) }
         persistExerciseDraft(draft)
     }
 
-    /** Clears both the UI state and the persisted SavedStateHandle fields. */
     private fun clearExerciseDraft() {
         _state.update { it.copy(exerciseDraft = null) }
         clearPersistedExerciseDraft()
     }
 
-    // ---- SavedStateHandle helpers (KDoc only for savedstate parts) ----
-
-    /**
-     * Restores a previously persisted exercise draft from SavedStateHandle (if present),
-     * and rehydrates it into UI state.
-     */
     private fun restoreExerciseDraftIfPresent() {
         val type = savedStateHandle.get<String>(ExerciseSavedStateKeys.TYPE) ?: return
         val startMin = savedStateHandle.get<Int>(ExerciseSavedStateKeys.START_MIN) ?: return
@@ -438,7 +463,6 @@ class TodayScreenViewModel @Inject constructor(
         _state.update { it.copy(exerciseDraft = draft) }
     }
 
-    /** Persists the draft into small primitives so Android can restore it after process recreation. */
     private fun persistExerciseDraft(draft: ExerciseDraft) {
         savedStateHandle[ExerciseSavedStateKeys.TYPE] = draft.activityType.name
         savedStateHandle[ExerciseSavedStateKeys.START_MIN] = draft.startTime.toMinutesOfDay()
@@ -448,7 +472,6 @@ class TodayScreenViewModel @Inject constructor(
         savedStateHandle[ExerciseSavedStateKeys.PHASE] = draft.phase.name
     }
 
-    /** Removes the persisted keys so a dismissed/confirmed sheet does not restore unexpectedly. */
     private fun clearPersistedExerciseDraft() {
         savedStateHandle.remove<String>(ExerciseSavedStateKeys.TYPE)
         savedStateHandle.remove<Int>(ExerciseSavedStateKeys.START_MIN)
@@ -464,22 +487,11 @@ class TodayScreenViewModel @Inject constructor(
     private fun nowLocalTime(clock: Clock): LocalTime =
         DomainTimePolicy.nowLocalDateTime(clock).time
 
-    private fun localTimeToEpochMillis(
-        date: LocalDate,
-        time: LocalTime
-    ): Long {
+    private fun localTimeToEpochMillis(date: LocalDate, time: LocalTime): Long {
         val ldt = LocalDateTime(date = date, time = time)
         return ldt.toInstant(DomainTimePolicy.localTimeZone).toEpochMilliseconds()
     }
 
-    /**
-     * Ensures endTime is never earlier than startTime.
-     * If "now" is earlier (rare but possible with manual edits / clock changes),
-     * clamp to startTime.
-     */
-    private fun clampEndTimeNotBeforeStart(
-        start: LocalTime,
-        endCandidate: LocalTime
-    ): LocalTime = if (endCandidate < start) start else endCandidate
-
+    private fun clampEndTimeNotBeforeStart(start: LocalTime, endCandidate: LocalTime): LocalTime =
+        if (endCandidate < start) start else endCandidate
 }

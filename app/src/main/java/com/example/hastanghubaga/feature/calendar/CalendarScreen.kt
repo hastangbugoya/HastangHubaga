@@ -40,11 +40,16 @@ fun CalendarScreen(
                     snackbarHostState.showSnackbar(effect.message)
                 }
 
-                CalendarContract.Effect.CloseDayPeek ->  {
-                    // Close the sheet gracefully
-                    sheetState.hide()
-                    showDayPeek = false
-                    dayPeekDate = null
+                CalendarContract.Effect.CloseDayPeek -> {
+                    try {
+                        sheetState.hide()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        // ignore: leaving composition / panel switch
+                        throw e // recommended if you actually want cancellation to propagate
+                    } finally {
+                        showDayPeek = false
+                        dayPeekDate = null
+                    }
                 }
 
                 is CalendarContract.Effect.OpenDayPeek ->  {

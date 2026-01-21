@@ -29,6 +29,12 @@ class CalendarViewModel : ViewModel() {
     init {
         // seed fake summaries for initial month
         refreshMonthSummaries()
+        android.util.Log.d("Meow", "CalendarVM init: ${hashCode()}")
+    }
+
+    override fun onCleared() {
+        android.util.Log.d("Meow", "CalendarVM cleared: ${hashCode()}")
+        super.onCleared()
     }
 
     fun onEvent(event: CalendarContract.Event) {

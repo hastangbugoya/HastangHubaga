@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.local.entity.meal
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -50,5 +51,9 @@ data class MealEntity(
     val type: MealType,
     val timestamp: Long, // epoch millis
 
-    val notes: String? = null
+    val notes: String? = null,
+
+    @ColumnInfo(defaultValue = "0")
+    val sendAlert: Boolean = false,
+    val alertOffsetMinutes: Int? = null
 )
