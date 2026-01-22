@@ -7,6 +7,16 @@ import androidx.room.Query
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import kotlinx.coroutines.flow.Flow
 
+data class MealNutritionAtTimeRow(
+    val timestamp: Long,
+    val protein: Double,
+    val carbs: Double,
+    val fat: Double,
+    val calories: Int,
+    val sodium: Double?,
+    val cholesterol: Double?,
+    val fiber: Double?
+)
 @Dao
 interface MealNutritionDao {
 
@@ -21,15 +31,23 @@ interface MealNutritionDao {
 
     @Query(
         """
-        SELECT n.*
-        FROM meal_nutrition n
-        INNER JOIN meals m ON m.id = n.mealId
-        WHERE m.timestamp >= :startMillis AND m.timestamp < :endMillis
-        ORDER BY m.timestamp ASC
-        """
+    SELECT
+        m.timestamp AS timestamp,
+        n.protein AS protein,
+        n.carbs AS carbs,
+        n.fat AS fat,
+        n.calories AS calories,
+        n.sodium AS sodium,
+        n.cholesterol AS cholesterol,
+        n.fiber AS fiber
+    FROM meal_nutrition n
+    INNER JOIN meals m ON m.id = n.mealId
+    WHERE m.timestamp >= :startMillis AND m.timestamp < :endMillis
+    ORDER BY m.timestamp ASC
+    """
     )
     fun observeNutritionForMealsInRange(
         startMillis: Long,
         endMillis: Long
-    ): Flow<List<MealNutritionEntity>>
+    ): Flow<List<MealNutritionAtTimeRow>>
 }

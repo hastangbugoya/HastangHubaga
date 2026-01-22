@@ -72,10 +72,6 @@ interface SupplementRepository {
         date: LocalDate
     ): LocalTime?
 
-//    suspend fun getSupplementWithUserSettings(id: Long): SupplementWithSettings?
-
-//    fun observeSupplement(id: Long): Flow<SupplementWithSettings?>
-
     suspend fun updateUserPreferredDose(
         supplementId: Long,
         dose: Double,

@@ -28,6 +28,7 @@ import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
@@ -79,6 +80,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun nutritionPlanEntityDao(): NutritionPlanEntityDao
     abstract fun nutrientGoalDao(): NutrientGoalDao
     abstract fun ingredientPreferenceDao(): IngredientPreferenceDao
+    abstract fun supplementNutritionDao(): SupplementNutritionDao
+
 
     companion object
 

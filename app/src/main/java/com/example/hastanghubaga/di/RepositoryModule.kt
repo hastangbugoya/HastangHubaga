@@ -1,6 +1,8 @@
 package com.example.hastanghubaga.di
 
+import com.example.hastanghubaga.data.repository.NutritionAggregateRepositoryImpl
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
+import com.example.hastanghubaga.domain.repository.nutrition.NutritionAggregateRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import dagger.Binds
 import dagger.Module
@@ -16,6 +18,11 @@ abstract class RepositoryModule {
     abstract fun bindSupplementRepository(
         impl: SupplementRepositoryImpl
     ): SupplementRepository
+
+    @Binds
+    abstract fun bindNutritionAggregateRepository(
+        impl: NutritionAggregateRepositoryImpl
+    ): NutritionAggregateRepository
 }
 
 

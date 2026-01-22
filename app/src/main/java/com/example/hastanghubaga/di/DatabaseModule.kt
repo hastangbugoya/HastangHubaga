@@ -12,6 +12,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
@@ -97,5 +98,9 @@ object DatabaseModule {
     @Provides
     fun provideIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
         db.ingredientPreferenceDao()
+
+    @Provides
+    fun provideSupplementNutritionDao(db: AppDatabase): SupplementNutritionDao =
+        db.supplementNutritionDao()
 
 }
