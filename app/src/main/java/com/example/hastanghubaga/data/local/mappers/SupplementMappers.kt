@@ -66,9 +66,6 @@ fun com.example.hastanghubaga.domain.model.supplement.Supplement.toDomain(): com
         alertOffsetMinutes = alertOffsetMinutes
     )
 
-
-
-
 // Ingredient
 fun IngredientEntity.toDomain() = Ingredient(
     id = this.id,

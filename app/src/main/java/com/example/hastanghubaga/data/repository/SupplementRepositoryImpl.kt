@@ -6,6 +6,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
@@ -16,7 +17,9 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLog
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.data.local.mappers.toMealNutritionFromNames
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
+import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.nutrition.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
@@ -33,10 +36,12 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toKotlinInstant
+import kotlinx.datetime.toLocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
@@ -60,7 +65,8 @@ class SupplementRepositoryImpl @Inject constructor(
     private val supplementDailyLogDao: SupplementDailyLogDao,
     private val dailyStartTimeDao: DailyStartTimeDao,
     private val eventTimeDao: EventTimeDao,
-    private val supplementUserSettingsDao: SupplementUserSettingsDao
+    private val supplementUserSettingsDao: SupplementUserSettingsDao,
+    private val supplementNutritionDao: SupplementNutritionDao
 ) : SupplementRepository, SupplementDoseLogRepository {
 
     /* ================================================== */
@@ -128,6 +134,20 @@ class SupplementRepositoryImpl @Inject constructor(
                 )
             }
         }
+
+    override fun observeSupplementNutritionForDate(dateMillis: Long): Flow<List<MealNutrition>> {
+        val (startMillis, endMillis) = dayRangeUtcMillis(dateMillis)
+
+        return supplementNutritionDao
+            .observeSupplementLogNutrientsInRange(startMillis, endMillis)
+            .map { rows ->
+                rows
+                    .groupBy { it.logId }
+                    .values
+                    .map { perLogRows -> perLogRows.toMealNutritionFromNames() }
+            }
+    }
+
 
     /* ================================================== */
     /* SUPPLEMENT LISTING                                 */
@@ -377,4 +397,22 @@ class SupplementRepositoryImpl @Inject constructor(
         // Intentionally no-op.
         // Default event times are not user-editable yet.
     }
+
+    private fun dayRangeUtcMillis(dateMillis: Long): Pair<Long, Long> {
+        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
+
+        val localDate = kotlinx.datetime.Instant
+            .fromEpochMilliseconds(dateMillis)
+            .toLocalDateTime(tz)
+            .date
+
+        val startMillis = localDate.atStartOfDayIn(tz).toEpochMilliseconds()
+        val endMillis = localDate
+            .plus(kotlinx.datetime.DatePeriod(days = 1))
+            .atStartOfDayIn(tz)
+            .toEpochMilliseconds()
+
+        return startMillis to endMillis
+    }
+
 }

@@ -4,6 +4,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementWithSettings
+import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.nutrition.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
@@ -88,5 +89,7 @@ interface SupplementRepository {
     fun observeSupplement(
         supplementId: Long
     ): Flow<SupplementWithUserSettings?>
+
+    fun observeSupplementNutritionForDate(dateMillis: Long): Flow<List<MealNutrition>>
 
 }

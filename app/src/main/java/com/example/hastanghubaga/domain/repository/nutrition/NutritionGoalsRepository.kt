@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.domain.repository.nutrition
 
 
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
 import kotlinx.coroutines.flow.Flow
@@ -30,4 +31,6 @@ interface NutritionGoalsRepository {
 
     /** Get all goals by type (bulking, cutting, etc.) */
     suspend fun getByType(type: NutritionGoalType): List<NutritionGoal>
+
+    fun observeActiveGoal(): Flow<UserNutritionGoalsEntity?>
 }

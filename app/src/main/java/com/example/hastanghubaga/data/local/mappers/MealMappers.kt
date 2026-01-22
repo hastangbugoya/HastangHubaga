@@ -81,4 +81,7 @@ fun MealType.toEntity(): com.example.hastanghubaga.data.local.entity.meal.MealTy
         MealType.CUSTOM -> com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM
     }
 
+private fun MealNutrition.hasAnyValue(): Boolean =
+    protein != null || carbs != null || fat != null || calories != null ||
+            sodium != null || cholesterol != null || fiber != null
 

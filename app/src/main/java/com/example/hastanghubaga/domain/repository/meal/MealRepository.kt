@@ -4,6 +4,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
@@ -35,4 +36,6 @@ interface MealRepository {
         notes: String?,
         nutrition: NutritionInput?
     )
+
+    fun observeMealNutritionForDate(dateMillis: Long): Flow<List<MealNutrition>>
 }

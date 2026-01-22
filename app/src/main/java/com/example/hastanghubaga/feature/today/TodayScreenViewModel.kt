@@ -277,6 +277,10 @@ class TodayScreenViewModel @Inject constructor(
      * This does not create new collectors; it only updates [selectedDate].
      */
     fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
+        if (selectedDate.value == date) {
+            Log.d("Meow", "TodayVM loadToday ignored (same date=$date)")
+            return
+        }
         Log.d("Meow", "TodayVM loadToday(day=$date)")
         _state.update { it.copy(isLoading = true, errorMessage = null) }
         selectedDate.value = date
@@ -284,6 +288,7 @@ class TodayScreenViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeTimeline() {
+        Log.d("Meow", "TodayVM observeTimeline()")
         viewModelScope.launch {
             selectedDate
                 .flatMapLatest { date ->

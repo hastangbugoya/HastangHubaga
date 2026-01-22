@@ -24,6 +24,10 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
+        Log.d("Meow", "🔥 Room onCreate() callback CALLED")
+        // -------------------------------
+        // GLOBAL VARIABLES
+        // -------------------------------
         java.time.ZoneId.systemDefault()
         val today: LocalDate =
             DomainTimePolicy.todayLocal()
@@ -98,7 +102,8 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                 recommendedWithFood, recommendedLiquidInOz, recommendedTimeBetweenDailyDosesMinutes,
                 avoidCaffeine,
                 frequencyType, frequencyInterval, weeklyDays, offsetMinutes,
-                isActive, doseAnchorType
+                isActive, doseAnchorType,
+                sendAlert, alertOffsetMinutes
             )
             VALUES
               -- 1: Daily Multivitamin
@@ -107,7 +112,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, 8.0, NULL,
                0,
                'DAILY', NULL, NULL, 30,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 2: Fish Oil (daily)
               (2, 'Fish Oil Triple Strength', 'Kirkland', 'High EPA/DHA fish oil',
@@ -115,7 +120,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, 8.0, NULL,
                0,
                'DAILY', NULL, NULL, 45,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 3: Creatine Monohydrate
               (3, 'Creatine Monohydrate', 'BulkSupps', 'Performance supplement',
@@ -123,7 +128,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                0, NULL, NULL,
                0,
                'DAILY', NULL, NULL, 60,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 4: Magnesium Glycinate
               (4, 'Magnesium Glycinate', 'Doctor''s Best', 'Supports sleep & recovery',
@@ -131,7 +136,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, 8.0, NULL,
                1,
                'DAILY', NULL, NULL, 120,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 5: Ashwagandha (twice daily)
               (5, 'Ashwagandha KSM-66', 'NOW', 'Adaptogen for stress & sleep',
@@ -139,7 +144,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                NULL, NULL, 480,
                0,
                'DAILY', NULL, NULL, 20,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 6: Zinc Picolinate (every 2 days)
               (6, 'Zinc Picolinate', 'Life Extension', 'Mineral for immune support',
@@ -147,7 +152,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, NULL, NULL,
                0,
                'EVERY_X_DAYS', 2, NULL, 0,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 7: Melatonin (night, negative offset)
               (7, 'Melatonin 5mg', 'Natrol', 'Helps initiate sleep',
@@ -155,7 +160,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                0, NULL, NULL,
                0,
                'DAILY', NULL, NULL, -30,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 8: Probiotic 40B
               (8, 'Probiotic 40 Billion CFU', 'Garden of Life', 'Probiotic blend',
@@ -163,7 +168,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                NULL, NULL, NULL,
                0,
                'DAILY', NULL, NULL, 10,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 9: L-Theanine + Caffeine (M/W/F)
               (9, 'L-Theanine + Caffeine Focus', 'Genius', 'Stack for focus',
@@ -171,7 +176,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                0, NULL, NULL,
                0,
                'WEEKLY', NULL, 'MONDAY,WEDNESDAY,FRIDAY', 60,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 10: Electrolyte Mix
               (10, 'Electrolyte Hydration Mix', 'LMNT', 'Sodium/potassium/magnesium',
@@ -179,7 +184,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                0, 16.0, NULL,
                0,
                'DAILY', NULL, NULL, 15,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 11: Turmeric Curcumin
               (11, 'Turmeric & Curcumin', 'Sports Research', 'Anti-inflammatory complex',
@@ -187,7 +192,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, 8.0, NULL,
                0,
                'DAILY', NULL, NULL, 20,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 12: Vitamin D3 Weekly
               (12, 'Vitamin D3 Weekly', 'Thorne', 'High-dose weekly D',
@@ -195,7 +200,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                NULL, NULL, NULL,
                0,
                'WEEKLY', NULL, 'SUNDAY', 0,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 13: CoQ10 (daily)
               (13, 'CoQ10 200mg', 'Qunol', 'Ubiquinone antioxidant',
@@ -203,7 +208,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, NULL, NULL,
                0,
                'DAILY', NULL, NULL, 30,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 14: Vitamin C 1000
               (14, 'Vitamin C 1000', 'NOW', 'Immune support',
@@ -211,7 +216,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, NULL, NULL,
                0,
                'DAILY', NULL, NULL, 30,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 15: Calcium + Vitamin D combo (every other day)
               (15, 'Calcium + D', 'Generic', 'Bone support combo',
@@ -219,7 +224,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, NULL, NULL,
                0,
                'EVERY_X_DAYS', 2, NULL, 120,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 16: Collagen Peptides (daily)
               (16, 'Collagen Peptides', 'Vital Proteins', 'Joint/skin support',
@@ -227,7 +232,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, 8.0, NULL,
                0,
                'DAILY', NULL, NULL, 10,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 17: NAC (daily)
               (17, 'NAC 600mg', 'Jarrow', 'Liver support',
@@ -235,7 +240,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                0, NULL, NULL,
                0,
                'DAILY', NULL, NULL, 30,
-               1, 'MIDNIGHT'),
+               1, 'MIDNIGHT', 0, 0),
 
               -- 18: Multivitamin (alternate high dose every 3 days)
               (18, 'High Potency Multi (Q3)', 'BrandX', 'Every 3 days',
@@ -243,7 +248,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                1, NULL, NULL,
                0,
                'EVERY_X_DAYS', 3, NULL, 60,
-               1, 'MIDNIGHT')
+               1, 'MIDNIGHT', 0, 0)
             ;
         """)
 
@@ -367,7 +372,6 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
     """.trimIndent()
         )
 
-
         db.execSQL(
             """
             INSERT INTO event_day_of_week_times (anchor, dayOfWeek, timeSeconds)
@@ -395,53 +399,87 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
         db.execSQL(
                 """
-                INSERT INTO meals (type, timestamp) VALUES
-                    ('BREAKFAST', ${mealMillis(8, 0)}),
-                    ('LUNCH',     ${mealMillis(12, 0)}),
-                    ('DINNER',    ${mealMillis(18, 0)});
+                INSERT INTO meals (type, timestamp,sendAlert, alertOffsetMinutes) VALUES
+                    ('BREAKFAST', ${mealMillis(8, 0)}, 0, 0),
+                    ('LUNCH',     ${mealMillis(12, 0)}, 0, 0),
+                    ('DINNER',    ${mealMillis(18, 0)}, 0, 0);
                 """.trimIndent()
         )
 
         db.execSQL(
             """
-                INSERT INTO activities (type, startTimestamp, endTimestamp, notes) VALUES
+                INSERT INTO activities (type, startTimestamp, endTimestamp, notes, sendAlert, alertOffsetMinutes) VALUES
                 -- Morning workout (45 min)
                 ('STRENGTH_TRAINING',
                   ${millisAt(7, 0)},
                   ${millisAt(7, 45)},
-                  'Morning strength training'
+                  'Morning strength training', 0, 0
                 ),
                 -- Breakfast walk (20 min)
                 ('WALKING',
                   ${millisAt(8, 15)},
                   ${millisAt(8, 35)},
-                  'Post-breakfast walk'
+                  'Post-breakfast walk', 0, 0
                 ),
                 -- Focus work session (90 min)
                 ('WORK',
                   ${millisAt(10, 0)},
                   ${millisAt(11, 30)},
-                  'Deep work session'
+                  'Deep work session', 0, 0
                 ),
                 -- Lunch break (30 min)
                 ('MEAL',
                   ${millisAt(12, 0)},
                   ${millisAt(12, 30)},
-                  'Lunch break'
+                  'Lunch break', 0, 0
                 ),
                 -- Evening relaxation (no end time)
                 ('RELAX',
                   ${millisAt(20, 0)},
                   NULL,
-                  'Evening relaxation'
+                  'Evening relaxation', 0, 0
                 ),
                 ('SLEEP',
                   ${millisAt(21, 0)},
                   NULL,
-                  'Sleep'
+                  'Sleep', 0, 0
                 );
                 """.trimIndent()
         )
+
+        db.execSQL(
+            """
+    INSERT INTO user_nutrition_goals (
+        type,
+        name,
+        startDate,
+        endDate,
+        dailyProteinTarget,
+        dailyFatTarget,
+        dailyCarbTarget,
+        dailyCalorieTarget,
+        sodiumLimitMg,
+        cholesterolLimitMg,
+        fiberTargetGrams,
+        isActive
+    )
+    VALUES (
+        'CUTTING',
+        'Sustainable Cut 50+',
+        ${System.currentTimeMillis()},
+        NULL,
+        165.0,
+        70.0,
+        180.0,
+        2100.0,
+        2300.0,
+        300.0,
+        30.0,
+        1
+    )
+    """.trimIndent()
+        )
+
         Log.d("Meow", "Inserted meal millis: ${mealMillis(8, 0)}")
     }
 }

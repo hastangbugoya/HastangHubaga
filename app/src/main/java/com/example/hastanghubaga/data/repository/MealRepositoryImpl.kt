@@ -17,6 +17,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 import androidx.room.withTransaction
+import com.example.hastanghubaga.domain.model.meal.MealNutrition
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 
 class MealRepositoryImpl @Inject constructor(
     private val db: AppDatabase,
@@ -106,8 +110,27 @@ class MealRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeMealNutritionForDate(dateMillis: Long): Flow<List<MealNutrition>> {
+        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
 
+        val localDate = kotlinx.datetime.Instant
+            .fromEpochMilliseconds(dateMillis)
+            .toLocalDateTime(tz)
+            .date
 
+        val startMillis = localDate
+            .atStartOfDayIn(tz)
+            .toEpochMilliseconds()
+
+        val endMillis = localDate
+            .plus(kotlinx.datetime.DatePeriod(days = 1))
+            .atStartOfDayIn(tz)
+            .toEpochMilliseconds()
+
+        return nutritionDao
+            .observeNutritionForMealsInRange(startMillis, endMillis)
+            .map { list -> list.map { it.toDomain() } }
+    }
 
 
 }

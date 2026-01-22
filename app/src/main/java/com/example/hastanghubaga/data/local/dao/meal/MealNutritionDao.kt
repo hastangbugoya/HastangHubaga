@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MealNutritionDao {
@@ -17,4 +18,18 @@ interface MealNutritionDao {
 
     @Query("DELETE FROM meal_nutrition WHERE mealId = :mealId")
     suspend fun deleteNutrition(mealId: Long)
+
+    @Query(
+        """
+        SELECT n.*
+        FROM meal_nutrition n
+        INNER JOIN meals m ON m.id = n.mealId
+        WHERE m.timestamp >= :startMillis AND m.timestamp < :endMillis
+        ORDER BY m.timestamp ASC
+        """
+    )
+    fun observeNutritionForMealsInRange(
+        startMillis: Long,
+        endMillis: Long
+    ): Flow<List<MealNutritionEntity>>
 }

@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.data.repository
 
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
@@ -39,4 +40,8 @@ class NutritionGoalsRepositoryImpl @Inject constructor(
 
     override suspend fun getByType(type: NutritionGoalType): List<NutritionGoal> =
         dao.getGoalsByType(type).map { it.toDomain() }
+
+    override fun observeActiveGoal(): Flow<UserNutritionGoalsEntity?> =
+        dao.observeActiveGoal()
+
 }

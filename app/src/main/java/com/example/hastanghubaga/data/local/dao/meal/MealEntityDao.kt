@@ -81,4 +81,13 @@ interface MealEntityDao {
     @Query("SELECT * FROM meals WHERE type = :type")
     suspend fun getMealsByType(type: MealType): List<MealEntity>
 
+    @Query(
+        """
+        SELECT * FROM meals
+        WHERE timestamp >= :startMillis AND timestamp < :endMillis
+        ORDER BY timestamp ASC
+        """
+    )
+    fun observeMealsInRange(startMillis: Long, endMillis: Long): Flow<List<MealEntity>>
+
 }

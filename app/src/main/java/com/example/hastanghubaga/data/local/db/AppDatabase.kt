@@ -59,7 +59,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         IngredientPreferenceEntity::class,
         // add others here later
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -79,10 +79,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun nutritionPlanEntityDao(): NutritionPlanEntityDao
     abstract fun nutrientGoalDao(): NutrientGoalDao
     abstract fun ingredientPreferenceDao(): IngredientPreferenceDao
-
-
-
-
 
     companion object
 

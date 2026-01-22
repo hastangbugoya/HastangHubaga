@@ -69,6 +69,11 @@ sealed interface TimelineItemUiModel {
     val title: String
     val subtitle: String?
     val isCompleted: Boolean
+
+    val sendAlert: Boolean
+
+    val alertOffsetMinutes: Int?
+
 }
 
 
@@ -78,12 +83,15 @@ data class SupplementUiModel(
     override val title: String,
     override val subtitle: String?,
     override val isCompleted: Boolean,
+    override val sendAlert: Boolean = false,
+    override val alertOffsetMinutes: Int? = null,
 
     val supplementId: Long,
     val scheduledTime: LocalTime,
     val doseState: MealAwareDoseState?,
     val defaultUnit: SupplementDoseUnit,
-    val suggestedDose: Double
+    val suggestedDose: Double,
+
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
@@ -99,6 +107,8 @@ data class ActivityUiModel(
     override val title: String,
     override val subtitle: String?,
     override val isCompleted: Boolean,
+    override val sendAlert: Boolean = false,
+    override val alertOffsetMinutes: Int? = null,
 
     val activityId: Long,
     val activityType: ActivityType,
@@ -121,6 +131,8 @@ data class MealUiModel(
     override val title: String,
     override val subtitle: String?,
     override val isCompleted: Boolean,
+    override val sendAlert: Boolean = false,
+    override val alertOffsetMinutes: Int? = null,
 
     val mealId: Long,
     val mealType: MealType
@@ -147,6 +159,8 @@ data class SupplementDoseLogUiModel(
     override val title: String,            // supplement name
     override val subtitle: String?,        // "1 cap" / "extra dose" / etc.
     override val isCompleted: Boolean,     // usually true (a log row is "done")
+    override val sendAlert: Boolean = false,
+    override val alertOffsetMinutes: Int? = null,
 
     val supplementId: Long,
     val scheduledTime: LocalTime?,         // null if this was "Log now/extra"
