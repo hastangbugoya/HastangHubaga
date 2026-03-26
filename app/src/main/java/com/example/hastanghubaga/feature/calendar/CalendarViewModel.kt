@@ -1,9 +1,10 @@
 package com.example.hastanghubaga.feature.calendar
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.feature.calendar.CalendarContract.AdoboSnapshotUi
 import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.*
@@ -27,15 +28,22 @@ import kotlinx.datetime.todayIn
 import org.json.JSONObject
 import java.time.YearMonth
 
-class CalendarViewModel : ViewModel() {
+private const val PREFS_NAME = "adobo_snapshot_prefs"
+private const val KEY_ADOBO_SNAPSHOT_URI = "adobo_snapshot_uri"
 
+class CalendarViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val appContext: Context = application.applicationContext
     private val tz = TimeZone.currentSystemDefault()
 
     private val _state = MutableStateFlow(
         CalendarContract.State(
             month = currentYearMonth(),
             selectedDate = Clock.System.todayIn(tz),
-            summaries = emptyMap()
+            summaries = emptyMap(),
+            savedAdoboSnapshotUri = loadSavedAdoboSnapshotUri()
         )
     )
     val state: StateFlow<CalendarContract.State> = _state.asStateFlow()
@@ -92,10 +100,31 @@ class CalendarViewModel : ViewModel() {
         }
     }
 
+    fun readSavedAdoboSnapshotIfAvailable() {
+        val selectedDate = _state.value.selectedDate ?: Clock.System.todayIn(tz)
+        val uri = buildSnapshotUriForDate(selectedDate)
+
+        Log.d("AdoboRead", "Reading snapshot for date=$selectedDate uri=$uri")
+
+        readAdoboSnapshot(uri)
+    }
+
+    private fun buildSnapshotUriForDate(date: LocalDate): Uri {
+        return Uri.parse(
+            "content://com.example.adobongkangkong.shared/snapshot/$date"
+        )
+    }
+
     private fun refreshMonthSummaries() {
         val month = _state.value.month
         val map = buildFakeSummariesForMonth(month, tz)
-        _state.update { it.copy(summaries = map) }
+        _state.update { current ->
+            current.copy(
+                summaries = map
+            )
+        }
+
+        reapplyAdoboSnapshotToSummaries()
     }
 
     private fun emit(effect: CalendarContract.Effect) {
@@ -107,12 +136,12 @@ class CalendarViewModel : ViewModel() {
         return YearMonth.of(today.year, today.monthNumber())
     }
 
-    fun readAdoboSnapshot(context: Context, uri: Uri) {
+    private fun readAdoboSnapshot(uri: Uri) {
         viewModelScope.launch {
             try {
                 _state.update { it.copy(isLoading = true) }
 
-                val jsonString = context.contentResolver
+                val jsonString = appContext.contentResolver
                     .openInputStream(uri)
                     ?.bufferedReader()
                     ?.use { it.readText() }
@@ -120,7 +149,7 @@ class CalendarViewModel : ViewModel() {
 
                 val json = JSONObject(jsonString)
 
-                val date = json.optString("dateIso")
+                val dateIso = json.optString("dateIso")
                 val macros = json.optJSONObject("macros")
 
                 val calories = macros?.optDouble("caloriesKcal")
@@ -129,26 +158,30 @@ class CalendarViewModel : ViewModel() {
                 val fat = macros?.optDouble("fatG")
 
                 Log.d("AdoboRead", "URI: $uri")
-                Log.d("AdoboRead", "Date: $date")
+                Log.d("AdoboRead", "Date: $dateIso")
                 Log.d("AdoboRead", "Calories: $calories")
                 Log.d("AdoboRead", "Protein: $protein")
                 Log.d("AdoboRead", "Carbs: $carbs")
                 Log.d("AdoboRead", "Fat: $fat")
 
+                val snapshot = AdoboSnapshotUi(
+                    dateIso = dateIso,
+                    calories = calories,
+                    protein = protein,
+                    carbs = carbs,
+                    fat = fat
+                )
+
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        adoboSnapshot = AdoboSnapshotUi(
-                            dateIso = date,
-                            calories = calories,
-                            protein = protein,
-                            carbs = carbs,
-                            fat = fat
-                        )
+                        adoboSnapshot = snapshot
                     )
                 }
 
-                emit(ShowSnackbar("Loaded Adobo snapshot for $date"))
+                applyAdoboSnapshotToSummaries(snapshot)
+
+                emit(ShowSnackbar("Loaded Adobo snapshot for $dateIso"))
             } catch (e: Exception) {
                 Log.e("AdoboRead", "Failed to read snapshot", e)
 
@@ -162,6 +195,54 @@ class CalendarViewModel : ViewModel() {
                 emit(ShowSnackbar("Failed to read Adobo snapshot"))
             }
         }
+    }
+
+    private fun applyAdoboSnapshotToSummaries(snapshot: AdoboSnapshotUi) {
+        val snapshotDate = parseIsoDateOrNull(snapshot.dateIso) ?: return
+
+        _state.update { current ->
+            val existing = current.summaries[snapshotDate]
+
+            val updatedSummary = DaySummaryUi(
+                date = snapshotDate,
+                supplementsLogged = existing?.supplementsLogged ?: 0,
+                mealsLogged = 1,
+                activitiesCompleted = existing?.activitiesCompleted ?: 0
+            )
+
+            current.copy(
+                summaries = current.summaries + (snapshotDate to updatedSummary)
+            )
+        }
+    }
+
+    private fun reapplyAdoboSnapshotToSummaries() {
+        val snapshot = _state.value.adoboSnapshot ?: return
+        applyAdoboSnapshotToSummaries(snapshot)
+    }
+
+    private fun parseIsoDateOrNull(raw: String): LocalDate? {
+        return try {
+            LocalDate.parse(raw)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun saveAdoboSnapshotUri(uri: Uri) {
+        appContext
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_ADOBO_SNAPSHOT_URI, uri.toString())
+            .apply()
+    }
+
+    private fun loadSavedAdoboSnapshotUri(): Uri? {
+        val raw = appContext
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_ADOBO_SNAPSHOT_URI, null)
+
+        return raw?.let(Uri::parse)
     }
 }
 
