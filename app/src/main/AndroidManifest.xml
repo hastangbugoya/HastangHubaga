@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <queries>
+        <package android:name="com.example.adobongkangkong" />
+    </queries>
     <application
         android:name=".HastangHubagaApp"
         android:allowBackup="true"

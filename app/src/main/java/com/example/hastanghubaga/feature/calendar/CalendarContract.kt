@@ -13,7 +13,8 @@ object CalendarContract {
         val isLoading: Boolean = false,
 
         // ✅ NEW: imported Adobo snapshot (per selected day)
-        val adoboSnapshot: AdoboSnapshotUi? = null
+        val adoboSnapshot: AdoboSnapshotUi? = null,
+        val savedAdoboSnapshotUri: android.net.Uri? = null
     )
 
     // ✅ NEW: UI model for imported snapshot
