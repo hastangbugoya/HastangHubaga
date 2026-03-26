@@ -5,10 +5,11 @@ import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.ui.timeline.TimelineItem
+import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
 import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshotUseCase
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
@@ -35,6 +36,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 }
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementItems: ${supplementItems.size}")
+
         val mealItems =
             meals.map { meal ->
                 TimelineItem.MealTimelineItem(
@@ -43,9 +45,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
-//        mealItems.forEach {
-//            Log.d("Meow", "BuildTodayTimelineUseCase> mealItem: $it")
-//        }
+
         val activityItems =
             activities.map { activity ->
                 TimelineItem.ActivityTimelineItem(
@@ -54,9 +54,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
-//        activityItems.forEach {
-//            Log.d("Meow", "BuildTodayTimelineUseCase> activityItem: $it")
-//        }
+
         val merged = (supplementItems + mealItems + activityItems)
             .sortedBy { it.time }
 
@@ -66,8 +64,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 item.toUpcomingSchedule(date = date)
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> upcomingItems: ${upcomingItems.size}")
-
-
 
         buildWidgetDailySnapshotUseCase(date)
         upcomingScheduleRepository.replaceAll(upcomingItems)

@@ -46,7 +46,7 @@ import kotlinx.serialization.Serializable
 data class IngredientEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-
+    val code: String = "",
     val name: String,
 
     val defaultUnit: IngredientUnit,

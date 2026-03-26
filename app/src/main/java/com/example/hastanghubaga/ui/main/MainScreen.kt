@@ -34,6 +34,7 @@ import com.example.hastanghubaga.ui.common.sheets.SheetSuccessContent
 import com.example.hastanghubaga.ui.common.sheets.TimelineItemInfoSheet
 import com.example.hastanghubaga.ui.components.BottomNavigationBar
 import com.example.hastanghubaga.ui.components.TopBanner
+import com.example.hastanghubaga.ui.ingredient.IngredientManagerScreen
 import com.example.hastanghubaga.ui.screens.SettingsScreen
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
@@ -220,7 +221,7 @@ fun MainScreen() {
                 }
 
                 composable(NavItem.SETTINGS.route) {
-                    SettingsScreen { }
+                    IngredientManagerScreen()
                 }
             }
         }

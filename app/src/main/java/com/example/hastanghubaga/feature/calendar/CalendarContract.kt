@@ -10,7 +10,19 @@ object CalendarContract {
         val month: YearMonth,
         val selectedDate: LocalDate?,
         val summaries: Map<LocalDate, DaySummaryUi>,
-        val isLoading: Boolean = false
+        val isLoading: Boolean = false,
+
+        // ✅ NEW: imported Adobo snapshot (per selected day)
+        val adoboSnapshot: AdoboSnapshotUi? = null
+    )
+
+    // ✅ NEW: UI model for imported snapshot
+    data class AdoboSnapshotUi(
+        val dateIso: String,
+        val calories: Double?,
+        val protein: Double?,
+        val carbs: Double?,
+        val fat: Double?
     )
 
     sealed interface Event {
@@ -32,8 +44,4 @@ object CalendarContract {
         data class OpenDayPeek(val date: LocalDate) : Effect
         data object CloseDayPeek : Effect
     }
-
-
-
-
 }

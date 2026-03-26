@@ -40,56 +40,64 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         // INGREDIENTS (45)
         // -------------------------------
         db.execSQL("""
-            INSERT INTO ingredients
-            (id, name, defaultUnit, rdaValue, rdaUnit, upperLimitValue, upperLimitUnit, category)
-            VALUES
-              (1,  'Vitamin A (Retinol)', 'MCG', 900.0, 'MCG', 3000.0, 'MCG', 'Vitamin'),
-              (2,  'Vitamin B1 (Thiamine)', 'MG', 1.2, 'MG', NULL, NULL, 'Vitamin'),
-              (3,  'Vitamin B2 (Riboflavin)', 'MG', 1.3, 'MG', NULL, NULL, 'Vitamin'),
-              (4,  'Vitamin B3 (Niacin)', 'MG', 16.0, 'MG', 35.0, 'MG', 'Vitamin'),
-              (5,  'Vitamin B5 (Pantothenic Acid)', 'MG', 5.0, 'MG', NULL, NULL, 'Vitamin'),
-              (6,  'Vitamin B6 (Pyridoxine)', 'MG', 1.3, 'MG', 100.0, 'MG', 'Vitamin'),
-              (7,  'Vitamin B7 (Biotin)', 'MCG', 30.0, 'MCG', NULL, NULL, 'Vitamin'),
-              (8,  'Vitamin B9 (Folate / Methylfolate)', 'MCG', 400.0, 'MCG', 1000.0, 'MCG', 'Vitamin'),
-              (9,  'Vitamin B12 (Cobalamin)', 'MCG', 2.4, 'MCG', NULL, NULL, 'Vitamin'),
-              (10, 'Vitamin C (Ascorbic Acid)', 'MG', 90.0, 'MG', 2000.0, 'MG', 'Vitamin'),
-              (11, 'Vitamin D3 (Cholecalciferol)', 'IU', 800.0, 'IU', 4000.0, 'IU', 'Vitamin'),
-              (12, 'Vitamin E (Tocopherol)', 'MG', 15.0, 'MG', 1000.0, 'MG', 'Vitamin'),
-              (13, 'Vitamin K2 (MK-7)', 'MCG', 120.0, 'MCG', NULL, NULL, 'Vitamin'),
-              (14, 'Calcium', 'MG', 1000.0, 'MG', 2500.0, 'MG', 'Mineral'),
-              (15, 'Iron (Ferrous Bisglycinate)', 'MG', 8.0, 'MG', 45.0, 'MG', 'Mineral'),
-              (16, 'Magnesium (Glycinate)', 'MG', 420.0, 'MG', 350.0, 'MG', 'Mineral'),
-              (17, 'Zinc (Picolinate)', 'MG', 11.0, 'MG', 40.0, 'MG', 'Mineral'),
-              (18, 'Copper', 'MG', 0.9, 'MG', 10.0, 'MG', 'Mineral'),
-              (19, 'Selenium', 'MCG', 55.0, 'MCG', 400.0, 'MCG', 'Mineral'),
-              (20, 'Iodine', 'MCG', 150.0, 'MCG', 1100.0, 'MCG', 'Mineral'),
-              (21, 'Potassium', 'MG', 4700.0, 'MG', NULL, NULL, 'Mineral'),
-              (22, 'Sodium', 'MG', NULL, NULL, NULL, NULL, 'Mineral'),
-              (23, 'Omega-3 (Fish Oil)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
-              (24, 'EPA (Eicosapentaenoic Acid)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
-              (25, 'DHA (Docosahexaenoic Acid)', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
-              (26, 'CoQ10 (Ubiquinone)', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
-              (27, 'Creatine Monohydrate', 'G', NULL, NULL, NULL, NULL, 'Performance'),
-              (28, 'L-Theanine', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
-              (29, 'Caffeine', 'MG', NULL, NULL, NULL, NULL, 'Stimulant'),
-              (30, 'Ashwagandha (KSM-66)', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
-              (31, 'Rhodiola Rosea', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
-              (32, 'Turmeric Extract', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
-              (33, 'Curcumin', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
-              (34, 'Black Pepper Extract (Piperine)', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
-              (35, 'NAC (N-Acetyl Cysteine)', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
-              (36, 'Probiotic Blend', 'CFU', NULL, NULL, NULL, NULL, 'Probiotic'),
-              (37, 'Melatonin', 'MG', NULL, NULL, NULL, NULL, 'Sleep'),
-              (38, 'Glycine', 'G', NULL, NULL, NULL, NULL, 'Amino Acid'),
-              (39, 'Glucosamine', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
-              (40, 'Chondroitin', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
-              (41, 'MSM', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
-              (42, 'Alpha Lipoic Acid (ALA)', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
-              (43, 'Bacopa Monnieri', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
-              (44, 'Ginkgo Biloba', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
-              (45, 'Electrolyte Blend', 'MG', NULL, NULL, NULL, NULL, 'Hydration')
-            ;
-        """)
+INSERT INTO ingredients
+(id, name, code, defaultUnit, rdaValue, rdaUnit, upperLimitValue, upperLimitUnit, category)
+VALUES
+  (1,  'Vitamin A (Retinol)', 'VITAMIN_A_MCG', 'MCG', 900.0, 'MCG', 3000.0, 'MCG', 'Vitamin'),
+  (2,  'Vitamin B1 (Thiamine)', 'THIAMINE_MG', 'MG', 1.2, 'MG', NULL, NULL, 'Vitamin'),
+  (3,  'Vitamin B2 (Riboflavin)', 'RIBOFLAVIN_MG', 'MG', 1.3, 'MG', NULL, NULL, 'Vitamin'),
+  (4,  'Vitamin B3 (Niacin)', 'NIACIN_MG', 'MG', 16.0, 'MG', 35.0, 'MG', 'Vitamin'),
+  (5,  'Vitamin B5 (Pantothenic Acid)', 'PANTOTHENIC_ACID_MG', 'MG', 5.0, 'MG', NULL, NULL, 'Vitamin'),
+  (6,  'Vitamin B6 (Pyridoxine)', 'VITAMIN_B6_MG', 'MG', 1.3, 'MG', 100.0, 'MG', 'Vitamin'),
+  (7,  'Vitamin B7 (Biotin)', 'BIOTIN_MCG', 'MCG', 30.0, 'MCG', NULL, NULL, 'Vitamin'),
+  (8,  'Vitamin B9 (Folate / Methylfolate)', 'FOLATE_DFE_MCG', 'MCG', 400.0, 'MCG', 1000.0, 'MCG', 'Vitamin'),
+  (9,  'Vitamin B12 (Cobalamin)', 'VITAMIN_B12_MCG', 'MCG', 2.4, 'MCG', NULL, NULL, 'Vitamin'),
+  (10, 'Vitamin C (Ascorbic Acid)', 'VITAMIN_C_MG', 'MG', 90.0, 'MG', 2000.0, 'MG', 'Vitamin'),
+  (11, 'Vitamin D3 (Cholecalciferol)', 'VITAMIN_D_MCG', 'IU', 800.0, 'IU', 4000.0, 'IU', 'Vitamin'),
+  (12, 'Vitamin E (Tocopherol)', 'VITAMIN_E_MG', 'MG', 15.0, 'MG', 1000.0, 'MG', 'Vitamin'),
+  (13, 'Vitamin K2 (MK-7)', 'VITAMIN_K_MCG', 'MCG', 120.0, 'MCG', NULL, NULL, 'Vitamin'),
+
+  (14, 'Calcium', 'CALCIUM_MG', 'MG', 1000.0, 'MG', 2500.0, 'MG', 'Mineral'),
+  (15, 'Iron (Ferrous Bisglycinate)', 'IRON_MG', 'MG', 8.0, 'MG', 45.0, 'MG', 'Mineral'),
+  (16, 'Magnesium (Glycinate)', 'MAGNESIUM_MG', 'MG', 420.0, 'MG', 350.0, 'MG', 'Mineral'),
+  (17, 'Zinc (Picolinate)', 'ZINC_MG', 'MG', 11.0, 'MG', 40.0, 'MG', 'Mineral'),
+  (18, 'Copper', 'COPPER_MG', 'MG', 0.9, 'MG', 10.0, 'MG', 'Mineral'),
+  (19, 'Selenium', 'SELENIUM_MCG', 'MCG', 55.0, 'MCG', 400.0, 'MCG', 'Mineral'),
+  (20, 'Iodine', 'IODINE_MCG', 'MCG', 150.0, 'MCG', 1100.0, 'MCG', 'Mineral'),
+  (21, 'Potassium', 'POTASSIUM_MG', 'MG', 4700.0, 'MG', NULL, NULL, 'Mineral'),
+  (22, 'Sodium', 'SODIUM_MG', 'MG', NULL, NULL, NULL, NULL, 'Mineral'),
+
+  (23, 'Omega-3 (Fish Oil)', 'OMEGA_3_MG', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+  (24, 'EPA (Eicosapentaenoic Acid)', 'EPA_MG', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+  (25, 'DHA (Docosahexaenoic Acid)', 'DHA_MG', 'MG', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+
+  (26, 'CoQ10 (Ubiquinone)', 'COQ10_MG', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
+  (27, 'Creatine Monohydrate', 'CREATINE_G', 'G', NULL, NULL, NULL, NULL, 'Performance'),
+  (28, 'L-Theanine', 'L_THEANINE_MG', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
+  (29, 'Caffeine', 'CAFFEINE_MG', 'MG', NULL, NULL, NULL, NULL, 'Stimulant'),
+
+  (30, 'Ashwagandha (KSM-66)', 'ASHWAGANDHA_MG', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+  (31, 'Rhodiola Rosea', 'RHODIOLA_MG', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+  (32, 'Turmeric Extract', 'TURMERIC_MG', 'MG', NULL, NULL, NULL, NULL, 'Herb'),
+
+  (33, 'Curcumin', 'CURCUMIN_MG', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
+  (34, 'Black Pepper Extract (Piperine)', 'PIPERINE_MG', 'MG', NULL, NULL, NULL, NULL, 'Extract'),
+
+  (35, 'NAC (N-Acetyl Cysteine)', 'NAC_MG', 'MG', NULL, NULL, NULL, NULL, 'Amino Acid'),
+  (36, 'Probiotic Blend', 'PROBIOTICS_CFU', 'CFU', NULL, NULL, NULL, NULL, 'Probiotic'),
+  (37, 'Melatonin', 'MELATONIN_MG', 'MG', NULL, NULL, NULL, NULL, 'Sleep'),
+  (38, 'Glycine', 'GLYCINE_G', 'G', NULL, NULL, NULL, NULL, 'Amino Acid'),
+
+  (39, 'Glucosamine', 'GLUCOSAMINE_MG', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+  (40, 'Chondroitin', 'CHONDROITIN_MG', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+  (41, 'MSM', 'MSM_MG', 'MG', NULL, NULL, NULL, NULL, 'Joint'),
+
+  (42, 'Alpha Lipoic Acid (ALA)', 'ALA_MG', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
+  (43, 'Bacopa Monnieri', 'BACOPA_MG', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
+  (44, 'Ginkgo Biloba', 'GINKGO_MG', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
+  (45, 'Electrolyte Blend', 'ELECTROLYTES_MG', 'MG', NULL, NULL, NULL, NULL, 'Hydration')
+;
+""")
 
         // -------------------------------
         // SUPPLEMENTS
@@ -449,7 +457,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
         db.execSQL(
             """
-    INSERT INTO user_nutrition_goals (
+    INSERT INTO nutrition_goals (
         type,
         name,
         startDate,
