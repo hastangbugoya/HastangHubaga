@@ -25,6 +25,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import org.json.JSONArray
 import org.json.JSONObject
 import java.time.YearMonth
 
@@ -75,6 +76,7 @@ class CalendarViewModel(
 
             is CalendarContract.Event.DateClicked -> {
                 _state.update { it.copy(selectedDate = event.date) }
+                readAdoboSnapshot(buildSnapshotUriForDate(event.date))
                 emit(OpenDayPeek(event.date))
             }
 
@@ -115,6 +117,12 @@ class CalendarViewModel(
         )
     }
 
+    private fun buildMonthSnapshotUri(month: YearMonth): Uri {
+        return Uri.parse(
+            "content://com.example.adobongkangkong.shared/snapshot-month/$month"
+        )
+    }
+
     private fun refreshMonthSummaries() {
         val month = _state.value.month
         val map = buildFakeSummariesForMonth(month, tz)
@@ -125,6 +133,7 @@ class CalendarViewModel(
         }
 
         reapplyAdoboSnapshotToSummaries()
+        readAdoboMonthSnapshot(month)
     }
 
     private fun emit(effect: CalendarContract.Effect) {
@@ -180,8 +189,6 @@ class CalendarViewModel(
                 }
 
                 applyAdoboSnapshotToSummaries(snapshot)
-
-                emit(ShowSnackbar("Loaded Adobo snapshot for $dateIso"))
             } catch (e: Exception) {
                 Log.e("AdoboRead", "Failed to read snapshot", e)
 
@@ -197,6 +204,69 @@ class CalendarViewModel(
         }
     }
 
+    private fun readAdoboMonthSnapshot(month: YearMonth) {
+        val uri = buildMonthSnapshotUri(month)
+
+        Log.d("AdoboRead", "Reading month snapshot uri=$uri")
+
+        viewModelScope.launch {
+            try {
+                _state.update { it.copy(isLoading = true) }
+
+                val jsonString = appContext.contentResolver
+                    .openInputStream(uri)
+                    ?.bufferedReader()
+                    ?.use { it.readText() }
+                    ?: throw IllegalStateException("Unable to open month snapshot input stream")
+
+                val json = JSONObject(jsonString)
+                val days = json.optJSONArray("days")
+                    ?: throw IllegalStateException("Month snapshot missing days array")
+
+                Log.d("AdoboRead", "Month URI: $uri")
+                Log.d("AdoboRead", "Month days count: ${days.length()}")
+
+                applyAdoboMonthSnapshotToSummaries(days)
+
+                _state.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                Log.e("AdoboRead", "Failed to read month snapshot", e)
+
+                _state.update { it.copy(isLoading = false) }
+
+                emit(ShowSnackbar("Failed to read Adobo month snapshot"))
+            }
+        }
+    }
+
+    private fun applyAdoboMonthSnapshotToSummaries(days: JSONArray) {
+        val updates = mutableMapOf<LocalDate, DaySummaryUi>()
+
+        for (i in 0 until days.length()) {
+            val day = days.optJSONObject(i) ?: continue
+            val dateIso = day.optString("dateIso")
+            val snapshotDate = parseIsoDateOrNull(dateIso) ?: continue
+
+            val existing = _state.value.summaries[snapshotDate]
+
+            updates[snapshotDate] = DaySummaryUi(
+                date = snapshotDate,
+                supplementsLogged = existing?.supplementsLogged ?: 0,
+                mealsLogged = 1,
+                activitiesCompleted = existing?.activitiesCompleted ?: 0,
+                hasImportedNutritionData = true
+            )
+        }
+
+        if (updates.isEmpty()) return
+
+        _state.update { current ->
+            current.copy(
+                summaries = current.summaries + updates
+            )
+        }
+    }
+
     private fun applyAdoboSnapshotToSummaries(snapshot: AdoboSnapshotUi) {
         val snapshotDate = parseIsoDateOrNull(snapshot.dateIso) ?: return
 
@@ -207,7 +277,8 @@ class CalendarViewModel(
                 date = snapshotDate,
                 supplementsLogged = existing?.supplementsLogged ?: 0,
                 mealsLogged = 1,
-                activitiesCompleted = existing?.activitiesCompleted ?: 0
+                activitiesCompleted = existing?.activitiesCompleted ?: 0,
+                hasImportedNutritionData = true
             )
 
             current.copy(

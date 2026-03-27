@@ -4,8 +4,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 @Composable
-fun SupplementsScreen(
+fun SettingsScreen(
     showBottomSheet: (content: @Composable () -> Unit) -> Unit
 ) {
-    Text("Supplements Screen")
+    Text("Settings Screen")
 }
