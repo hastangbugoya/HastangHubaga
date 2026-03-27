@@ -77,6 +77,8 @@ fun CalendarScreen(
             onDateClick = { viewModel.onEvent(CalendarContract.Event.DateClicked(it)) },
         )
 
+        val selectedDateLabel = state.selectedDate?.toString() ?: "selected day"
+
         ExtendedFloatingActionButton(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -85,7 +87,7 @@ fun CalendarScreen(
                 viewModel.readSavedAdoboSnapshotIfAvailable()
             }
         ) {
-            Text("Read Adobo JSON")
+            Text("Read Adobo for $selectedDateLabel")
         }
     }
 

@@ -6,5 +6,6 @@ data class DaySummaryUi(
     val date: LocalDate,
     val supplementsLogged: Int,
     val mealsLogged: Int,
-    val activitiesCompleted: Int
+    val activitiesCompleted: Int,
+    val hasImportedNutritionData: Boolean = false
 )
