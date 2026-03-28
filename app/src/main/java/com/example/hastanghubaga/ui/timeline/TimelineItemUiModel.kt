@@ -1,7 +1,5 @@
 package com.example.hastanghubaga.ui.timeline
 
-
-
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.MealType
@@ -59,7 +57,6 @@ import kotlinx.datetime.LocalTime
  * It also enables the timeline to evolve visually
  * without impacting persistence or business rules.
  */
-
 sealed interface TimelineItemUiModel {
     val id: Long
     val time: LocalTime
@@ -71,11 +68,8 @@ sealed interface TimelineItemUiModel {
     val isCompleted: Boolean
 
     val sendAlert: Boolean
-
     val alertOffsetMinutes: Int?
-
 }
-
 
 data class SupplementUiModel(
     override val id: Long,
@@ -91,7 +85,6 @@ data class SupplementUiModel(
     val doseState: MealAwareDoseState?,
     val defaultUnit: SupplementDoseUnit,
     val suggestedDose: Double,
-
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
@@ -124,7 +117,6 @@ data class ActivityUiModel(
         "ACTIVITY-$activityId-$startTime"
 }
 
-
 data class MealUiModel(
     override val id: Long,
     override val time: LocalTime,
@@ -145,6 +137,31 @@ data class MealUiModel(
         "MEAL-$mealId-$time"
 }
 
+/**
+ * Read-only imported meal row.
+ *
+ * This is intentionally separate from [MealUiModel] so imported AK meals do not
+ * go through HH native meal interactions such as "log a new meal now".
+ */
+data class ImportedMealUiModel(
+    override val id: Long,
+    override val time: LocalTime,
+    override val title: String,
+    override val subtitle: String?,
+    override val isCompleted: Boolean,
+    override val sendAlert: Boolean = false,
+    override val alertOffsetMinutes: Int? = null,
+
+    val importedMealId: Long,
+    val mealType: MealType
+) : TimelineItemUiModel {
+
+    override val rowType: TodayUiRowType =
+        TodayUiRowType.MEAL
+
+    override val key: String =
+        "IMPORTED_MEAL-$importedMealId-$time"
+}
 
 /**
  * A UI row representing an actual recorded supplement dose event.
@@ -154,18 +171,18 @@ data class MealUiModel(
  * as distinct rows, even if the supplement is scheduled only once.
  */
 data class SupplementDoseLogUiModel(
-    override val id: Long,                // doseLogId if you have one; otherwise synthetic
-    override val time: LocalTime,          // when the dose was taken
-    override val title: String,            // supplement name
-    override val subtitle: String?,        // "1 cap" / "extra dose" / etc.
-    override val isCompleted: Boolean,     // usually true (a log row is "done")
+    override val id: Long,
+    override val time: LocalTime,
+    override val title: String,
+    override val subtitle: String?,
+    override val isCompleted: Boolean,
     override val sendAlert: Boolean = false,
     override val alertOffsetMinutes: Int? = null,
 
     val supplementId: Long,
-    val scheduledTime: LocalTime?,         // null if this was "Log now/extra"
-    val amountText: String?,               // optional display like "1.0"
-    val unitText: String?                  // optional display like "capsule"
+    val scheduledTime: LocalTime?,
+    val amountText: String?,
+    val unitText: String?
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT_DOSE_LOG
@@ -173,79 +190,3 @@ data class SupplementDoseLogUiModel(
     override val key: String =
         "SUPPLEMENT_DOSE_LOG-$supplementId-$time-$id"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//sealed interface TimelineItemUiModel {
-//
-//    /** Stable UI key for LazyColumn */
-//    val key: String
-//
-//    /** Source entity ID (supplementId, mealId, activityId) */
-//    val id: Long
-//
-//    /** Time this item occurs */
-//    val time: LocalTime
-//
-//    /** Primary display text */
-//    val title: String
-//
-//    /** Optional secondary text */
-//    val subtitle: String?
-//
-//    /** Row category for styling & behavior */
-//    val rowType: TodayUiRowType
-//
-//    data class Supplement(
-//        override val id: Long,
-//        override val time: LocalTime,
-//        override val title: String,
-//        override val subtitle: String?,
-//        val doseState: MealAwareDoseState?,
-//        val suggestedDose: Double,
-//        val defaultUnit: SupplementDoseUnit
-//    ) : TimelineItemUiModel {
-//        override val rowType = TodayUiRowType.SUPPLEMENT
-//        override val key = "${rowType.name}-$id-$time"
-//    }
-//
-//    data class Meal(
-//        override val id: Long,
-//        override val time: LocalTime,
-//        override val title: String,
-//        override val subtitle: String?,
-//        val type: MealType
-//    ) : TimelineItemUiModel {
-//        override val rowType = TodayUiRowType.MEAL
-//        override val key = "${rowType.name}-$id-$time"
-//    }
-//
-//    data class Activity(
-//        override val id: Long,
-//        override val time: LocalTime,
-//        override val title: String,
-//        override val subtitle: String?,
-//        val activityType: ActivityType,
-//        val endTime: LocalTime?
-//    ) : TimelineItemUiModel {
-//        override val rowType = TodayUiRowType.ACTIVITY
-//        override val key = "${rowType.name}-$id-$time"
-//    }
-//}

@@ -45,6 +45,7 @@ import com.example.hastanghubaga.ui.common.ErrorView
 import com.example.hastanghubaga.ui.common.LoadingView
 import com.example.hastanghubaga.ui.common.SnackbarController
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
+import com.example.hastanghubaga.ui.timeline.ImportedMealUiModel
 import com.example.hastanghubaga.ui.timeline.MealUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.tokens.Dimens
@@ -158,6 +159,12 @@ fun TodayScreen(
                     )
                 }
 
+                is ImportedMealUiModel -> {
+                    // Read-only for now.
+                    // Do NOT open the native HH meal logging sheet for imported meals.
+                    Unit
+                }
+
                 is ActivityUiModel -> {
                     if (item.activityType.isExercise) {
                         viewModel.onIntent(TodayScreenContract.Intent.ExerciseTapped(item))
@@ -237,6 +244,7 @@ fun TodayScreen(
                             when (sheet.draft.phase) {
                                 TodayScreenContract.ExerciseDraft.Phase.Draft ->
                                     viewModel.onIntent(ExerciseStartPressed)
+
                                 TodayScreenContract.ExerciseDraft.Phase.Running ->
                                     viewModel.onIntent(ExerciseConfirmPressed)
                             }

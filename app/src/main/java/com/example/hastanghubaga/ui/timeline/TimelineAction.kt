@@ -24,7 +24,6 @@ sealed interface TimelineAction {
     data object NoOp : TimelineAction
 }
 
-
 /**
  * Maps a timeline item to its default click action.
  */
@@ -36,10 +35,11 @@ fun TimelineItemUiModel.toClickAction(): TimelineAction =
         is MealUiModel ->
             OpenMeal(id)
 
+        is ImportedMealUiModel ->
+            NoOp
+
         is ActivityUiModel ->
             OpenActivity(id)
-
-//        is TimelineItem.SupplementDoseLog -> NoOp
 
         is SupplementDoseLogUiModel ->
             OpenSupplement(id)

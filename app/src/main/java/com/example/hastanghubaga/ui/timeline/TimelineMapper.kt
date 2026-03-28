@@ -50,13 +50,13 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
         is TimelineItem.ImportedMealTimelineItem -> {
             val importedMealId = importedMealStableId(meal.groupingKey)
 
-            MealUiModel(
+            ImportedMealUiModel(
                 id = importedMealId,
                 time = time,
                 title = meal.type.name,
                 subtitle = buildImportedMealSubtitle(meal.notes),
                 isCompleted = true,
-                mealId = importedMealId,
+                importedMealId = importedMealId,
                 mealType = meal.type.toDomain()
             )
         }
