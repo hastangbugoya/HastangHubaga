@@ -122,4 +122,15 @@ interface AkImportedLogDao {
         }
         return changedCount
     }
+
+    @Query("""
+    SELECT COUNT(*) FROM ak_imported_logs
+    WHERE logDateIso = :logDateIso
+      AND (
+        mealSlot IS NULL OR
+        TRIM(mealSlot) = '' OR
+        UPPER(TRIM(mealSlot)) = 'CUSTOM'
+      )
+""")
+    fun observeUnresolvedCountForDate(logDateIso: String): Flow<Int>
 }

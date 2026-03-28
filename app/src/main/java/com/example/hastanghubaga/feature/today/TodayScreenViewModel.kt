@@ -121,6 +121,7 @@ class TodayScreenViewModel @Inject constructor(
 
     init {
         restoreExerciseDraftIfPresent()
+        _state.update { it.copy(selectedDate = selectedDate.value) }
         observeTimeline()
         Log.d("Meow", "TodayVM init: ${hashCode()}")
     }
@@ -135,8 +136,8 @@ class TodayScreenViewModel @Inject constructor(
         val today = DomainTimePolicy.todayLocal(clock)
 
         when (intent) {
-            is TodayScreenContract.Intent.LoadToday -> loadToday(today)
-            is TodayScreenContract.Intent.Refresh -> loadToday(today)
+            is TodayScreenContract.Intent.LoadDate -> loadToday(intent.date)
+            is TodayScreenContract.Intent.Refresh -> loadToday(selectedDate.value)
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
                 handleTimelineItemClicked(intent.item)
@@ -218,8 +219,9 @@ class TodayScreenViewModel @Inject constructor(
                     val now = nowLocalTime(clock)
                     val endTime = clampEndTimeNotBeforeStart(draft.startTime, now)
 
-                    val startMillis = localTimeToEpochMillis(today, draft.startTime)
-                    val endMillis = localTimeToEpochMillis(today, endTime)
+                    val activeDate = selectedDate.value
+                    val startMillis = localTimeToEpochMillis(activeDate, draft.startTime)
+                    val endMillis = localTimeToEpochMillis(activeDate, endTime)
 
                     savedExerciseActivityUseCase(
                         type = draft.activityType,
@@ -280,10 +282,24 @@ class TodayScreenViewModel @Inject constructor(
     fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
         if (selectedDate.value == date) {
             Log.d("Meow", "TodayVM loadToday ignored (same date=$date)")
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    errorMessage = null,
+                    selectedDate = date
+                )
+            }
             return
         }
+
         Log.d("Meow", "TodayVM loadToday(day=$date)")
-        _state.update { it.copy(isLoading = true, errorMessage = null) }
+        _state.update {
+            it.copy(
+                isLoading = true,
+                errorMessage = null,
+                selectedDate = date
+            )
+        }
         selectedDate.value = date
     }
 
@@ -312,6 +328,7 @@ class TodayScreenViewModel @Inject constructor(
                     Log.d("Meow", "Timeline update size=${timeline.size}")
                     _state.update {
                         it.copy(
+                            selectedDate = selectedDate.value,
                             isLoading = false,
                             domainTimelineItems = timeline,
                             uiTimelineItems = timeline.toTimelineItemUiModels()
@@ -338,7 +355,6 @@ class TodayScreenViewModel @Inject constructor(
         )
 
     private fun handleTimelineItemClicked(uiItem: TimelineItemUiModel) {
-        // Domain lookup retained for continuity (even if not used yet).
         findDomainItemFor(uiItem) ?: return
 
         when (val action = handleTimelineItemTapUseCase.resolve(uiItem)) {
@@ -375,19 +391,6 @@ class TodayScreenViewModel @Inject constructor(
             time = time
         )
 
-    /**
-     * Resolves a UI row back to its corresponding domain timeline item.
-     *
-     * For scheduled items (supplement/activity/meal), (id + time) is enough.
-     *
-     * For dose log rows, the domain item currently has no `doseLogId`, so we match using:
-     * - supplementId
-     * - time
-     * - scheduledTime (nullable)
-     * - amount/unit when parseable
-     *
-     * If you later add a real doseLogId to the domain item, update this method to match on it.
-     */
     private fun findDomainItemFor(uiItem: TimelineItemUiModel): TimelineItem? {
         val identity = uiItem.identity()
 
@@ -408,7 +411,6 @@ class TodayScreenViewModel @Inject constructor(
                     domainItem.meal.id == identity.id &&
                             domainItem.time == identity.time
 
-                // ✅ NEW: imported meals
                 identity.type == TodayUiRowType.MEAL &&
                         domainItem is TimelineItem.ImportedMealTimelineItem ->
                     importedMealStableId(domainItem.meal.groupingKey) == identity.id &&

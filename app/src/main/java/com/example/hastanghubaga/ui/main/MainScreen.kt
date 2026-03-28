@@ -51,6 +51,7 @@ import com.example.hastanghubaga.ui.screens.SettingsScreen
 import com.example.hastanghubaga.ui.screens.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toLocalDateTime
 
 private enum class SettingsSubscreen {
     ROOT,
@@ -85,6 +86,8 @@ fun MainScreen() {
     var sheetVisible by remember { mutableStateOf(false) }
 
     var settingsSubscreen by rememberSaveable { mutableStateOf(SettingsSubscreen.ROOT) }
+
+    var selectedHomeDateIso by rememberSaveable { mutableStateOf(LocalDate.Companion.parse(kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date.toString()).toString()) }
 
     val snackbarController: SnackbarController = remember {
         object : SnackbarController {
@@ -218,6 +221,7 @@ fun MainScreen() {
             ) {
                 composable(NavItem.HOME.route) {
                     TodayScreen(
+                        initialDate = LocalDate.parse(selectedHomeDateIso),
                         viewModel = todayViewModel,
                         snackbarController = snackbarController,
                         bannerController = bannerController,
@@ -234,6 +238,7 @@ fun MainScreen() {
                         modifier = Modifier.fillMaxSize(),
                         snackbarHostState = snackbarHostState,
                         onNavigateToDate = { date: LocalDate ->
+                            selectedHomeDateIso = date.toString()
                             navController.navigate(NavItem.HOME.route) {
                                 launchSingleTop = true
                                 restoreState = true
@@ -241,7 +246,6 @@ fun MainScreen() {
                                     saveState = true
                                 }
                             }
-                            todayViewModel.loadToday(date)
                         }
                     )
                 }

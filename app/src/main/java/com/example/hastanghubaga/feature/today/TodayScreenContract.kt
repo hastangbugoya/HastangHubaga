@@ -8,6 +8,7 @@ import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toLocalDateTime
 
@@ -17,6 +18,7 @@ object TodayScreenContract {
      * UI State – single source of truth
      */
     data class State(
+        val selectedDate: LocalDate = DomainTimePolicy.todayLocal(),
         val isLoading: Boolean = false,
         val uiTimelineItems: List<TimelineItemUiModel> = emptyList(),
         val domainTimelineItems: List<TimelineItem> = emptyList(),
@@ -28,7 +30,7 @@ object TodayScreenContract {
      * User / system intents
      */
     sealed interface Intent {
-        data object LoadToday : Intent
+        data class LoadDate(val date: LocalDate) : Intent
         data object Refresh : Intent
         data class TimelineItemClicked(val item: TimelineItemUiModel) : Intent
 
@@ -63,14 +65,13 @@ object TodayScreenContract {
             val option: SupplementLogOption
         ) : Intent
 
-        data class LogMealConfirmed (
+        data class LogMealConfirmed(
             val input: MealLogInput
-        ): Intent
+        ) : Intent
 
         data class LogMealTapped(
             val mealType: MealType,
-        ): Intent
-
+        ) : Intent
     }
 
     /**
@@ -80,18 +81,23 @@ object TodayScreenContract {
         data class ShowSnackbar(
             val message: String
         ) : Effect
+
         data class ShowBanner(
             val message: String
         ) : Effect
+
         data class ShowBottomSheet(
             val content: @Composable () -> Unit
         ) : Effect
+
         data class ShowError(
             val message: String
         ) : Effect
+
         data class Navigate(
             val destination: Destination
         ) : Effect
+
         data class ShowDoseInputDialog(
             val supplementId: Long,
             val title: String,
@@ -113,7 +119,6 @@ object TodayScreenContract {
         ) : Effect
     }
 
-
     sealed interface Destination {
         data class Supplement(val id: Long) : Destination
         data class Meal(val id: Long) : Destination
@@ -123,17 +128,17 @@ object TodayScreenContract {
     data class ExerciseDraft(
         val activityType: ActivityType,
         val startTime: LocalTime,
-        val endTime: LocalTime?,      // if you have it
+        val endTime: LocalTime?,
         val notes: String,
-        val intensity: Int?,          // your new field
+        val intensity: Int?,
         val phase: Phase
     ) {
         enum class Phase { Draft, Running }
     }
 
     enum class SupplementLogOption {
-        Scheduled, // “Log scheduled dose”
-        NowExtra   // “Log now / extra dose”
+        Scheduled,
+        NowExtra
     }
 
     /**
@@ -183,5 +188,4 @@ object TodayScreenContract {
         kotlinx.datetime.Instant
             .fromEpochMilliseconds(utcMillis)
             .toLocalDateTime(DomainTimePolicy.localTimeZone)
-
 }

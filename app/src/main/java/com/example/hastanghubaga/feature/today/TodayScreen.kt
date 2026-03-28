@@ -49,16 +49,10 @@ import com.example.hastanghubaga.ui.timeline.MealUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.math.roundToInt
 
-/**
- * Local sheet host:
- * - Dose sheet
- * - Exercise sheet
- *
- * This pattern scales: add another subtype in [ActiveLocalSheet] and handle it in the effect collector.
- */
 sealed interface ActiveLocalSheet {
     data class Dose(
         val data: TodayScreenContract.Effect.ShowDoseInputDialog,
@@ -77,7 +71,7 @@ sealed interface ActiveLocalSheet {
 
     data class Meal(
         val input: TodayScreenContract.MealLogInput
-    ): ActiveLocalSheet
+    ) : ActiveLocalSheet
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -87,38 +81,31 @@ fun TodayScreen(
     bannerController: BannerController,
     bottomSheetController: BottomSheetController,
     onNavigate: (TodayScreenContract.Destination) -> Unit,
+    initialDate: LocalDate = DomainTimePolicy.todayLocal(),
     viewModel: TodayScreenViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     var activeSheet by remember { mutableStateOf<ActiveLocalSheet?>(null) }
-
     val localSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Existing “loaded banner” effect remains unchanged
-    LaunchedEffect(state.isLoading, state.uiTimelineItems.size) {
+    LaunchedEffect(state.isLoading, state.uiTimelineItems.size, state.selectedDate) {
         if (!state.isLoading && state.uiTimelineItems.isNotEmpty()) {
             val count = state.uiTimelineItems.size
             bannerController.show(
-                if (count == 1) "Loaded 1 timeline item" else "Loaded $count timeline items"
+                if (count == 1) {
+                    "Loaded 1 timeline item for ${state.selectedDate}"
+                } else {
+                    "Loaded $count timeline items for ${state.selectedDate}"
+                }
             )
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.onIntent(TodayScreenContract.Intent.LoadToday)
+    LaunchedEffect(initialDate) {
+        viewModel.onIntent(TodayScreenContract.Intent.LoadDate(initialDate))
     }
 
-    /**
-     * One collector for all Effects.
-     *
-     * Bottom sheets:
-     * 1) Global sheet via BottomSheetController (Effect.ShowBottomSheet)
-     * 2) Local dose sheet (ActiveLocalSheet.Dose)
-     * 3) Local exercise sheet (ActiveLocalSheet.Exercise) driven by state.exerciseDraft
-     *
-     * Adding a 4th local sheet = add a new ActiveLocalSheet subtype + set activeSheet here.
-     */
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
@@ -138,7 +125,6 @@ fun TodayScreen(
                     bannerController.show(effect.message)
 
                 is TodayScreenContract.Effect.ShowDoseInputDialog -> {
-                    // Keep old behavior, but route to the unified local sheet host
                     activeSheet = Dose(
                         data = effect,
                         title = effect.title
@@ -158,7 +144,6 @@ fun TodayScreen(
     TodayScreenContent(
         state = state,
         onItemClick = { item ->
-            // Keep existing behavior: VM decides what to do on click (dose, etc.)
             viewModel.onIntent(TodayScreenContract.Intent.TimelineItemClicked(item))
 
             when (item) {
@@ -181,13 +166,12 @@ fun TodayScreen(
 
                 else -> Unit
             }
-
         },
         onRefresh = {
             viewModel.onIntent(TodayScreenContract.Intent.Refresh)
         }
     )
-    // Drive exercise sheet from state so it shows even in the Draft/Start-only phase
+
     LaunchedEffect(state.exerciseDraft) {
         val draft = state.exerciseDraft
         if (draft != null) {
@@ -196,30 +180,22 @@ fun TodayScreen(
                 title = draft.activityType.name.replace('_', ' ')
             )
         } else {
-            // If draft cleared, close local sheet if it was Exercise
             if (activeSheet is ActiveLocalSheet.Exercise) activeSheet = null
         }
     }
 
-    // One local ModalBottomSheet host for multiple sheet content types
     activeSheet?.let { sheet ->
         ModalBottomSheet(
             sheetState = localSheetState,
             onDismissRequest = {
                 when (sheet) {
-                    is Dose -> {
-                        activeSheet = null
-                    }
+                    is Dose -> activeSheet = null
                     is Exercise -> {
                         viewModel.onIntent(DismissExerciseSheet)
                         activeSheet = null
                     }
-                    is SupplementLogChoice -> {
-                        activeSheet = null
-                    }
-                    is Meal -> {
-                        activeSheet = null
-                    }
+                    is SupplementLogChoice -> activeSheet = null
+                    is Meal -> activeSheet = null
                 }
             }
         ) {
@@ -261,7 +237,6 @@ fun TodayScreen(
                             when (sheet.draft.phase) {
                                 TodayScreenContract.ExerciseDraft.Phase.Draft ->
                                     viewModel.onIntent(ExerciseStartPressed)
-
                                 TodayScreenContract.ExerciseDraft.Phase.Running ->
                                     viewModel.onIntent(ExerciseConfirmPressed)
                             }
@@ -301,9 +276,10 @@ fun TodayScreen(
                         }
                     )
                 }
+
                 is Meal -> {
                     MealLogBottomSheetContent(
-                        title = sheet.input.mealType.name, // e.g. "Log Lunch"
+                        title = sheet.input.mealType.name,
                         initialNotes = null,
                         initialNutrition = null,
                         onConfirm = { notes, nutrition ->
@@ -326,16 +302,6 @@ fun TodayScreen(
     }
 }
 
-/**
- * Full Exercise bottom sheet UI.
- *
- * Requirements met:
- * - Start time is shown (prefilled by VM on ExerciseTapped)
- * - End time is shown (from Activity UI model; editable hook included)
- * - Notes + intensity inputs are always visible
- * - Button switches Start -> Save/Confirm based on phase
- * - Shows even when only "Start" exists (Draft phase)
- */
 @Composable
 private fun ExerciseBottomSheetContent(
     title: String,
@@ -345,9 +311,11 @@ private fun ExerciseBottomSheetContent(
     onEndTimeChange: (kotlinx.datetime.LocalTime?) -> Unit,
     onPrimaryAction: () -> Unit,
 ) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
         Text(text = title, style = MaterialTheme.typography.titleLarge)
 
         Spacer(Modifier.height(12.dp))
@@ -361,9 +329,6 @@ private fun ExerciseBottomSheetContent(
             text = "End: ${draft.endTime ?: "—"}",
             style = MaterialTheme.typography.titleMedium
         )
-
-        // (Optional) later replace with a time picker; for now just a hook point
-        // onEndTimeChange(...)
 
         Spacer(Modifier.height(12.dp))
 
@@ -427,15 +392,25 @@ fun TodayScreenContent(
     when {
         state.isLoading -> LoadingView()
         state.errorMessage != null -> ErrorView(state.errorMessage)
-        else -> TimelineList(
-            items = state.uiTimelineItems,
-            onItemClick = onItemClick
-        )
+        else -> Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = state.selectedDate.toString(),
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            TimelineList(
+                modifier = Modifier.weight(1f),
+                items = state.uiTimelineItems,
+                onItemClick = onItemClick
+            )
+        }
     }
 }
 
 @Composable
 fun TimelineList(
+    modifier: Modifier = Modifier,
     items: List<TimelineItemUiModel>,
     onItemClick: (TimelineItemUiModel) -> Unit
 ) {
@@ -443,7 +418,7 @@ fun TimelineList(
     items.forEach {
         Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
     }
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = modifier.fillMaxWidth()) {
         items(items = items, key = { it.key }) { item ->
             TimelineRow(item = item, onClick = onItemClick)
         }
@@ -476,8 +451,6 @@ fun TimelineRow(
     }
 }
 
-
-
 @Composable
 private fun SupplementLogChoiceSheetContent(
     title: String?,
@@ -501,7 +474,6 @@ private fun SupplementLogChoiceSheetContent(
             modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
         )
 
-        // Option: scheduled
         val scheduledLabel = scheduledTime?.toString() ?: "scheduled time"
         Text(
             text = "Log scheduled dose ($scheduledLabel)",
@@ -512,7 +484,6 @@ private fun SupplementLogChoiceSheetContent(
                 .padding(vertical = 12.dp)
         )
 
-        // Option: now/extra
         Text(
             text = "Log now / extra dose",
             style = MaterialTheme.typography.titleMedium,
@@ -533,7 +504,6 @@ fun MealLogBottomSheetContent(
 ) {
     var notesText by remember { mutableStateOf(initialNotes.orEmpty()) }
 
-    // Keep as text while editing; convert to Double? on confirm.
     var calories by remember { mutableStateOf(initialNutrition?.calories?.toString().orEmpty()) }
     var protein by remember { mutableStateOf(initialNutrition?.proteinGrams?.toString().orEmpty()) }
     var carbs by remember { mutableStateOf(initialNutrition?.carbsGrams?.toString().orEmpty()) }
@@ -580,7 +550,6 @@ fun MealLogBottomSheetContent(
                     fiberGrams = fiber.toDoubleOrNull()
                 )
 
-                // If ALL nutrition fields are empty, treat nutrition as null.
                 val nutritionOrNull =
                     if (parsed.isAllNull()) null else parsed
 
@@ -603,7 +572,6 @@ private fun NutrientNumberField(
     OutlinedTextField(
         value = value,
         onValueChange = { new ->
-            // Allow digits + decimal point; keep it forgiving.
             onValueChange(new.filter { it.isDigit() || it == '.' })
         },
         modifier = Modifier.fillMaxWidth(),
@@ -620,4 +588,3 @@ private fun TodayScreenContract.NutritionInput.isAllNull(): Boolean =
             sodiumMg == null &&
             cholesterolMg == null &&
             fiberGrams == null
-
