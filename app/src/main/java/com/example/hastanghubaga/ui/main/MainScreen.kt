@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.hastanghubaga.feature.calendar.CalendarScreen
+import com.example.hastanghubaga.feature.supplements.ui.SupplementEditorSheet
+import com.example.hastanghubaga.feature.supplements.ui.SupplementsScreen
+import com.example.hastanghubaga.feature.supplements.ui.SupplementsViewModel
 import com.example.hastanghubaga.feature.today.TodayScreen
 import com.example.hastanghubaga.feature.today.TodayScreenContract
 import com.example.hastanghubaga.feature.today.TodayScreenViewModel
@@ -47,6 +51,9 @@ fun MainScreen() {
 
     val todayViewModel: TodayScreenViewModel = hiltViewModel()
     val calendarViewModel: CalendarViewModel = hiltViewModel()
+    val supplementsViewModel: SupplementsViewModel = hiltViewModel()
+
+    val supplementsState by supplementsViewModel.state.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -58,6 +65,7 @@ fun MainScreen() {
     var sheetVisible by remember { mutableStateOf(false) }
 
     var showIngredientManager by remember { mutableStateOf(false) }
+    var showSupplements by remember { mutableStateOf(false) }
 
     val snackbarController: SnackbarController = remember {
         object : SnackbarController {
@@ -204,29 +212,46 @@ fun MainScreen() {
                 }
 
                 composable(NavItem.SETTINGS.route) {
-                    if (showIngredientManager) {
-                        IngredientManagerScreen()
-                    } else {
-                        SettingsScreen(
-                            onOpenSupplements = {
-                                bottomSheetController.show {
-                                    Text("Supplements CRUD coming next")
+                    when {
+                        showIngredientManager -> {
+                            IngredientManagerScreen()
+                        }
+
+                        showSupplements -> {
+                            SupplementsScreen(
+                                items = supplementsState.items,
+                                onAddClick = {
+                                    supplementsViewModel.onAddClick()
+                                },
+                                onItemClick = { supplementId ->
+                                    supplementsViewModel.onEditClick(supplementId)
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        else -> {
+                            SettingsScreen(
+                                onOpenSupplements = {
+                                    showSupplements = true
+                                    showIngredientManager = false
+                                },
+                                onOpenNutrients = {
+                                    bottomSheetController.show {
+                                        Text("Nutrients editor coming later")
+                                    }
+                                },
+                                onOpenActivities = {
+                                    bottomSheetController.show {
+                                        Text("Activities editor coming later")
+                                    }
+                                },
+                                onOpenIngredients = {
+                                    showIngredientManager = true
+                                    showSupplements = false
                                 }
-                            },
-                            onOpenNutrients = {
-                                bottomSheetController.show {
-                                    Text("Nutrients editor coming later")
-                                }
-                            },
-                            onOpenActivities = {
-                                bottomSheetController.show {
-                                    Text("Activities editor coming later")
-                                }
-                            },
-                            onOpenIngredients = {
-                                showIngredientManager = true
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -238,6 +263,24 @@ fun MainScreen() {
                 onDismissRequest = { bottomSheetController.hide() }
             ) {
                 sheetContent?.invoke()
+            }
+        }
+
+        val supplementEditor = supplementsState.editor
+        if (supplementEditor != null) {
+            ModalBottomSheet(
+                onDismissRequest = { supplementsViewModel.onDismissEditor() }
+            ) {
+                SupplementEditorSheet(
+                    state = supplementEditor,
+                    onNameChanged = supplementsViewModel::onNameChanged,
+                    onBrandChanged = supplementsViewModel::onBrandChanged,
+                    onNotesChanged = supplementsViewModel::onNotesChanged,
+                    onIsActiveChanged = supplementsViewModel::onIsActiveChanged,
+                    onSaveClick = supplementsViewModel::onSaveClick,
+                    onDeleteClick = supplementsViewModel::onDeleteClick,
+                    onDismiss = supplementsViewModel::onDismissEditor
+                )
             }
         }
 
