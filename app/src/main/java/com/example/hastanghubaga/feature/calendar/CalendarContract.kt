@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.feature.calendar
 
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.feature.calendar.model.DaySummaryUi
 import kotlinx.datetime.LocalDate
 import java.time.YearMonth
@@ -12,12 +13,14 @@ object CalendarContract {
         val summaries: Map<LocalDate, DaySummaryUi>,
         val isLoading: Boolean = false,
 
-        // ✅ NEW: imported Adobo snapshot (per selected day)
+        // Imported Adobo snapshot (per selected day)
         val adoboSnapshot: AdoboSnapshotUi? = null,
-        val savedAdoboSnapshotUri: android.net.Uri? = null
+        val savedAdoboSnapshotUri: android.net.Uri? = null,
+
+        // HH-derived imported meals for the currently selected day
+        val importedMealsForSelectedDate: List<ImportedMealUi> = emptyList()
     )
 
-    // ✅ NEW: UI model for imported snapshot
     data class AdoboSnapshotUi(
         val dateIso: String,
         val calories: Double?,
@@ -26,13 +29,26 @@ object CalendarContract {
         val fat: Double?
     )
 
+    data class ImportedMealUi(
+        val groupingKey: String,
+        val type: MealType,
+        val timestamp: Long,
+        val notes: String?,
+        val calories: Int,
+        val protein: Double,
+        val carbs: Double,
+        val fat: Double,
+        val sodium: Double? = null,
+        val cholesterol: Double? = null,
+        val fiber: Double? = null
+    )
+
     sealed interface Event {
         data object PrevMonthClicked : Event
         data object NextMonthClicked : Event
         data class DateClicked(val date: LocalDate) : Event
         data object TodayClicked : Event
 
-        // Day peek
         data object DayPeekDismissed : Event
         data class OpenDayClicked(val date: LocalDate) : Event
     }
@@ -41,7 +57,6 @@ object CalendarContract {
         data class NavigateToDate(val date: LocalDate) : Effect
         data class ShowSnackbar(val message: String) : Effect
 
-        // Day peek
         data class OpenDayPeek(val date: LocalDate) : Effect
         data object CloseDayPeek : Effect
     }

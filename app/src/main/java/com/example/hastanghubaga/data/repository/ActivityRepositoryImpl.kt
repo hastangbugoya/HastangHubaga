@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.data.repository
 
+import android.util.Log
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import com.example.hastanghubaga.data.local.mappers.toEntity
@@ -32,8 +33,22 @@ class ActivityRepositoryImpl @Inject constructor(
     override fun observeActivitiesForDate(date: LocalDate): Flow<List<Activity>> {
         val (start, end) = DomainTimePolicy.utcMillisRangeForLocalDate(date)
 
+        Log.d("ActivityDebug", "Query date=$date")
+        Log.d("ActivityDebug", "UTC range: $start → $end")
+
         return dao.observeActivitiesForDay(start, end)
-            .map { it.map(ActivityEntity::toDomain) }
+            .map { list ->
+                Log.d("ActivityDebug", "DB returned ${list.size} activities")
+
+                list.forEach {
+                    Log.d(
+                        "ActivityDebug",
+                        "Activity id=${it.id} type=${it.type} start=${it.startTimestamp}"
+                    )
+                }
+
+                list.map { it.toDomain() }
+            }
     }
 
     override suspend fun insertActivity(

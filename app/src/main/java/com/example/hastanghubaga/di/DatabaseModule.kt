@@ -3,6 +3,8 @@ package com.example.hastanghubaga.di
 import android.content.Context
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
+import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
@@ -34,7 +36,7 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext appContext: Context,
         callback: DatabaseCallback
-        ): AppDatabase =
+    ): AppDatabase =
         Room.databaseBuilder(
             appContext,
             AppDatabase::class.java,
@@ -47,6 +49,7 @@ object DatabaseModule {
     @Provides
     fun provideSupplementEntityDao(db: AppDatabase): SupplementEntityDao =
         db.supplementEntityDao()
+
     @Provides
     fun provideIngredientDao(db: AppDatabase): IngredientEntityDao =
         db.ingredientEntityDao()
@@ -67,6 +70,7 @@ object DatabaseModule {
     @Provides
     fun provideSupplementUserSettingsDao(db: AppDatabase): SupplementUserSettingsDao =
         db.supplementUserSettingsDao()
+
     @Provides
     fun provideActivityEntityDao(db: AppDatabase): ActivityEntityDao =
         db.activityEntityDao()
@@ -76,12 +80,20 @@ object DatabaseModule {
         db.mealEntityDao()
 
     @Provides
-    fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
-        db.userNutritionGoalsEntityDao()
-
-    @Provides
     fun provideMealNutritionDao(db: AppDatabase): MealNutritionDao =
         db.mealNutritionDao()
+
+    @Provides
+    fun provideAkImportedLogDao(db: AppDatabase): AkImportedLogDao =
+        db.akImportedLogDao()
+
+    @Provides
+    fun provideAkImportedMealDao(db: AppDatabase): AkImportedMealDao =
+        db.akImportedMealDao()
+
+    @Provides
+    fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
+        db.userNutritionGoalsEntityDao()
 
     @Provides
     fun provideUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
@@ -102,5 +114,4 @@ object DatabaseModule {
     @Provides
     fun provideSupplementNutritionDao(db: AppDatabase): SupplementNutritionDao =
         db.supplementNutritionDao()
-
 }

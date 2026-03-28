@@ -1,4 +1,4 @@
-package com.example.hastanghubaga.data.local.entity.imported
+package com.example.hastanghubaga.data.local.entity.meal
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

@@ -23,7 +23,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hastanghubaga.feature.calendar.ui.DayPeekBottomSheet
 import com.example.hastanghubaga.feature.calendar.ui.MonthCalendarPanel
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +90,7 @@ fun CalendarScreen(
         val summary = state.summaries[date]
         val adoboSnapshotForDate =
             state.adoboSnapshot?.takeIf { it.dateIso == date.toString() }
+        val importedMealsForDate = state.importedMealsForSelectedDate
 
         ModalBottomSheet(
             onDismissRequest = { viewModel.onEvent(CalendarContract.Event.DayPeekDismissed) },
@@ -98,6 +102,38 @@ fun CalendarScreen(
                 onOpenDay = { viewModel.onEvent(CalendarContract.Event.OpenDayClicked(date)) },
                 onDismiss = { viewModel.onEvent(CalendarContract.Event.DayPeekDismissed) }
             )
+
+            if (importedMealsForDate.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Imported AK meals",
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(4.dp))
+
+                importedMealsForDate.forEach { meal ->
+                    Text(
+                        text = buildString {
+                            append(meal.type.name.replace("_", " "))
+                            meal.notes?.takeIf { it.isNotBlank() }?.let {
+                                append(": ")
+                                append(it)
+                            }
+                            append("\nCalories: ${meal.calories}")
+                            append("\nProtein: ${meal.protein}")
+                            append("\nCarbs: ${meal.carbs}")
+                            append("\nFat: ${meal.fat}")
+                            meal.fiber?.let { append("\nFiber: $it") }
+                            meal.sodium?.let { append("\nSodium: $it") }
+                            meal.cholesterol?.let { append("\nCholesterol: $it") }
+                            append("\nTime: ${meal.timestamp.toLocalTimeString()}")
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
 
             if (adoboSnapshotForDate != null) {
                 Spacer(Modifier.height(8.dp))
@@ -122,4 +158,15 @@ fun CalendarScreen(
             Spacer(Modifier.height(12.dp))
         }
     }
+}
+
+private fun Long.toLocalTimeString(): String {
+    val time = Instant
+        .fromEpochMilliseconds(this)
+        .toLocalDateTime(TimeZone.currentSystemDefault())
+        .time
+
+    val hour = time.hour.toString().padStart(2, '0')
+    val minute = time.minute.toString().padStart(2, '0')
+    return "$hour:$minute"
 }

@@ -6,9 +6,16 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.feature.calendar.CalendarContract.AdoboSnapshotUi
-import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.*
+import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.CloseDayPeek
+import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.NavigateToDate
+import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.OpenDayPeek
+import com.example.hastanghubaga.feature.calendar.CalendarContract.Effect.ShowSnackbar
+import com.example.hastanghubaga.feature.calendar.CalendarContract.ImportedMealUi
 import com.example.hastanghubaga.feature.calendar.model.DaySummaryUi
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +39,10 @@ import java.time.YearMonth
 private const val PREFS_NAME = "adobo_snapshot_prefs"
 private const val KEY_ADOBO_SNAPSHOT_URI = "adobo_snapshot_uri"
 
-class CalendarViewModel(
-    application: Application
+@HiltViewModel
+class CalendarViewModel @Inject constructor(
+    application: Application,
+    private val akImportedMealDao: AkImportedMealDao
 ) : AndroidViewModel(application) {
 
     private val appContext: Context = application.applicationContext
@@ -54,6 +63,7 @@ class CalendarViewModel(
 
     init {
         refreshMonthSummaries()
+        loadImportedMealsForSelectedDate()
         Log.d("Meow", "CalendarVM init: ${hashCode()}")
     }
 
@@ -76,6 +86,7 @@ class CalendarViewModel(
 
             is CalendarContract.Event.DateClicked -> {
                 _state.update { it.copy(selectedDate = event.date) }
+                loadImportedMealsForSelectedDate()
                 readAdoboSnapshot(buildSnapshotUriForDate(event.date))
                 emit(OpenDayPeek(event.date))
             }
@@ -89,15 +100,16 @@ class CalendarViewModel(
                     )
                 }
                 refreshMonthSummaries()
+                loadImportedMealsForSelectedDate()
                 emit(ShowSnackbar("Jumped to today"))
             }
 
             CalendarContract.Event.DayPeekDismissed -> {
-                emit(CalendarContract.Effect.CloseDayPeek)
+                emit(CloseDayPeek)
             }
 
             is CalendarContract.Event.OpenDayClicked -> {
-                emit(CalendarContract.Effect.NavigateToDate(event.date))
+                emit(NavigateToDate(event.date))
             }
         }
     }
@@ -133,7 +145,68 @@ class CalendarViewModel(
         }
 
         reapplyAdoboSnapshotToSummaries()
+        applyImportedMealsToSummaries(month)
         readAdoboMonthSnapshot(month)
+    }
+
+    private fun applyImportedMealsToSummaries(month: YearMonth) {
+        viewModelScope.launch {
+            val start = LocalDate(month.year, month.month.toKotlinxMonth(), 1)
+            val daysInMonth = month.lengthOfMonth()
+
+            val updates = mutableMapOf<LocalDate, DaySummaryUi>()
+
+            for (offset in 0 until daysInMonth) {
+                val date = start.plus(DatePeriod(days = offset))
+                val importedMeals = akImportedMealDao.getForDate(date.toString())
+                if (importedMeals.isEmpty()) continue
+
+                val existing = _state.value.summaries[date]
+
+                updates[date] = DaySummaryUi(
+                    date = date,
+                    supplementsLogged = existing?.supplementsLogged ?: 0,
+                    mealsLogged = importedMeals.size,
+                    activitiesCompleted = existing?.activitiesCompleted ?: 0,
+                    hasImportedNutritionData = true
+                )
+            }
+
+            _state.update { current ->
+                current.copy(
+                    summaries = current.summaries + updates
+                )
+            }
+
+            loadImportedMealsForSelectedDate()
+        }
+    }
+
+    private fun loadImportedMealsForSelectedDate() {
+        val selectedDate = _state.value.selectedDate ?: return
+
+        viewModelScope.launch {
+            val meals = akImportedMealDao.getForDate(selectedDate.toString())
+                .map { meal ->
+                    ImportedMealUi(
+                        groupingKey = meal.groupingKey,
+                        type = meal.type,
+                        timestamp = meal.timestamp,
+                        notes = meal.notes,
+                        calories = meal.totalCalories,
+                        protein = meal.totalProtein,
+                        carbs = meal.totalCarbs,
+                        fat = meal.totalFat,
+                        sodium = meal.totalSodium,
+                        cholesterol = meal.totalCholesterol,
+                        fiber = meal.totalFiber
+                    )
+                }
+
+            _state.update { current ->
+                current.copy(importedMealsForSelectedDate = meals)
+            }
+        }
     }
 
     private fun emit(effect: CalendarContract.Effect) {
@@ -252,13 +325,11 @@ class CalendarViewModel(
             updates[snapshotDate] = DaySummaryUi(
                 date = snapshotDate,
                 supplementsLogged = existing?.supplementsLogged ?: 0,
-                mealsLogged = 1,
+                mealsLogged = maxOf(existing?.mealsLogged ?: 0, 1),
                 activitiesCompleted = existing?.activitiesCompleted ?: 0,
                 hasImportedNutritionData = true
             )
         }
-
-        if (updates.isEmpty()) return
 
         _state.update { current ->
             current.copy(
@@ -276,7 +347,7 @@ class CalendarViewModel(
             val updatedSummary = DaySummaryUi(
                 date = snapshotDate,
                 supplementsLogged = existing?.supplementsLogged ?: 0,
-                mealsLogged = 1,
+                mealsLogged = maxOf(existing?.mealsLogged ?: 0, 1),
                 activitiesCompleted = existing?.activitiesCompleted ?: 0,
                 hasImportedNutritionData = true
             )

@@ -12,6 +12,7 @@ import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUseCase
+import com.example.hastanghubaga.domain.usecase.meal.GetImportedMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
@@ -30,13 +31,13 @@ import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -49,7 +50,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import javax.inject.Inject
 
 /**
  * TodayScreenViewModel drives the Today timeline UI (supplements, meals, activities, dose logs)
@@ -84,6 +84,7 @@ import javax.inject.Inject
 class TodayScreenViewModel @Inject constructor(
     private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase,
+    private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
@@ -295,11 +296,13 @@ class TodayScreenViewModel @Inject constructor(
                     combine(
                         getSupplementsForDate(date),
                         getMealsForDate(date),
+                        getImportedMealsForDate(date),
                         getActivitiesForDate(date)
-                    ) { supplements, meals, activities ->
+                    ) { supplements, meals, importedMeals, activities ->
                         buildTodayTimeline(
                             supplements = supplements,
                             meals = meals,
+                            importedMeals = importedMeals,
                             activities = activities
                         )
                     }
@@ -405,9 +408,16 @@ class TodayScreenViewModel @Inject constructor(
                     domainItem.meal.id == identity.id &&
                             domainItem.time == identity.time
 
+                // ✅ NEW: imported meals
+                identity.type == TodayUiRowType.MEAL &&
+                        domainItem is TimelineItem.ImportedMealTimelineItem ->
+                    importedMealStableId(domainItem.meal.groupingKey) == identity.id &&
+                            domainItem.time == identity.time
+
                 identity.type == TodayUiRowType.SUPPLEMENT_DOSE_LOG &&
                         uiItem is SupplementDoseLogUiModel &&
                         domainItem is TimelineItem.SupplementDoseLogTimelineItem -> {
+
                     val uiAmount = uiItem.amountText?.toDoubleOrNull()
                     val domainAmount = domainItem.amount
 
@@ -433,6 +443,11 @@ class TodayScreenViewModel @Inject constructor(
                 else -> false
             }
         }
+    }
+
+    private fun importedMealStableId(groupingKey: String): Long {
+        val positive = groupingKey.hashCode().toLong() and 0x7fffffffL
+        return -positive.coerceAtLeast(1L)
     }
 
     // ---- Exercise draft helpers (State + SavedStateHandle) ----

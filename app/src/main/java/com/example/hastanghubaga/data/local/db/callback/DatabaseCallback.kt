@@ -413,7 +413,10 @@ VALUES
                     ('DINNER',    ${mealMillis(18, 0)}, 0, 0);
                 """.trimIndent()
         )
-
+        Log.d("SeedDebug", "Inserted meals for date=$today")
+        Log.d("SeedDebug", "Breakfast ts=${mealMillis(8, 0)}")
+        Log.d("SeedDebug", "Lunch ts=${mealMillis(12, 0)}")
+        Log.d("SeedDebug", "Dinner ts=${mealMillis(18, 0)}")
         db.execSQL(
             """
                 INSERT INTO activities (type, startTimestamp, endTimestamp, notes, sendAlert, alertOffsetMinutes) VALUES
@@ -454,7 +457,8 @@ VALUES
                 );
                 """.trimIndent()
         )
-
+        Log.d("SeedDebug", "Inserted activities for date=$today")
+        Log.d("SeedDebug", "Sample activity ts=${millisAt(7, 0)}")
         db.execSQL(
             """
     INSERT INTO nutrition_goals (

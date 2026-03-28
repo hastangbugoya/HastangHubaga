@@ -47,10 +47,23 @@ class MealRepositoryImpl @Inject constructor(
     override fun observeMealsForDate(date: LocalDate): Flow<List<Meal>> {
         val (startUtc, endUtc) =
             DateRangeConverter.utcRangeForLocalDate(date)
-        Log.d("Meow", "Meals query range (UTC): $startUtc → $endUtc")
+
+        Log.d("MealDebug", "Query date=$date")
+        Log.d("MealDebug", "UTC range: $startUtc → $endUtc")
+
         return mealEntityDao
             .observeMealsForDay(startUtc, endUtc)
             .map { joinedList ->
+
+                Log.d("MealDebug", "DB returned ${joinedList.size} meals")
+
+                joinedList.forEach {
+                    Log.d(
+                        "MealDebug",
+                        "Meal id=${it.meal.id} type=${it.meal.type} ts=${it.meal.timestamp}"
+                    )
+                }
+
                 joinedList.map { it.toDomain() }
             }
     }

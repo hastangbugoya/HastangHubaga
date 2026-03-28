@@ -48,6 +48,7 @@ import com.example.hastanghubaga.ui.common.sheets.TimelineItemInfoSheet
 import com.example.hastanghubaga.ui.components.BottomNavigationBar
 import com.example.hastanghubaga.ui.components.TopBanner
 import com.example.hastanghubaga.ui.screens.SettingsScreen
+import com.example.hastanghubaga.ui.screens.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 
@@ -68,6 +69,7 @@ fun MainScreen() {
     val supplementsViewModel: SupplementsViewModel = hiltViewModel()
     val activitiesViewModel: ActivitiesViewModel = hiltViewModel()
     val ingredientsViewModel: IngredientsViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
 
     val supplementsState by supplementsViewModel.state.collectAsState()
     val activitiesState by activitiesViewModel.state.collectAsState()
@@ -171,6 +173,16 @@ fun MainScreen() {
         if (bannerVisible && !bannerMessage.isNullOrBlank()) {
             delay(3_000)
             bannerVisible = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        settingsViewModel.events.collect { event ->
+            when (event) {
+                is SettingsViewModel.UiEvent.ShowMessage -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+            }
         }
     }
 
@@ -280,6 +292,9 @@ fun MainScreen() {
 
                         SettingsSubscreen.ROOT -> {
                             SettingsScreen(
+                                onImportFromAdobongKangkong = {
+                                    settingsViewModel.onImportFromAdobongKangkongClick()
+                                },
                                 onOpenSupplements = {
                                     settingsSubscreen = SettingsSubscreen.SUPPLEMENTS
                                 },
