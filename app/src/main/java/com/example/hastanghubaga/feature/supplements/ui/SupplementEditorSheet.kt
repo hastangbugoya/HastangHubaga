@@ -19,9 +19,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.hastanghubaga.feature.schedule.ui.ScheduleEditorSection
+import com.example.hastanghubaga.feature.schedule.ui.model.ScheduleEditorController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,13 @@ fun SupplementEditorSheet(
     modifier: Modifier = Modifier
 ) {
     val isExisting = !state.isNew
+
+    // -------------------------
+    // Schedule editor (UI-only for now)
+    // -------------------------
+    val scheduleController = remember {
+        ScheduleEditorController()
+    }
 
     Column(
         modifier = modifier
@@ -104,6 +114,47 @@ fun SupplementEditorSheet(
                 onCheckedChange = onIsActiveChanged
             )
         }
+
+        // -------------------------
+        // NEW: Schedule section
+        // -------------------------
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(4.dp))
+
+        Text(
+            text = "Schedule",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        ScheduleEditorSection(
+            state = scheduleController.state,
+            onEnabledChanged = { scheduleController.setEnabled(it) },
+            onRecurrenceModeChanged = { scheduleController.setRecurrenceMode(it) },
+            onIntervalInputChanged = { scheduleController.setIntervalInput(it) },
+            onWeekdayToggled = { scheduleController.toggleWeekday(it) },
+            onStartDateClick = {
+                // TODO: hook up date picker
+            },
+            onEndDateToggleChanged = { scheduleController.setHasEndDate(it) },
+            onEndDateClick = {
+                // TODO: hook up date picker
+            },
+            onTimingModeChanged = { scheduleController.setTimingMode(it) },
+            onFixedTimeChanged = { id, value ->
+                scheduleController.setFixedTimeValue(id, value)
+            },
+            onAddFixedTime = { scheduleController.addFixedTimeRow() },
+            onRemoveFixedTime = { scheduleController.removeFixedTimeRow(it) },
+            onAnchoredRowAnchorChanged = { id, anchor ->
+                scheduleController.setAnchoredRowAnchor(id, anchor)
+            },
+            onAnchoredRowOffsetChanged = { id, value ->
+                scheduleController.setAnchoredRowOffsetValue(id, value)
+            },
+            onAddAnchoredRow = { scheduleController.addAnchoredTimeRow() },
+            onRemoveAnchoredRow = { scheduleController.removeAnchoredTimeRow(it) }
+        )
 
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()

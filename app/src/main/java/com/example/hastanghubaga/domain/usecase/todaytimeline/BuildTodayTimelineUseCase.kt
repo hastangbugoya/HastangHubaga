@@ -10,7 +10,7 @@ import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.ui.timeline.TimelineItem
-import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshotUseCase
+import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
@@ -26,7 +26,7 @@ import javax.inject.Inject
  */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,
-    private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshotUseCase
+    private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshot
 ) {
     suspend operator fun invoke(
         supplements: List<SupplementWithUserSettings>,

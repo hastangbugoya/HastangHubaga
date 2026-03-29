@@ -3,54 +3,55 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
-import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.factory.FakeActivityFactory
 import com.example.hastanghubaga.factory.FakeMealFactory
-import com.example.hastanghubaga.factory.FakeSupplementFactory
 import com.example.hastanghubaga.factory.FakeSupplementWithUserSettingsFactory
-import com.example.hastanghubaga.factory.FakeUpcomingSchedule
-import com.example.hastanghubaga.testing.FakeUpcomingScheduleRepository
-import com.example.hastanghubaga.testing.TestTimestamps
+import com.example.hastanghubaga.ui.timeline.TimelineItem
+import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import org.junit.Assert
 import org.junit.Ignore
 import org.junit.Test
 
-@Ignore("Temporarily disabled while getting app running on device")
+@Ignore("Temporarily disabled while stabilizing scheduling refactor")
 class BuildTodayTimelineUseCaseTest {
 
-    val TEST_DATE_TIME = LocalDateTime.parse("2026-01-15T12:00:00")
-    private val upcomingSchedules = listOf(
-        FakeUpcomingSchedule.create(
-            name  = "Next Activity",
-            at = TEST_DATE_TIME
-        )
-    )
-    private val fakeBuildWidgetDailySnapshotUseCase =
-        object : com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot {
-            override suspend fun invoke(day: kotlinx.datetime.LocalDate) {
-                // no-op for tests
+    // ✅ FIX: mock interface, not concrete class
+    private val fakeBuildWidgetDailySnapshot =
+        object : BuildWidgetDailySnapshot {
+            override suspend fun invoke(day: LocalDate) {
+                // no-op
             }
         }
 
+    // ✅ FIX: match current repository interface
     private val upcomingScheduleRepository =
         object : UpcomingScheduleRepository {
-            override suspend fun getUpcomingForDate(
-                date: kotlinx.datetime.LocalDate
-            ): List<UpcomingScheduleItem> {
-                return emptyList() // tests will override as needed
+
+            override fun observeUpcoming(): Flow<List<UpcomingSchedule>> {
+                return flowOf(emptyList())
+            }
+
+            override suspend fun replaceAll(items: List<UpcomingSchedule>) {
+                // no-op
+            }
+
+            override fun observeNextUpcoming(): Flow<UpcomingSchedule?> {
+                return flowOf(null)
             }
         }
 
     private val useCase = BuildTodayTimelineUseCase(
         upcomingScheduleRepository = upcomingScheduleRepository,
-        buildWidgetDailySnapshotUseCase = fakeBuildWidgetDailySnapshotUseCase
+        buildWidgetDailySnapshotUseCase = fakeBuildWidgetDailySnapshot
     )
-
-    // ---------- helpers ----------
 
     private fun supplement(
         name: String,
@@ -70,7 +71,6 @@ class BuildTodayTimelineUseCaseTest {
             at = at
         )
 
-
     private fun activity(
         name: String,
         at: LocalDateTime
@@ -79,8 +79,6 @@ class BuildTodayTimelineUseCaseTest {
             name = name,
             at = at
         )
-
-    // ---------- tests ----------
 
     @Test
     fun `empty inputs returns empty list`() = runTest {
@@ -129,7 +127,7 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `activities are mapped correctly`()  = runTest {
+    fun `activities are mapped correctly`() = runTest {
         val activity = activity(
             name = "Workout",
             at = LocalDateTime(2025, 1, 1, 6, 0)
