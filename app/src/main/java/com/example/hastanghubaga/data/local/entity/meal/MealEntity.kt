@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * Represents a concrete meal occurrence recorded by the system.
  *
  * A meal is modeled as a point-in-time event (not a schedule rule), meaning it
- * always has a fully resolved timestamp rather than an anchor or time-of-day.
+ * always has a fully resolved timestamp rather than a recurrence rule.
  *
  * ## Time semantics (IMPORTANT)
  * - [timestamp] is stored as **UTC epoch milliseconds**
@@ -31,16 +31,23 @@ import kotlinx.serialization.Serializable
  * - [id]
  *   Auto-generated primary key. Used only for local identity and relations.
  *
+ * - [name]
+ *   User-defined meal label shown in manager screens and timeline UI.
+ *
  * - [type]
- *   The semantic meal category (e.g., BREAKFAST, LUNCH, DINNER).
- *   Used for grouping, display, and future timeline ordering.
+ *   The actual semantic meal category (e.g., BREAKFAST, LUNCH, DINNER,
+ *   SNACK, PRE_WORKOUT).
+ *
+ * - [treatAsAnchor]
+ *   Optional anchor override used later when meals act as anchor providers.
+ *   This does not change the meal's actual type.
  *
  * - [timestamp]
- *   The moment the meal occurred, stored as UTC epoch milliseconds.
+ *   The moment the meal occurs, stored as UTC epoch milliseconds.
  *   This is the authoritative time reference for all meal-related logic.
  *
  * - [notes]
- *   Optional user-provided text. Does not affect scheduling or timeline logic.
+ *   Optional user-provided text. Does not affect scheduling math.
  */
 @Serializable
 @Entity(tableName = "meals")
@@ -48,12 +55,19 @@ data class MealEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
 
+    @ColumnInfo(defaultValue = "")
+    val name: String = "",
+
     val type: MealType,
-    val timestamp: Long, // epoch millis
+
+    val treatAsAnchor: MealType? = null,
+
+    val timestamp: Long,
 
     val notes: String? = null,
 
     @ColumnInfo(defaultValue = "0")
     val sendAlert: Boolean = false,
+
     val alertOffsetMinutes: Int? = null
 )

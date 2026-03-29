@@ -37,7 +37,9 @@ import java.time.ZoneId
 @Composable
 fun MealEditorSheet(
     state: MealEditorUiState,
+    onNameChanged: (String) -> Unit,
     onTypeChanged: (MealType) -> Unit,
+    onTreatAsAnchorChanged: (MealType?) -> Unit,
     onNotesChanged: (String) -> Unit,
     onTimestampChanged: (Long) -> Unit,
     onSaveClick: () -> Unit,
@@ -47,6 +49,7 @@ fun MealEditorSheet(
 ) {
     val isExisting = !state.isNew
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    var treatAsMenuExpanded by remember { mutableStateOf(false) }
 
     var hourText by remember(state.timestampMillis) {
         mutableStateOf(timestampTo12Hour(state.timestampMillis).toString())
@@ -93,11 +96,20 @@ fun MealEditorSheet(
         )
 
         Text(
-            text = "Meals are simple planned timeline items for now. Set a time on the intended day so the meal can appear in the day timeline.",
+            text = "Meals are still simple timestamped timeline items. Meal type is what the meal actually is. Treat as anchor is an optional override for future anchor behavior.",
             style = MaterialTheme.typography.bodyMedium
         )
 
         Spacer(Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = state.name,
+            onValueChange = onNameChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Meal name") },
+            placeholder = { Text("User-defined name") },
+            singleLine = true
+        )
 
         ExposedDropdownMenuBox(
             expanded = typeMenuExpanded,
@@ -126,6 +138,47 @@ fun MealEditorSheet(
                         onClick = {
                             onTypeChanged(type)
                             typeMenuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = treatAsMenuExpanded,
+            onExpandedChange = { treatAsMenuExpanded = !treatAsMenuExpanded }
+        ) {
+            OutlinedTextField(
+                value = state.treatAsAnchor?.toDisplayLabel() ?: "None",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Treat as anchor") },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = treatAsMenuExpanded)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+
+            ExposedDropdownMenu(
+                expanded = treatAsMenuExpanded,
+                onDismissRequest = { treatAsMenuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("None") },
+                    onClick = {
+                        onTreatAsAnchorChanged(null)
+                        treatAsMenuExpanded = false
+                    }
+                )
+
+                anchorEligibleMealTypes().forEach { anchorType ->
+                    DropdownMenuItem(
+                        text = { Text(anchorType.toDisplayLabel()) },
+                        onClick = {
+                            onTreatAsAnchorChanged(anchorType)
+                            treatAsMenuExpanded = false
                         }
                     )
                 }
@@ -256,6 +309,13 @@ private fun MealType.toDisplayLabel(): String =
         .lowercase()
         .split("_")
         .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
+
+private fun anchorEligibleMealTypes(): List<MealType> =
+    listOf(
+        MealType.BREAKFAST,
+        MealType.LUNCH,
+        MealType.DINNER
+    )
 
 private fun timestampTo12Hour(timestampMillis: Long): Int {
     val localDateTime = Instant.ofEpochMilli(timestampMillis)

@@ -13,6 +13,7 @@ object FakeMealFactory {
         val TEST_DATE_TIME = LocalDateTime.parse("2026-01-15T12:00:00")
         val meal = Meal(
             id = 1,
+            name = "Test Breakfast",
             type = MealType.BREAKFAST,
             timestamp = TEST_DATE_TIME,
             nutrition = null,

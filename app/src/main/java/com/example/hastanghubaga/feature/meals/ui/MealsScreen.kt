@@ -128,12 +128,25 @@ private fun MealRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = item.typeLabel,
+                    text = item.name,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
                     text = item.timeLabel,
                     style = MaterialTheme.typography.labelMedium
+                )
+            }
+
+            Text(
+                text = item.typeLabel,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            val treatAsLabel = item.treatAsLabel
+            if (!treatAsLabel.isNullOrBlank()) {
+                Text(
+                    text = treatAsLabel,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
 

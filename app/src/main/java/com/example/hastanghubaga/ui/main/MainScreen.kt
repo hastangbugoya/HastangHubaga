@@ -407,7 +407,9 @@ fun MainScreen() {
             ) {
                 MealEditorSheet(
                     state = mealEditor,
+                    onNameChanged = mealsViewModel::onNameChanged,
                     onTypeChanged = mealsViewModel::onTypeChanged,
+                    onTreatAsAnchorChanged = mealsViewModel::onTreatAsAnchorChanged,
                     onNotesChanged = mealsViewModel::onNotesChanged,
                     onTimestampChanged = mealsViewModel::onTimestampChanged,
                     onSaveClick = mealsViewModel::onSaveClick,

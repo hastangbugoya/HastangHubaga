@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +49,7 @@ import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.ImportedMealUiModel
 import com.example.hastanghubaga.ui.timeline.MealUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
+import com.example.hastanghubaga.ui.timeline.icon
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
 import kotlinx.datetime.LocalDate
@@ -452,9 +454,35 @@ fun TimelineRow(
             )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text(text = item.time.toString(), style = MaterialTheme.typography.titleMedium)
-            Text(text = item.title, style = MaterialTheme.typography.titleLarge)
-            item.subtitle?.let { Text(text = it) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = item.time.toString(),
+                    style = MaterialTheme.typography.labelMedium
+                )
+
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = item.icon()),
+                    contentDescription = null
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            item.subtitle?.let {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

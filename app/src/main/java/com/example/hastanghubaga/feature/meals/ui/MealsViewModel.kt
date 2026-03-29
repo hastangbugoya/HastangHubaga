@@ -26,14 +26,18 @@ data class MealsUiState(
 
 data class MealListItemUi(
     val id: Long,
+    val name: String,
     val typeLabel: String,
+    val treatAsLabel: String?,
     val timeLabel: String,
     val notes: String?
 )
 
 data class MealEditorUiState(
     val id: Long? = null,
+    val name: String = "",
     val type: MealType = MealType.BREAKFAST,
+    val treatAsAnchor: MealType? = null,
     val timestampMillis: Long = System.currentTimeMillis(),
     val notes: String = "",
     val isNew: Boolean = true
@@ -48,7 +52,6 @@ class MealsViewModel @Inject constructor(
 
     private val zoneId = ZoneId.systemDefault()
     private val listTimeFormatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
-    private val editorTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 
     private val itemsFlow =
         mealEntityDao
@@ -58,7 +61,9 @@ class MealsViewModel @Inject constructor(
                     val meal = joined.meal
                     MealListItemUi(
                         id = meal.id,
+                        name = meal.name,
                         typeLabel = meal.type.toDisplayLabel(),
+                        treatAsLabel = meal.treatAsAnchor?.let { "Treat as ${it.toDisplayLabel()}" },
                         timeLabel = formatListTimestamp(meal.timestamp),
                         notes = meal.notes
                     )
@@ -92,7 +97,9 @@ class MealsViewModel @Inject constructor(
 
             editorState.value = MealEditorUiState(
                 id = meal.id,
+                name = meal.name,
                 type = meal.type,
+                treatAsAnchor = meal.treatAsAnchor,
                 timestampMillis = meal.timestamp,
                 notes = meal.notes.orEmpty(),
                 isNew = false
@@ -100,8 +107,16 @@ class MealsViewModel @Inject constructor(
         }
     }
 
+    fun onNameChanged(value: String) {
+        editorState.update { current -> current?.copy(name = value) }
+    }
+
     fun onTypeChanged(value: MealType) {
         editorState.update { current -> current?.copy(type = value) }
+    }
+
+    fun onTreatAsAnchorChanged(value: MealType?) {
+        editorState.update { current -> current?.copy(treatAsAnchor = value) }
     }
 
     fun onNotesChanged(value: String) {
@@ -120,9 +135,14 @@ class MealsViewModel @Inject constructor(
         val editor = editorState.value ?: return
 
         viewModelScope.launch {
+            val trimmedName = editor.name.trim()
+            if (trimmedName.isBlank()) return@launch
+
             val entity = MealEntity(
                 id = editor.id ?: 0L,
+                name = trimmedName,
                 type = editor.type,
+                treatAsAnchor = editor.treatAsAnchor,
                 timestamp = editor.timestampMillis,
                 notes = editor.notes.trim().ifBlank { null }
             )
@@ -143,20 +163,10 @@ class MealsViewModel @Inject constructor(
         }
     }
 
-    fun getEditorTimeLabel(): String {
-        val timestamp = editorState.value?.timestampMillis ?: System.currentTimeMillis()
-        return formatEditorTimestamp(timestamp)
-    }
-
     private fun formatListTimestamp(timestampMillis: Long): String =
         Instant.ofEpochMilli(timestampMillis)
             .atZone(zoneId)
             .format(listTimeFormatter)
-
-    private fun formatEditorTimestamp(timestampMillis: Long): String =
-        Instant.ofEpochMilli(timestampMillis)
-            .atZone(zoneId)
-            .format(editorTimeFormatter)
 }
 
 private fun MealType.toDisplayLabel(): String =
