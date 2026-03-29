@@ -23,7 +23,7 @@ interface MealRepository {
     suspend fun addMeal(
         meal: MealEntity,
         nutrition: MealNutritionEntity,
-        type: com.example.hastanghubaga.domain.model.meal.MealType
+        type: MealType
     ): Long
 
     suspend fun deleteMeal(meal: MealEntity)

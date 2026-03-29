@@ -1,7 +1,6 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
-import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.ui.util.UiFormatter
 import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
@@ -44,7 +43,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 subtitle = meal.notes,
                 isCompleted = true,
                 mealId = meal.id,
-                mealType = meal.type.toDomain()
+                mealType = meal.type
             )
 
         is TimelineItem.ImportedMealTimelineItem -> {
@@ -57,7 +56,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 subtitle = buildImportedMealSubtitle(meal.notes),
                 isCompleted = true,
                 importedMealId = importedMealId,
-                mealType = meal.type.toDomain()
+                mealType = meal.type
             )
         }
 
@@ -119,26 +118,26 @@ private fun importedMealStableId(groupingKey: String): Long {
     return -positive.coerceAtLeast(1L)
 }
 
-private fun com.example.hastanghubaga.data.local.entity.meal.MealType.toDomain(): MealType =
-    when (this) {
-        com.example.hastanghubaga.data.local.entity.meal.MealType.BREAKFAST ->
-            MealType.BREAKFAST
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.LUNCH ->
-            MealType.LUNCH
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.DINNER ->
-            MealType.DINNER
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.SNACK ->
-            MealType.SNACK
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.PRE_WORKOUT ->
-            MealType.PRE_WORKOUT
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.POST_WORKOUT ->
-            MealType.POST_WORKOUT
-
-        com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM ->
-            MealType.CUSTOM
-    }
+//private fun com.example.hastanghubaga.data.local.entity.meal.MealType.toDomain(): MealType =
+//    when (this) {
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.BREAKFAST ->
+//            MealType.BREAKFAST
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.LUNCH ->
+//            MealType.LUNCH
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.DINNER ->
+//            MealType.DINNER
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.SNACK ->
+//            MealType.SNACK
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.PRE_WORKOUT ->
+//            MealType.PRE_WORKOUT
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.POST_WORKOUT ->
+//            MealType.POST_WORKOUT
+//
+//        com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM ->
+//            MealType.CUSTOM
+//    }

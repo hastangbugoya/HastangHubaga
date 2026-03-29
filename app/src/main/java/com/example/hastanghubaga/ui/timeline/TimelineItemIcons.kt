@@ -1,8 +1,8 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.R
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 
 /**

@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.domain.model.meal
 
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 
 data class LogMealInput(

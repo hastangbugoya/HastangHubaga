@@ -7,7 +7,6 @@ import com.example.hastanghubaga.data.local.models.MealJoinedRoom
 import com.example.hastanghubaga.data.time.JavaTimeAdapter
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
-import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import java.time.Instant
 import java.time.ZoneId
@@ -70,16 +69,16 @@ fun Meal.toNutritionEntity(): MealNutritionEntity? =
         )
     }
 
-fun MealType.toEntity(): com.example.hastanghubaga.data.local.entity.meal.MealType =
-    when (this) {
-        MealType.BREAKFAST -> com.example.hastanghubaga.data.local.entity.meal.MealType.BREAKFAST
-        MealType.LUNCH -> com.example.hastanghubaga.data.local.entity.meal.MealType.LUNCH
-        MealType.DINNER -> com.example.hastanghubaga.data.local.entity.meal.MealType.DINNER
-        MealType.SNACK -> com.example.hastanghubaga.data.local.entity.meal.MealType.SNACK
-        MealType.PRE_WORKOUT -> com.example.hastanghubaga.data.local.entity.meal.MealType.PRE_WORKOUT
-        MealType.POST_WORKOUT -> com.example.hastanghubaga.data.local.entity.meal.MealType.POST_WORKOUT
-        MealType.CUSTOM -> com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM
-    }
+//fun MealType.toEntity(): com.example.hastanghubaga.data.local.entity.meal.MealType =
+//    when (this) {
+//        MealType.BREAKFAST -> com.example.hastanghubaga.data.local.entity.meal.MealType.BREAKFAST
+//        MealType.LUNCH -> com.example.hastanghubaga.data.local.entity.meal.MealType.LUNCH
+//        MealType.DINNER -> com.example.hastanghubaga.data.local.entity.meal.MealType.DINNER
+//        MealType.SNACK -> com.example.hastanghubaga.data.local.entity.meal.MealType.SNACK
+//        MealType.PRE_WORKOUT -> com.example.hastanghubaga.data.local.entity.meal.MealType.PRE_WORKOUT
+//        MealType.POST_WORKOUT -> com.example.hastanghubaga.data.local.entity.meal.MealType.POST_WORKOUT
+//        MealType.CUSTOM -> com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM
+//    }
 
 private fun MealNutrition.hasAnyValue(): Boolean =
     protein != null || carbs != null || fat != null || calories != null ||

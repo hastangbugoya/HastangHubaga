@@ -1,9 +1,9 @@
 package com.example.hastanghubaga.feature.today
 
 import androidx.compose.runtime.Composable
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import com.example.hastanghubaga.domain.model.meal.MealType
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.ui.timeline.TimelineItem

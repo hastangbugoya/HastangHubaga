@@ -26,7 +26,7 @@ class LogMealUseCase @Inject constructor(
         val timestampMillis = localDateTimeToEpochMillis(date, time)
 
         repo.logMeal(
-            type = input.mealType.toEntity(),
+            type = input.mealType,
             timestampMillis = timestampMillis,
             notes = input.notes,
             nutrition = input.nutrition

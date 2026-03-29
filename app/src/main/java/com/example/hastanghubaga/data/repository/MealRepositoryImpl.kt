@@ -71,7 +71,7 @@ class MealRepositoryImpl @Inject constructor(
     override suspend fun addMeal(
         meal: MealEntity,
         nutrition: MealNutritionEntity,
-        type: com.example.hastanghubaga.domain.model.meal.MealType
+        type: MealType
     ): Long {
         val mealId = mealEntityDao.insertMeal(meal)
         nutritionDao.insertNutrition(nutrition.copy(mealId = mealId))
