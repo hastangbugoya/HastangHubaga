@@ -29,6 +29,7 @@ data class ActivityEditorUiState(
     val type: ActivityType = ActivityType.OTHER,
     val notes: String = "",
     val intensity: String = "",
+    val isWorkout: Boolean = false,
     val isNew: Boolean = true
 )
 
@@ -51,7 +52,7 @@ class ActivitiesViewModel @Inject constructor(
                         id = activity.id,
                         typeLabel = activity.type.toDisplayLabel(),
                         notes = activity.notes,
-                        intensityLabel = activity.intensity?.let { "Intensity: $it" },
+                        intensityLabel = buildIntensityLabel(activity),
                         startLabel = formatTimestamp(activity.startTimestamp)
                     )
                 }
@@ -86,6 +87,7 @@ class ActivitiesViewModel @Inject constructor(
                 type = activity.type,
                 notes = activity.notes.orEmpty(),
                 intensity = activity.intensity?.toString().orEmpty(),
+                isWorkout = activity.isWorkout,
                 isNew = false
             )
         }
@@ -101,6 +103,10 @@ class ActivitiesViewModel @Inject constructor(
 
     fun onIntensityChanged(value: String) {
         editorState.update { current -> current?.copy(intensity = value) }
+    }
+
+    fun onIsWorkoutChanged(value: Boolean) {
+        editorState.update { current -> current?.copy(isWorkout = value) }
     }
 
     fun onDismissEditor() {
@@ -120,7 +126,8 @@ class ActivitiesViewModel @Inject constructor(
                         startTimestamp = System.currentTimeMillis(),
                         endTimestamp = null,
                         notes = editor.notes.trim().ifBlank { null },
-                        intensity = parsedIntensity
+                        intensity = parsedIntensity,
+                        isWorkout = editor.isWorkout
                     )
                 )
             } else {
@@ -131,7 +138,8 @@ class ActivitiesViewModel @Inject constructor(
                     existing.copy(
                         type = editor.type,
                         notes = editor.notes.trim().ifBlank { null },
-                        intensity = parsedIntensity
+                        intensity = parsedIntensity,
+                        isWorkout = editor.isWorkout
                     )
                 )
             }
@@ -155,6 +163,15 @@ class ActivitiesViewModel @Inject constructor(
         return Instant.ofEpochMilli(timestamp)
             .atZone(zoneId)
             .format(timeFormatter)
+    }
+
+    private fun buildIntensityLabel(activity: ActivityEntity): String? {
+        val pieces = buildList {
+            activity.intensity?.let { add("Intensity: $it") }
+            if (activity.isWorkout) add("Workout")
+        }
+
+        return pieces.takeIf { it.isNotEmpty() }?.joinToString(" • ")
     }
 }
 

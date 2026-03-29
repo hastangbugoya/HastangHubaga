@@ -18,6 +18,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.hastanghubaga.domain.model.activity.ActivityType
@@ -36,6 +38,7 @@ fun ActivityEditorSheet(
     onTypeChanged: (ActivityType) -> Unit,
     onNotesChanged: (String) -> Unit,
     onIntensityChanged: (String) -> Unit,
+    onIsWorkoutChanged: (Boolean) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onDismiss: () -> Unit,
@@ -57,7 +60,7 @@ fun ActivityEditorSheet(
         )
 
         Text(
-            text = "First-pass editor: basic fields only. Activity settings can come later.",
+            text = "Basic activity fields only. Marking an activity as a workout allows workout-related supplement anchors to resolve through it later.",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -111,6 +114,30 @@ fun ActivityEditorSheet(
             label = { Text("Notes") },
             minLines = 3
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Treat as workout",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Use this when pre-, during-, or post-workout supplement anchors should resolve through this activity.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Switch(
+                checked = state.isWorkout,
+                onCheckedChange = onIsWorkoutChanged
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()

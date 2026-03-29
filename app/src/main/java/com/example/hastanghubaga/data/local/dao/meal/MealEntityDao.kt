@@ -27,6 +27,9 @@ interface MealEntityDao {
     @Query("SELECT * FROM meals WHERE id = :id")
     fun observeMeal(id: Long): Flow<MealJoinedRoom?>
 
+    @Query("SELECT * FROM meals WHERE id = :id")
+    suspend fun getMealByIdOnce(id: Long): MealEntity?
+
     @Transaction
     @Query("""
             SELECT * FROM meals
@@ -59,6 +62,8 @@ interface MealEntityDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNutrition(nutrition: MealNutritionEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMeal(meal: MealEntity): Long
 
     // -------------------------------
     // DELETE

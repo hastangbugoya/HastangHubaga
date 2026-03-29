@@ -89,7 +89,7 @@ fun MainScreen() {
 
     var selectedHomeDateIso by rememberSaveable {
         mutableStateOf(
-            LocalDate.Companion.parse(
+            LocalDate.parse(
                 kotlinx.datetime.Clock.System.now()
                     .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
                     .date
@@ -369,6 +369,7 @@ fun MainScreen() {
                     onTypeChanged = activitiesViewModel::onTypeChanged,
                     onNotesChanged = activitiesViewModel::onNotesChanged,
                     onIntensityChanged = activitiesViewModel::onIntensityChanged,
+                    onIsWorkoutChanged = activitiesViewModel::onIsWorkoutChanged,
                     onSaveClick = activitiesViewModel::onSaveClick,
                     onDeleteClick = activitiesViewModel::onDeleteClick,
                     onDismiss = activitiesViewModel::onDismissEditor

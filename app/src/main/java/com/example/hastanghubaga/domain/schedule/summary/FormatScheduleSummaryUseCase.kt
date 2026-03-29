@@ -122,6 +122,7 @@ class FormatScheduleSummaryUseCase {
             TimeAnchor.BEFORE_WORKOUT -> "before workout"
             TimeAnchor.AFTER_WORKOUT -> "after workout"
             TimeAnchor.SLEEP -> "sleep"
+            TimeAnchor.DURING_WORKOUT -> "during workout"
         }
     }
 
