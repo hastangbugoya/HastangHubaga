@@ -4,6 +4,7 @@ import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.datetime.LocalTime
 
 sealed interface TimelineItem {
@@ -20,9 +21,19 @@ sealed interface TimelineItem {
         val activity: Activity
     ) : TimelineItem
 
+    /**
+     * Native HH meal timeline row.
+     *
+     * Important:
+     * - [resolvedAnchor] is derived anchor behavior only
+     * - It does NOT change the meal's actual type
+     * - It does NOT affect current timeline rendering or ordering
+     * - It prepares meals to act as anchor providers later
+     */
     data class MealTimelineItem(
         override val time: LocalTime,
-        val meal: Meal
+        val meal: Meal,
+        val resolvedAnchor: TimeAnchor? = null
     ) : TimelineItem
 
     /**

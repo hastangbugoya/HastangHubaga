@@ -9,6 +9,7 @@ import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSetti
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
 import kotlinx.datetime.Instant
@@ -23,10 +24,16 @@ import javax.inject.Inject
  * - Native HH meals and AK imported meals remain separate timeline sources
  * - Imported meals are surfaced read-only
  * - No linking / merging / assignment is performed here
+ *
+ * Anchor note:
+ * - Native HH meals may resolve an optional anchor via [ResolveMealAnchorUseCase]
+ * - This does NOT currently change sorting, rendering, or scheduling behavior
+ * - It only prepares meals to act as anchor providers later
  */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,
-    private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshot
+    private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshot,
+    private val resolveMealAnchorUseCase: ResolveMealAnchorUseCase
 ) {
     suspend operator fun invoke(
         supplements: List<SupplementWithUserSettings>,
@@ -47,9 +54,19 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         val mealItems =
             meals.map { meal ->
+                val resolvedAnchor = resolveMealAnchorUseCase(meal)
+
+                if (resolvedAnchor != null) {
+                    Log.d(
+                        "MealAnchor",
+                        "Meal '${meal.name}' resolved anchor=$resolvedAnchor type=${meal.type} override=${meal.treatAsAnchor}"
+                    )
+                }
+
                 TimelineItem.MealTimelineItem(
                     time = meal.timestamp.time,
                     meal = meal,
+                    resolvedAnchor = resolvedAnchor
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
