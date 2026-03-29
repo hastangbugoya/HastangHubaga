@@ -18,6 +18,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
@@ -35,6 +36,9 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
 import com.example.hastanghubaga.data.local.entity.user.NutrientGoalEntity
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
@@ -53,6 +57,9 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         EventDayOfWeekTimeEntity::class,
         EventDailyOverrideEntity::class,
         SupplementUserSettingsEntity::class,
+        SupplementScheduleEntity::class,
+        SupplementScheduleFixedTimeEntity::class,
+        SupplementScheduleAnchoredTimeEntity::class,
         ActivityEntity::class,
         MealEntity::class,
         MealNutritionEntity::class,
@@ -64,7 +71,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -76,6 +83,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun supplementIngredientDao(): SupplementIngredientDao
     abstract fun eventTimeDao(): EventTimeDao
     abstract fun supplementUserSettingsDao(): SupplementUserSettingsDao
+    abstract fun supplementScheduleDao(): SupplementScheduleDao
     abstract fun activityEntityDao(): ActivityEntityDao
     abstract fun mealEntityDao(): MealEntityDao
     abstract fun mealNutritionDao(): MealNutritionDao
