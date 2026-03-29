@@ -1,5 +1,7 @@
 package com.example.hastanghubaga.domain.model.meal
 
+import com.example.hastanghubaga.data.local.entity.meal.MealType
+
 
 enum class MealType {
     BREAKFAST,

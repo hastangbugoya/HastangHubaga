@@ -33,6 +33,9 @@ import com.example.hastanghubaga.feature.calendar.CalendarViewModel
 import com.example.hastanghubaga.feature.ingredients.ui.IngredientEditorSheet
 import com.example.hastanghubaga.feature.ingredients.ui.IngredientsScreen
 import com.example.hastanghubaga.feature.ingredients.ui.IngredientsViewModel
+import com.example.hastanghubaga.feature.meals.ui.MealEditorSheet
+import com.example.hastanghubaga.feature.meals.ui.MealsScreen
+import com.example.hastanghubaga.feature.meals.ui.MealsViewModel
 import com.example.hastanghubaga.feature.supplements.ui.SupplementEditorSheet
 import com.example.hastanghubaga.feature.supplements.ui.SupplementsScreen
 import com.example.hastanghubaga.feature.supplements.ui.SupplementsViewModel
@@ -57,7 +60,8 @@ private enum class SettingsSubscreen {
     ROOT,
     SUPPLEMENTS,
     ACTIVITIES,
-    INGREDIENTS
+    INGREDIENTS,
+    MEALS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,11 +74,13 @@ fun MainScreen() {
     val supplementsViewModel: SupplementsViewModel = hiltViewModel()
     val activitiesViewModel: ActivitiesViewModel = hiltViewModel()
     val ingredientsViewModel: IngredientsViewModel = hiltViewModel()
+    val mealsViewModel: MealsViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
 
     val supplementsState by supplementsViewModel.state.collectAsState()
     val activitiesState by activitiesViewModel.state.collectAsState()
     val ingredientsState by ingredientsViewModel.uiState.collectAsState()
+    val mealsState by mealsViewModel.state.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -303,6 +309,20 @@ fun MainScreen() {
                             )
                         }
 
+                        SettingsSubscreen.MEALS -> {
+                            MealsScreen(
+                                items = mealsState.items,
+                                onAddClick = { mealsViewModel.onAddClick() },
+                                onItemClick = { mealId ->
+                                    mealsViewModel.onEditClick(mealId)
+                                },
+                                onBackClick = {
+                                    settingsSubscreen = SettingsSubscreen.ROOT
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         SettingsSubscreen.ROOT -> {
                             SettingsScreen(
                                 onImportFromAdobongKangkong = {
@@ -321,6 +341,9 @@ fun MainScreen() {
                                 },
                                 onOpenIngredients = {
                                     settingsSubscreen = SettingsSubscreen.INGREDIENTS
+                                },
+                                onOpenMeals = {
+                                    settingsSubscreen = SettingsSubscreen.MEALS
                                 }
                             )
                         }
@@ -373,6 +396,23 @@ fun MainScreen() {
                     onSaveClick = activitiesViewModel::onSaveClick,
                     onDeleteClick = activitiesViewModel::onDeleteClick,
                     onDismiss = activitiesViewModel::onDismissEditor
+                )
+            }
+        }
+
+        val mealEditor = mealsState.editor
+        if (mealEditor != null) {
+            ModalBottomSheet(
+                onDismissRequest = { mealsViewModel.onDismissEditor() }
+            ) {
+                MealEditorSheet(
+                    state = mealEditor,
+                    onTypeChanged = mealsViewModel::onTypeChanged,
+                    onNotesChanged = mealsViewModel::onNotesChanged,
+                    onTimestampChanged = mealsViewModel::onTimestampChanged,
+                    onSaveClick = mealsViewModel::onSaveClick,
+                    onDeleteClick = mealsViewModel::onDeleteClick,
+                    onDismiss = mealsViewModel::onDismissEditor
                 )
             }
         }

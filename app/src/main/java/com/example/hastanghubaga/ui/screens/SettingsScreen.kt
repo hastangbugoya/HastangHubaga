@@ -33,7 +33,8 @@ fun SettingsScreen(
     onOpenSupplements: () -> Unit,
     onOpenNutrients: () -> Unit,
     onOpenActivities: () -> Unit,
-    onOpenIngredients: () -> Unit
+    onOpenIngredients: () -> Unit,
+    onOpenMeals: () -> Unit
 ) {
     val items = listOf(
         SettingsDestinationUi(
@@ -45,6 +46,11 @@ fun SettingsScreen(
             title = "Supplements",
             subtitle = "Create and manage supplement entries",
             onClick = onOpenSupplements
+        ),
+        SettingsDestinationUi(
+            title = "Meals",
+            subtitle = "Create and manage meal entries",
+            onClick = onOpenMeals
         ),
         SettingsDestinationUi(
             title = "Nutrients",

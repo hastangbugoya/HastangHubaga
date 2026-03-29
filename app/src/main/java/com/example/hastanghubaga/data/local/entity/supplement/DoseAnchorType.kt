@@ -1,4 +1,7 @@
 package com.example.hastanghubaga.data.local.entity.supplement
+
+import com.example.hastanghubaga.data.local.entity.meal.MealType
+
 /**
  * Represents the **anchor point in time** around which a supplement dose
  * should be scheduled.
@@ -138,7 +141,7 @@ enum class DoseAnchorType(
     /** Tied to *any* meal.
      *  Resolved to the first applicable meal of the day.
      */
-    ANY_MEAL(MealType.ANY),
+    ANY_MEAL(null),
     SLEEP(null),
 
     /** No strict anchor.
@@ -147,9 +150,9 @@ enum class DoseAnchorType(
     ANYTIME(null)
 }
 
-enum class MealType {
-    BREAKFAST, LUNCH, DINNER, SNACK, ANY
-}
+//enum class MealType {
+//    BREAKFAST, LUNCH, DINNER, SNACK, ANY
+//}
 
 fun DoseAnchorType.isUserVisible(): Boolean = !isSentinel
 
