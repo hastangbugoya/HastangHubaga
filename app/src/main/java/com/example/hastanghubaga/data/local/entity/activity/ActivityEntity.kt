@@ -33,6 +33,17 @@ data class ActivityEntity(
      */
     val intensity: Int? = null,
 
+    /**
+     * Gentle user-defined flag indicating that this activity should be treated
+     * as a workout anchor source for supplement timing.
+     *
+     * This is intentionally user-controlled rather than inferred from type,
+     * so something like a walk, work shift, or any custom activity can count
+     * as a workout if the user wants pre/post workout reminders around it.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val isWorkout: Boolean = false,
+
     @ColumnInfo(defaultValue = "0")
     val sendAlert: Boolean = false,
     val alertOffsetMinutes: Int? = null

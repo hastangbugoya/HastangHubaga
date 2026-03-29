@@ -87,7 +87,16 @@ fun MainScreen() {
 
     var settingsSubscreen by rememberSaveable { mutableStateOf(SettingsSubscreen.ROOT) }
 
-    var selectedHomeDateIso by rememberSaveable { mutableStateOf(LocalDate.Companion.parse(kotlinx.datetime.Clock.System.now().toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date.toString()).toString()) }
+    var selectedHomeDateIso by rememberSaveable {
+        mutableStateOf(
+            LocalDate.Companion.parse(
+                kotlinx.datetime.Clock.System.now()
+                    .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+                    .date
+                    .toString()
+            ).toString()
+        )
+    }
 
     val snackbarController: SnackbarController = remember {
         object : SnackbarController {
@@ -340,6 +349,9 @@ fun MainScreen() {
                     onBrandChanged = supplementsViewModel::onBrandChanged,
                     onNotesChanged = supplementsViewModel::onNotesChanged,
                     onIsActiveChanged = supplementsViewModel::onIsActiveChanged,
+                    onAddScheduleClick = supplementsViewModel::onAddScheduleClick,
+                    onRemoveScheduleClick = supplementsViewModel::onRemoveScheduleClick,
+                    onScheduleAction = supplementsViewModel::onScheduleAction,
                     onSaveClick = supplementsViewModel::onSaveClick,
                     onDeleteClick = supplementsViewModel::onDeleteClick,
                     onDismiss = supplementsViewModel::onDismissEditor

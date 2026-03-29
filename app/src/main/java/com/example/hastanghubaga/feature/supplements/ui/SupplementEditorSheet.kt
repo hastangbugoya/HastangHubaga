@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -18,13 +20,28 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.hastanghubaga.feature.schedule.ui.ScheduleEditorSection
-import com.example.hastanghubaga.feature.schedule.ui.model.ScheduleEditorController
+import com.example.hastanghubaga.feature.schedule.ui.model.ScheduleEditorAction
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
+
+private enum class ScheduleDatePickerTarget {
+    START,
+    END
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +51,9 @@ fun SupplementEditorSheet(
     onBrandChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onIsActiveChanged: (Boolean) -> Unit,
+    onAddScheduleClick: () -> Unit,
+    onRemoveScheduleClick: (Int) -> Unit,
+    onScheduleAction: (Int, ScheduleEditorAction) -> Unit,
     onSaveClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onDismiss: () -> Unit,
@@ -41,11 +61,77 @@ fun SupplementEditorSheet(
 ) {
     val isExisting = !state.isNew
 
-    // -------------------------
-    // Schedule editor (UI-only for now)
-    // -------------------------
-    val scheduleController = remember {
-        ScheduleEditorController()
+    var pickerScheduleIndex by remember { mutableIntStateOf(-1) }
+    var pickerTarget by remember { mutableStateOf<ScheduleDatePickerTarget?>(null) }
+
+    val activePickerDate: LocalDate? =
+        state.scheduleEditors
+            .getOrNull(pickerScheduleIndex)
+            ?.let { schedule ->
+                when (pickerTarget) {
+                    ScheduleDatePickerTarget.START -> schedule.startDate
+                    ScheduleDatePickerTarget.END -> schedule.endDate
+                    null -> null
+                }
+            }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = activePickerDate?.toEpochMillisUtc()
+    )
+
+    if (pickerTarget != null && pickerScheduleIndex >= 0) {
+        DatePickerDialog(
+            onDismissRequest = {
+                pickerTarget = null
+                pickerScheduleIndex = -1
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val selectedMillis = datePickerState.selectedDateMillis
+                        if (selectedMillis != null) {
+                            val selectedDate = selectedMillis.toKtxLocalDateUtc()
+                            when (pickerTarget) {
+                                ScheduleDatePickerTarget.START -> {
+                                    onScheduleAction(
+                                        pickerScheduleIndex,
+                                        ScheduleEditorAction.SetStartDate(selectedDate)
+                                    )
+                                }
+
+                                ScheduleDatePickerTarget.END -> {
+                                    onScheduleAction(
+                                        pickerScheduleIndex,
+                                        ScheduleEditorAction.SetEndDate(selectedDate)
+                                    )
+                                }
+
+                                null -> Unit
+                            }
+                        }
+
+                        pickerTarget = null
+                        pickerScheduleIndex = -1
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pickerTarget = null
+                        pickerScheduleIndex = -1
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(
+                state = datePickerState
+            )
+        }
     }
 
     Column(
@@ -61,7 +147,7 @@ fun SupplementEditorSheet(
         )
 
         Text(
-            text = "First-pass editor: basic fields only. Scheduling and dose settings can come later.",
+            text = "Basic supplement fields plus actual schedule rules. Recommendation fields can remain separate from actual planning.",
             style = MaterialTheme.typography.bodyMedium
         )
 
@@ -115,46 +201,145 @@ fun SupplementEditorSheet(
             )
         }
 
-        // -------------------------
-        // NEW: Schedule section
-        // -------------------------
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()
         Spacer(Modifier.height(4.dp))
 
-        Text(
-            text = "Schedule",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Schedules",
+                style = MaterialTheme.typography.titleMedium
+            )
 
-        ScheduleEditorSection(
-            state = scheduleController.state,
-            onEnabledChanged = { scheduleController.setEnabled(it) },
-            onRecurrenceModeChanged = { scheduleController.setRecurrenceMode(it) },
-            onIntervalInputChanged = { scheduleController.setIntervalInput(it) },
-            onWeekdayToggled = { scheduleController.toggleWeekday(it) },
-            onStartDateClick = {
-                // TODO: hook up date picker
-            },
-            onEndDateToggleChanged = { scheduleController.setHasEndDate(it) },
-            onEndDateClick = {
-                // TODO: hook up date picker
-            },
-            onTimingModeChanged = { scheduleController.setTimingMode(it) },
-            onFixedTimeChanged = { id, value ->
-                scheduleController.setFixedTimeValue(id, value)
-            },
-            onAddFixedTime = { scheduleController.addFixedTimeRow() },
-            onRemoveFixedTime = { scheduleController.removeFixedTimeRow(it) },
-            onAnchoredRowAnchorChanged = { id, anchor ->
-                scheduleController.setAnchoredRowAnchor(id, anchor)
-            },
-            onAnchoredRowOffsetChanged = { id, value ->
-                scheduleController.setAnchoredRowOffsetValue(id, value)
-            },
-            onAddAnchoredRow = { scheduleController.addAnchoredTimeRow() },
-            onRemoveAnchoredRow = { scheduleController.removeAnchoredTimeRow(it) }
-        )
+            TextButton(
+                onClick = onAddScheduleClick
+            ) {
+                Text("Add schedule")
+            }
+        }
+
+        if (state.scheduleSaveErrors.isNotEmpty()) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                state.scheduleSaveErrors.forEach { error ->
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
+        state.scheduleEditors.forEachIndexed { index, scheduleState ->
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Schedule ${index + 1}",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
+                    if (state.scheduleEditors.size > 1) {
+                        TextButton(
+                            onClick = { onRemoveScheduleClick(index) }
+                        ) {
+                            Text("Remove")
+                        }
+                    }
+                }
+
+                ScheduleEditorSection(
+                    state = scheduleState,
+                    onEnabledChanged = {
+                        onScheduleAction(index, ScheduleEditorAction.SetEnabled(it))
+                    },
+                    onRecurrenceModeChanged = {
+                        onScheduleAction(index, ScheduleEditorAction.SetRecurrenceMode(it))
+                    },
+                    onIntervalInputChanged = {
+                        onScheduleAction(index, ScheduleEditorAction.SetIntervalInput(it))
+                    },
+                    onWeekdayToggled = {
+                        onScheduleAction(index, ScheduleEditorAction.ToggleWeekday(it))
+                    },
+                    onStartDateClick = {
+                        pickerScheduleIndex = index
+                        pickerTarget = ScheduleDatePickerTarget.START
+                    },
+                    onEndDateToggleChanged = {
+                        onScheduleAction(index, ScheduleEditorAction.SetHasEndDate(it))
+                    },
+                    onEndDateClick = {
+                        pickerScheduleIndex = index
+                        pickerTarget = ScheduleDatePickerTarget.END
+                    },
+                    onTimingModeChanged = {
+                        onScheduleAction(index, ScheduleEditorAction.SetTimingMode(it))
+                    },
+                    onFixedTimeChanged = { rowId, value ->
+                        onScheduleAction(
+                            index,
+                            ScheduleEditorAction.SetFixedTimeValue(
+                                rowId = rowId,
+                                value = value
+                            )
+                        )
+                    },
+                    onAddFixedTime = {
+                        onScheduleAction(index, ScheduleEditorAction.AddFixedTimeRow)
+                    },
+                    onRemoveFixedTime = { rowId ->
+                        onScheduleAction(
+                            index,
+                            ScheduleEditorAction.RemoveFixedTimeRow(rowId)
+                        )
+                    },
+                    onAnchoredRowAnchorChanged = { rowId, anchor ->
+                        onScheduleAction(
+                            index,
+                            ScheduleEditorAction.SetAnchoredRowAnchor(
+                                rowId = rowId,
+                                anchor = anchor
+                            )
+                        )
+                    },
+                    onAnchoredRowOffsetChanged = { rowId, value ->
+                        onScheduleAction(
+                            index,
+                            ScheduleEditorAction.SetAnchoredRowOffsetValue(
+                                rowId = rowId,
+                                value = value
+                            )
+                        )
+                    },
+                    onAddAnchoredRow = {
+                        onScheduleAction(index, ScheduleEditorAction.AddAnchoredTimeRow)
+                    },
+                    onRemoveAnchoredRow = { rowId ->
+                        onScheduleAction(
+                            index,
+                            ScheduleEditorAction.RemoveAnchoredTimeRow(rowId)
+                        )
+                    }
+                )
+
+                if (index < state.scheduleEditors.lastIndex) {
+                    Spacer(Modifier.height(4.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(4.dp))
+                }
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
         HorizontalDivider()
@@ -194,4 +379,15 @@ fun SupplementEditorSheet(
 
         Spacer(Modifier.height(8.dp))
     }
+}
+
+private fun LocalDate.toEpochMillisUtc(): Long {
+    return atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()
+}
+
+private fun Long.toKtxLocalDateUtc(): LocalDate {
+    return Instant
+        .fromEpochMilliseconds(this)
+        .toLocalDateTime(TimeZone.UTC)
+        .date
 }

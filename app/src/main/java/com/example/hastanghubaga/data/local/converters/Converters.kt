@@ -15,7 +15,6 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import kotlinx.datetime.DayOfWeek as KtxDayOfWeek
 import kotlinx.datetime.LocalDate as KtxLocalDate
 import kotlinx.datetime.LocalTime as KtxLocalTime
 
@@ -117,7 +116,7 @@ class Converters {
         ScheduleTypeEntity.valueOf(value)
 
     // -------------------------
-    // New shared scheduler converters (kotlinx.datetime)
+    // New shared scheduler converters
     // -------------------------
     @TypeConverter
     fun fromKtxLocalDate(value: KtxLocalDate?): String? =
@@ -141,23 +140,12 @@ class Converters {
         }
 
     @TypeConverter
-    fun fromKtxDayOfWeek(value: KtxDayOfWeek?): String? =
-        value?.name
+    fun fromStringList(value: List<String>?): String? =
+        value?.joinToString(",")
 
     @TypeConverter
-    fun toKtxDayOfWeek(value: String?): KtxDayOfWeek? =
-        value?.takeIf { it.isNotBlank() }?.let(KtxDayOfWeek::valueOf)
-
-    @TypeConverter
-    fun fromKtxDayOfWeekList(value: List<KtxDayOfWeek>?): String? =
-        value?.joinToString(",") { it.name }
-
-    @TypeConverter
-    fun toKtxDayOfWeekList(value: String?): List<KtxDayOfWeek>? =
-        value
-            ?.takeIf { it.isNotBlank() }
-            ?.split(",")
-            ?.map(KtxDayOfWeek::valueOf)
+    fun toStringList(value: String?): List<String>? =
+        value?.takeIf { it.isNotBlank() }?.split(",")
 
     @TypeConverter
     fun fromScheduleRecurrenceType(value: ScheduleRecurrenceType): String =
