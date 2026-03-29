@@ -1,19 +1,24 @@
 package com.example.hastanghubaga.domain.usecase.supplement
 
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.domain.model.supplement.DoseCondition
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.MealLog
+import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.schedule.model.AnchorTimeContext
+import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
+import com.example.hastanghubaga.domain.schedule.timing.ApplyAnchorOffsetUseCase
+import com.example.hastanghubaga.domain.schedule.timing.ResolveAnchorTimeUseCase
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -24,37 +29,44 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import javax.inject.Inject
 
-
 /**
- * Returns supplements scheduled for a specific date, enriched with
- * user-specific timing and scheduling rules.
+ * Returns supplements for a specific date, enriched with resolved daily schedule times.
  *
- * This use case combines:
- * - Supplement definitions (frequency, anchor type, offsets)
- * - User-configured default anchor times (e.g., BREAKFAST → 08:00)
- * - Date-based scheduling logic
+ * Scheduling source of truth:
+ * - Prefer [SupplementWithUserSettings.scheduleSpec] when present.
+ * - Populate [SupplementWithUserSettings.scheduledTimes] as a compatibility output for
+ *   existing timeline/UI code that still expects concrete times.
  *
- * The result represents the exact times each supplement should be taken
- * on the given date, accounting for:
- * - DAILY or interval-based frequencies
- * - Anchor-based scheduling (e.g., breakfast, lunch)
- * - User overrides and defaults
+ * Legacy supplement timing fields:
+ * - Fields on [com.example.hastanghubaga.domain.model.supplement.Supplement] such as
+ *   `doseAnchorType`, `offsetMinutes`, `frequencyType`, `frequencyInterval`, and
+ *   `weeklyDays` are now treated as legacy recommendation / dosage-guidance metadata.
+ * - They are still used here as a compatibility fallback while the app transitions toward
+ *   explicit schedule models, but they should no longer be considered the preferred or
+ *   authoritative scheduling source for new code.
  *
- * This use case does not perform any persistence itself; it orchestrates
- * data retrieval and scheduling logic from repositories and DAOs.
+ * Current scope:
+ * - No recurrence redesign yet
+ * - No timeline behavior changes
+ * - No persistence changes
  *
- * @param date The calendar date for which supplement schedules should be generated.
- * @return A [Flow] emitting a list of supplements with their computed scheduled times
- *         for the given date.
+ * This use case remains the bridge between schedule intent and concrete "today" times.
  */
 class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private val supplementRepository: SupplementRepository,
     private val eventTimeDao: EventTimeDao,
+    private val resolveAnchorTimeUseCase: ResolveAnchorTimeUseCase,
+    private val applyAnchorOffsetUseCase: ApplyAnchorOffsetUseCase,
     private val clock: Clock = Clock.System
 ) {
 
     /**
-     * Executes the scheduling logic for the provided date.
+     * Resolves supplements for the provided date.
+     *
+     * Important:
+     * - [scheduledTimes] is still emitted for backward compatibility.
+     * - New scheduling behavior should prefer schedule intent models and pure resolvers,
+     *   while legacy supplement timing fields remain fallback-only.
      */
     @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(
@@ -63,53 +75,144 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         supplementRepository
             .getSupplementsForDate(date.toString())
             .mapLatest { supplements ->
-                val mealsToday: List<MealLog> = emptyList<MealLog>()
+                val mealsToday: List<MealLog> = emptyList()
+                val anchorContext = buildAnchorTimeContext(date)
+
                 supplements
                     .filter { it.shouldTakeOn(date) }
-                    .map { it.withScheduleFor(date, mealsToday) }
+                    .map { it.withScheduleFor(mealsToday, anchorContext) }
             }
 
     // ---------------------------------------------------------------------
     // Scheduling
     // ---------------------------------------------------------------------
 
+    /**
+     * Resolves today's concrete schedule times for a supplement.
+     *
+     * Resolution order:
+     * 1. Explicit [SupplementWithUserSettings.scheduleSpec]
+     * 2. Legacy supplement timing fields as compatibility fallback
+     *
+     * This preserves existing callers that depend on [SupplementWithUserSettings.scheduledTimes]
+     * while gradually moving scheduling intent out of the legacy supplement model.
+     */
     private suspend fun SupplementWithUserSettings.withScheduleFor(
-        date: LocalDate,
-        mealsToday: List<MealLog>
+        mealsToday: List<MealLog>,
+        anchorContext: AnchorTimeContext
     ): SupplementWithUserSettings {
+        val scheduledTimes = resolveScheduledTimes(anchorContext)
 
-        val dosesPerDay: Double = resolveDosesPerDay()
-        val offsetMinutes = supplement.offsetMinutes ?: 0
-        val baseTime: LocalTime? = resolveAnchorTime(supplement.doseAnchorType, eventTimeDao)
-        val scheduledTimes: List<LocalTime> =
-            if (baseTime == null) {
-                emptyList()
-            } else {
-                val anchorTime: LocalTime = baseTime
-                val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
-
-                List(doseCount) { index ->
-                    val totalSeconds =
-                        anchorTime.toSecondOfDay() + (index * offsetMinutes * 60)
-
-                    LocalTime.fromSecondOfDay(
-                        ((totalSeconds % 86_400) + 86_400) % 86_400
-                    )
-                }
-            }
-        // Resolve dose state per scheduled time
         val doseState =
             scheduledTimes.firstOrNull()?.let { time ->
                 resolveDoseState(
                     scheduledTime = time,
-                    doseConditions = emptySet<DoseCondition>(),
+                    doseConditions = supplement.doseConditions,
                     mealsToday = mealsToday
                 )
             } ?: MealAwareDoseState.Ready
+
         return copy(
             scheduledTimes = scheduledTimes,
             doseState = doseState
         )
+    }
+
+    /**
+     * Resolves concrete times for a supplement on a date.
+     *
+     * Preferred path:
+     * - [scheduleSpec]
+     *
+     * Compatibility path:
+     * - legacy timing fields on [supplement]
+     */
+    private suspend fun SupplementWithUserSettings.resolveScheduledTimes(
+        anchorContext: AnchorTimeContext
+    ): List<LocalTime> {
+        val specTimes = scheduleSpec?.let { spec ->
+            resolveFromScheduleSpec(
+                spec = spec,
+                anchorContext = anchorContext
+            )
+        }
+
+        if (specTimes != null) {
+            return specTimes
+        }
+
+        return resolveFromLegacySupplementTiming(anchorContext)
+    }
+
+    /**
+     * Resolves the newer supplement schedule spec into concrete times.
+     *
+     * Notes:
+     * - Fixed times remain straightforward clock times.
+     * - Meal-anchored times are mapped into the shared anchor system.
+     * - Unsupported meal types are dropped rather than guessed.
+     */
+    private suspend fun resolveFromScheduleSpec(
+        spec: SupplementScheduleSpec,
+        anchorContext: AnchorTimeContext
+    ): List<LocalTime> {
+        return when (spec) {
+            is SupplementScheduleSpec.FixedTimes -> {
+                spec.times.sorted()
+            }
+
+            is SupplementScheduleSpec.MealAnchored -> {
+                spec.mealTypes
+                    .mapNotNull { mealType ->
+                        mealType.toTimeAnchorOrNull()
+                    }
+                    .mapNotNull { anchor ->
+                        resolveAnchoredTime(
+                            anchor = anchor,
+                            offsetMinutes = spec.offsetMinutes,
+                            context = anchorContext
+                        )
+                    }
+                    .sorted()
+            }
+        }
+    }
+
+    /**
+     * Compatibility fallback for legacy supplement timing fields.
+     *
+     * These fields are now interpreted as dosage guidance / legacy schedule hints,
+     * not the preferred scheduling source for new code.
+     *
+     * Important legacy behavior:
+     * - MIDNIGHT is treated as an unset/sentinel value and falls back to WAKEUP
+     *   so older supplement rows still surface on the timeline.
+     *
+     * Multi-dose behavior remains unchanged:
+     * - resolve the legacy anchor time
+     * - repeat doses using `index * offsetMinutes`
+     */
+    private suspend fun SupplementWithUserSettings.resolveFromLegacySupplementTiming(
+        anchorContext: AnchorTimeContext
+    ): List<LocalTime> {
+        val dosesPerDay = resolveDosesPerDay()
+        val offsetMinutes = supplement.offsetMinutes ?: 0
+        val anchor = supplement.doseAnchorType.toLegacyFallbackTimeAnchor() ?: return emptyList()
+
+        val baseTime = resolveAnchoredTime(
+            anchor = anchor,
+            offsetMinutes = 0,
+            context = anchorContext
+        ) ?: return emptyList()
+
+        val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
+
+        return List(doseCount) { index ->
+            applyAnchorOffsetUseCase(
+                baseTime = baseTime,
+                offsetMinutes = index * offsetMinutes
+            )
+        }.sorted()
     }
 
     private fun SupplementWithUserSettings.resolveDosesPerDay(): Double =
@@ -117,36 +220,98 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             ?: supplement.servingsPerDay
 
     /**
-     * Resolves the effective anchor time for scheduling.
+     * Builds the anchor context used by shared anchor resolvers.
      *
-     * MIDNIGHT is treated as a sentinel value meaning "no user-selected time".
-     * In this case, we default to WAKEUP, which represents the earliest valid
-     * time a supplement can reasonably be taken.
+     * Current backing storage only provides:
+     * - per-date overrides
+     * - global defaults
      *
-     * This avoids scheduling supplements at 00:00 while still allowing the
-     * MIDNIGHT enum to act as an unset / placeholder state.
+     * Day-of-week overrides are not wired for supplements yet, so they remain empty here.
      */
-    private suspend fun resolveAnchorTime(
-        anchor: DoseAnchorType,
-        eventTimeDao: EventTimeDao
-    ): LocalTime? {
-        val effectiveAnchor =
-            if (anchor == DoseAnchorType.MIDNIGHT)
-                DoseAnchorType.WAKEUP
-            else
-                anchor
+    private suspend fun buildAnchorTimeContext(
+        date: LocalDate
+    ): AnchorTimeContext {
+        val supportedAnchors = listOf(
+            TimeAnchor.MIDNIGHT,
+            TimeAnchor.WAKEUP,
+            TimeAnchor.BREAKFAST,
+            TimeAnchor.LUNCH,
+            TimeAnchor.DINNER,
+            TimeAnchor.BEFORE_WORKOUT,
+            TimeAnchor.AFTER_WORKOUT,
+            TimeAnchor.SLEEP
+        )
 
-        return eventTimeDao
-            .getDefault(effectiveAnchor)
-            ?.timeSeconds
-            ?.let {
-                LocalTime.fromSecondOfDay(it)
+        val defaultTimes = buildMap {
+            supportedAnchors.forEach { anchor ->
+                val doseAnchor = anchor.toDoseAnchorTypeOrNull() ?: return@forEach
+                val time = eventTimeDao
+                    .getDefault(doseAnchor)
+                    ?.timeSeconds
+                    ?.let(LocalTime::fromSecondOfDay)
+                    ?: fallbackAnchorTime(anchor)
+
+                if (time != null) {
+                    put(anchor, time)
+                }
             }
+        }
+
+        val dateOverrides = buildMap {
+            supportedAnchors.forEach { anchor ->
+                val doseAnchor = anchor.toDoseAnchorTypeOrNull() ?: return@forEach
+                val time = eventTimeDao
+                    .getOverride(date.toString(), doseAnchor)
+                    ?.timeSeconds
+                    ?.let(LocalTime::fromSecondOfDay)
+
+                if (time != null) {
+                    put(
+                        com.example.hastanghubaga.domain.schedule.model.AnchorDateKey(
+                            anchor = anchor,
+                            date = date
+                        ),
+                        time
+                    )
+                }
+            }
+        }
+
+        return AnchorTimeContext(
+            date = date,
+            defaultTimes = defaultTimes,
+            dayOfWeekOverrides = emptyMap(),
+            dateOverrides = dateOverrides
+        )
+    }
+
+    private fun resolveAnchoredTime(
+        anchor: TimeAnchor,
+        offsetMinutes: Int,
+        context: AnchorTimeContext
+    ): LocalTime? {
+        val baseTime = resolveAnchorTimeUseCase(
+            anchor = anchor,
+            context = context
+        ) ?: return null
+
+        return applyAnchorOffsetUseCase(
+            baseTime = baseTime,
+            offsetMinutes = offsetMinutes
+        )
     }
 
     // ---------------------------------------------------------------------
     // Frequency rules
     // ---------------------------------------------------------------------
+
+    /**
+     * Date eligibility still uses legacy supplement frequency fields for now.
+     *
+     * This is an intentional compatibility bridge while recurrence remains out of scope.
+     * These fields should be treated as legacy schedule guidance rather than the preferred
+     * scheduling source for future work.
+     */
     private fun SupplementWithUserSettings.shouldTakeOn(
         date: LocalDate
     ): Boolean =
@@ -154,6 +319,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             FrequencyType.DAILY -> true
             FrequencyType.WEEKLY ->
                 supplement.weeklyDays?.contains(date.dayOfWeek) == true
+
             FrequencyType.EVERY_X_DAYS ->
                 shouldTakeEveryXDays(date)
         }
@@ -161,33 +327,82 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private fun SupplementWithUserSettings.shouldTakeEveryXDays(
         date: LocalDate
     ): Boolean {
-        // X Days does not apply
         val intervalDays = supplement.frequencyInterval ?: return false
-        // Not taken before -> take it
         val lastTaken = supplement.lastTakenDate
             ?.let(LocalDate::parse)
             ?: return true
-        // Get last dose date
+
         val nextEligibleDate =
             lastTaken.plus(intervalDays, DateTimeUnit.DAY)
-        // today is the day or later -> take it
+
         return date >= nextEligibleDate
     }
 
     // ---------------------------------------------------------------------
-    // Anchor fallbacks
+    // Anchor mapping / defaults
     // ---------------------------------------------------------------------
 
-    private fun fallbackAnchorTime(anchor: DoseAnchorType): LocalTime? =
-        when (anchor) {
-            DoseAnchorType.MIDNIGHT -> null
-            DoseAnchorType.WAKEUP -> LocalTime(7, 0)
-            DoseAnchorType.BREAKFAST -> LocalTime(8, 0)
-            DoseAnchorType.LUNCH -> LocalTime(12, 0)
-            DoseAnchorType.DINNER -> LocalTime(18, 0)
-            DoseAnchorType.BEFORE_WORKOUT -> LocalTime(16, 30)
-            DoseAnchorType.AFTER_WORKOUT -> LocalTime(17, 45)
+    private fun MealType.toTimeAnchorOrNull(): TimeAnchor? =
+        when (this) {
+            MealType.BREAKFAST -> TimeAnchor.BREAKFAST
+            MealType.LUNCH -> TimeAnchor.LUNCH
+            MealType.DINNER -> TimeAnchor.DINNER
             else -> null
+        }
+
+    /**
+     * General anchor mapping used for explicit schedule-spec based resolution.
+     */
+    private fun DoseAnchorType.toTimeAnchorOrNull(): TimeAnchor? =
+        when (this) {
+            DoseAnchorType.MIDNIGHT -> TimeAnchor.MIDNIGHT
+            DoseAnchorType.WAKEUP -> TimeAnchor.WAKEUP
+            DoseAnchorType.BREAKFAST -> TimeAnchor.BREAKFAST
+            DoseAnchorType.LUNCH -> TimeAnchor.LUNCH
+            DoseAnchorType.DINNER -> TimeAnchor.DINNER
+            DoseAnchorType.BEFORE_WORKOUT -> TimeAnchor.BEFORE_WORKOUT
+            DoseAnchorType.AFTER_WORKOUT -> TimeAnchor.AFTER_WORKOUT
+            DoseAnchorType.SLEEP -> TimeAnchor.SLEEP
+            DoseAnchorType.ANYTIME -> null
+            else -> null
+        }
+
+    /**
+     * Legacy supplement fallback mapping.
+     *
+     * MIDNIGHT historically meant "unset / no user-selected event time" rather than a literal
+     * 00:00 schedule. Preserve old behavior by treating it as WAKEUP here.
+     */
+    private fun DoseAnchorType.toLegacyFallbackTimeAnchor(): TimeAnchor? =
+        when (this) {
+            DoseAnchorType.MIDNIGHT -> TimeAnchor.WAKEUP
+            else -> toTimeAnchorOrNull()
+        }
+
+    private fun TimeAnchor.toDoseAnchorTypeOrNull(): DoseAnchorType? =
+        when (this) {
+            TimeAnchor.MIDNIGHT -> DoseAnchorType.MIDNIGHT
+            TimeAnchor.WAKEUP -> DoseAnchorType.WAKEUP
+            TimeAnchor.BREAKFAST -> DoseAnchorType.BREAKFAST
+            TimeAnchor.LUNCH -> DoseAnchorType.LUNCH
+            TimeAnchor.DINNER -> DoseAnchorType.DINNER
+            TimeAnchor.BEFORE_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
+            TimeAnchor.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
+            TimeAnchor.SLEEP -> DoseAnchorType.SLEEP
+            TimeAnchor.DURING_WORKOUT -> null
+        }
+
+    private fun fallbackAnchorTime(anchor: TimeAnchor): LocalTime? =
+        when (anchor) {
+            TimeAnchor.MIDNIGHT -> null
+            TimeAnchor.WAKEUP -> LocalTime(7, 0)
+            TimeAnchor.BREAKFAST -> LocalTime(8, 0)
+            TimeAnchor.LUNCH -> LocalTime(12, 0)
+            TimeAnchor.DINNER -> LocalTime(18, 0)
+            TimeAnchor.BEFORE_WORKOUT -> LocalTime(16, 30)
+            TimeAnchor.AFTER_WORKOUT -> LocalTime(17, 45)
+            TimeAnchor.SLEEP -> LocalTime(22, 0)
+            TimeAnchor.DURING_WORKOUT -> null
         }
 
     /**
@@ -200,7 +415,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
      * - "Take on an empty stomach"
      * - "Avoid caffeine"
      *
-     * These are *medical recommendations*, not strict constraints.
+     * These are medical recommendations, not strict constraints.
      * This function evaluates the current context and returns a
      * user-facing advisory state instead of blocking the dose.
      *
@@ -208,15 +423,8 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
      * -----------------
      * • Never silently block a dose
      * • Prefer gentle reminders over enforcement
-     * • Allow the UI to explain *why* a suggestion exists
-     * • Support future extensibility (custom messages, overrides)
-     *
-     * @param scheduledTime The planned time for this dose
-     * @param doseConditions Set of advisory conditions for the supplement
-     * @param mealsToday List of meals already logged today (can be empty)
-     *
-     * @return A [MealAwareDoseState] indicating whether the dose is ready
-     *         or if a friendly reminder should be shown to the user.
+     * • Allow the UI to explain why a suggestion exists
+     * • Support future extensibility
      */
     fun resolveDoseState(
         scheduledTime: LocalTime,
@@ -226,18 +434,17 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         val lastMealTime = mealsToday
             .maxByOrNull { it.time }
             ?.time
-        /* ------------------------------------------------------------
-           EMPTY STOMACH CHECK
-           ------------------------------------------------------------ */
+
         if (DoseCondition.EMPTY_STOMACH in doseConditions) {
             val date = DomainTimePolicy.todayLocal(clock)
             val minutesSinceLastMeal =
                 lastMealTime?.let { lastMeal ->
                     val mealDate =
-                        if (lastMeal > scheduledTime)
+                        if (lastMeal > scheduledTime) {
                             date.minus(1, DateTimeUnit.DAY)
-                        else
+                        } else {
                             date
+                        }
 
                     val mealDateTime = LocalDateTime(mealDate, lastMeal)
                     val scheduledDateTime = LocalDateTime(date, scheduledTime)
@@ -250,7 +457,6 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                         .inWholeMinutes
                 }
 
-
             val isEmptyStomach =
                 lastMealTime == null || (minutesSinceLastMeal ?: 0) >= 120
 
@@ -260,14 +466,12 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                 )
             }
         }
-        /* ------------------------------------------------------------
-           WITH FOOD CHECK
-           ------------------------------------------------------------ */
+
         if (DoseCondition.WITH_FOOD in doseConditions) {
             val minutesBetween =
                 lastMealTime?.let { mealTime ->
-                (scheduledTime.toSecondOfDay() - mealTime.toSecondOfDay()) / 60
-            }
+                    (scheduledTime.toSecondOfDay() - mealTime.toSecondOfDay()) / 60
+                }
 
             val hasRecentMeal =
                 minutesBetween != null && minutesBetween <= 60
@@ -278,17 +482,13 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                 )
             }
         }
-        /* ------------------------------------------------------------
-           AVOID CAFFEINE (INFORMATIONAL)
-           ------------------------------------------------------------ */
+
         if (DoseCondition.AVOID_CAFFEINE in doseConditions) {
             return MealAwareDoseState.Advisory(
                 reason = "Avoid caffeine close to this dose if possible."
             )
         }
-        /* ------------------------------------------------------------
-           DEFAULT: READY
-           ------------------------------------------------------------ */
+
         return MealAwareDoseState.Ready
     }
 }

@@ -34,13 +34,19 @@ fun SettingsScreen(
     onOpenNutrients: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenIngredients: () -> Unit,
-    onOpenMeals: () -> Unit
+    onOpenMeals: () -> Unit,
+    onOpenEventTimes: () -> Unit // ✅ NEW
 ) {
     val items = listOf(
         SettingsDestinationUi(
             title = "Import from AdobongKangkong",
             subtitle = "Read the latest logged food items and import them into HastangHubaga",
             onClick = onImportFromAdobongKangkong
+        ),
+        SettingsDestinationUi(
+            title = "Event Times", // ✅ NEW
+            subtitle = "Edit default anchor times (wake up, meals, sleep, etc.)",
+            onClick = onOpenEventTimes
         ),
         SettingsDestinationUi(
             title = "Supplements",

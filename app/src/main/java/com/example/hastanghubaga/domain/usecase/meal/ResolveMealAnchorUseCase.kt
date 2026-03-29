@@ -3,6 +3,7 @@ package com.example.hastanghubaga.domain.usecase.meal
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
+import javax.inject.Inject
 
 /**
  * Resolves a [Meal] into a [TimeAnchor] if applicable.
@@ -20,7 +21,7 @@ import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
  * - This does NOT introduce scheduling
  * - This ONLY prepares meals to become anchor providers later
  */
-class ResolveMealAnchorUseCase {
+class ResolveMealAnchorUseCase @Inject constructor() {
 
     operator fun invoke(meal: Meal): TimeAnchor? {
         // 1. Explicit override

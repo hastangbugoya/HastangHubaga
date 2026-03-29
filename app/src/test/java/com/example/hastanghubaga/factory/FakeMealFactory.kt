@@ -17,6 +17,7 @@ object FakeMealFactory {
             timestamp = at,
             nutrition = null,
             notes = name,
+            name = name
         )
     }
 }

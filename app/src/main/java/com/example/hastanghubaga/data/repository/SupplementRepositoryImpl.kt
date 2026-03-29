@@ -8,6 +8,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
@@ -16,6 +17,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.entity.user.ScheduleTypeEntity
+import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
 import com.example.hastanghubaga.data.local.mappers.toMealNutritionFromNames
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
@@ -24,6 +27,7 @@ import com.example.hastanghubaga.domain.model.nutrition.DailyIngredientSummary
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
@@ -55,6 +59,15 @@ import javax.inject.Inject
  * - Dose logging
  * - Scheduling / anchor-time resolution
  *
+ * Scheduling note:
+ * - Persisted user schedule intent now lives in [SupplementUserSettingsEntity] and is exposed as
+ *   [SupplementWithUserSettings.scheduleSpec].
+ * - Concrete daily times are still resolved later by downstream use cases into
+ *   [SupplementWithUserSettings.scheduledTimes] for backward compatibility.
+ * - Legacy timing fields on [Supplement] (such as doseAnchorType / offsetMinutes / frequencyType)
+ *   are still retained, but should be treated as compatibility or dosage-guidance metadata rather
+ *   than the preferred source of new scheduling behavior.
+ *
  * NOTE:
  * - Timeline-related flows are intentionally placed FIRST because they are
  *   performance-sensitive and heavily composed downstream.
@@ -70,7 +83,7 @@ class SupplementRepositoryImpl @Inject constructor(
 ) : SupplementRepository, SupplementDoseLogRepository {
 
     /* ================================================== */
-    /* TIMELINE FLOW (PRIMARY CONSUMER PATH)               */
+    /* TIMELINE FLOW (PRIMARY CONSUMER PATH)              */
     /* ================================================== */
 
     /**
@@ -91,6 +104,10 @@ class SupplementRepositoryImpl @Inject constructor(
      * Intermediary tables:
      * - supplements
      * - supplement_user_settings
+     *
+     * Schedule behavior:
+     * - This repository exposes persisted schedule intent through [SupplementWithUserSettings.scheduleSpec].
+     * - It intentionally does not resolve today's concrete schedule times here.
      */
     override fun getSupplementsForDate(
         date: String
@@ -108,7 +125,8 @@ class SupplementRepositoryImpl @Inject constructor(
                                     SupplementWithUserSettings(
                                         supplement = supplement.toDomain(),
                                         userSettings = settings?.toUserSupplementSettings(),
-                                        doseState = MealAwareDoseState.Unknown
+                                        doseState = MealAwareDoseState.Unknown,
+                                        scheduleSpec = settings?.toScheduleSpec()
                                     )
                                 }
                         }
@@ -130,7 +148,8 @@ class SupplementRepositoryImpl @Inject constructor(
                 SupplementWithUserSettings(
                     supplement = it.toDomain(),
                     userSettings = settings?.toUserSupplementSettings(),
-                    doseState = MealAwareDoseState.Unknown
+                    doseState = MealAwareDoseState.Unknown,
+                    scheduleSpec = settings?.toScheduleSpec()
                 )
             }
         }
@@ -147,7 +166,6 @@ class SupplementRepositoryImpl @Inject constructor(
                     .map { perLogRows -> perLogRows.toMealNutritionFromNames() }
             }
     }
-
 
     /* ================================================== */
     /* SUPPLEMENT LISTING                                 */
@@ -276,6 +294,11 @@ class SupplementRepositoryImpl @Inject constructor(
      *
      * NOTE:
      * This is intentionally domain-level logic, not SQL.
+     *
+     * Compatibility note:
+     * - This still uses legacy frequency fields currently stored on [Supplement].
+     * - Recurrence redesign is intentionally out of scope for the current anchor-based
+     *   supplement scheduling work.
      */
     override suspend fun shouldTakeToday(
         supplement: Supplement,
@@ -415,4 +438,72 @@ class SupplementRepositoryImpl @Inject constructor(
         return startMillis to endMillis
     }
 
+    /**
+     * Maps persisted user scheduling settings into the domain-level supplement schedule intent.
+     *
+     * Rules:
+     * - FIXED_TIMES requires at least one parsable time, otherwise returns null
+     * - MEAL_ANCHORED requires at least one supported meal type, otherwise returns null
+     *
+     * Returning null means downstream scheduling code will fall back to the legacy supplement
+     * timing fields during the transition period.
+     */
+    private fun SupplementUserSettingsEntity.toScheduleSpec(): SupplementScheduleSpec? {
+        return when (scheduleType) {
+            ScheduleTypeEntity.FIXED_TIMES -> {
+                val times = parseFixedTimesCsv(fixedTimesCsv)
+                if (times.isEmpty()) {
+                    null
+                } else {
+                    SupplementScheduleSpec.FixedTimes(times = times)
+                }
+            }
+
+            ScheduleTypeEntity.MEAL_ANCHORED -> {
+                val mealTypes = parseMealTypesCsv(mealTypesCsv)
+                if (mealTypes.isEmpty()) {
+                    null
+                } else {
+                    SupplementScheduleSpec.MealAnchored(
+                        mealTypes = mealTypes,
+                        offsetMinutes = mealOffsetMinutes ?: 0
+                    )
+                }
+            }
+        }
+    }
+
+    private fun parseFixedTimesCsv(csv: String?): List<LocalTime> {
+        if (csv.isNullOrBlank()) return emptyList()
+
+        return csv.split(",")
+            .mapNotNull { token ->
+                parseLocalTimeOrNull(token.trim())
+            }
+            .distinct()
+            .sorted()
+    }
+
+    private fun parseMealTypesCsv(csv: String?): Set<MealType> {
+        if (csv.isNullOrBlank()) return emptySet()
+
+        return csv.split(",")
+            .mapNotNull { token ->
+                runCatching { MealType.valueOf(token.trim()) }.getOrNull()
+            }
+            .toSet()
+    }
+
+    private fun parseLocalTimeOrNull(value: String): LocalTime? {
+        val parts = value.split(":")
+        if (parts.size != 2) return null
+
+        val hour = parts[0].toIntOrNull() ?: return null
+        val minute = parts[1].toIntOrNull() ?: return null
+
+        if (hour !in 0..23) return null
+        if (minute !in 0..59) return null
+
+        return LocalTime(hour = hour, minute = minute)
+    }
 }

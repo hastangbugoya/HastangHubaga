@@ -1,8 +1,21 @@
 package com.example.hastanghubaga.domain.schedule.timing
 
 import kotlinx.datetime.LocalTime
+import javax.inject.Inject
 
-class ApplyAnchorOffsetUseCase {
+/**
+ * Applies a minute offset to a base [LocalTime], normalizing the result
+ * within a 24-hour day.
+ *
+ * Behavior:
+ * - Positive offsets move forward in time
+ * - Negative offsets move backward in time
+ * - Values wrap correctly across midnight
+ *
+ * This use case is intentionally pure and shared across all anchored
+ * scheduling features (meals, supplements, future schedule types).
+ */
+class ApplyAnchorOffsetUseCase @Inject constructor() {
 
     operator fun invoke(
         baseTime: LocalTime,

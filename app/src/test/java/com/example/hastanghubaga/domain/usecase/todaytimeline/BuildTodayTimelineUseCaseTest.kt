@@ -5,6 +5,7 @@ import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
+import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
 import com.example.hastanghubaga.factory.FakeActivityFactory
 import com.example.hastanghubaga.factory.FakeMealFactory
 import com.example.hastanghubaga.factory.FakeSupplementWithUserSettingsFactory
@@ -23,7 +24,6 @@ import org.junit.Test
 @Ignore("Temporarily disabled while stabilizing scheduling refactor")
 class BuildTodayTimelineUseCaseTest {
 
-    // ✅ FIX: mock interface, not concrete class
     private val fakeBuildWidgetDailySnapshot =
         object : BuildWidgetDailySnapshot {
             override suspend fun invoke(day: LocalDate) {
@@ -31,7 +31,6 @@ class BuildTodayTimelineUseCaseTest {
             }
         }
 
-    // ✅ FIX: match current repository interface
     private val upcomingScheduleRepository =
         object : UpcomingScheduleRepository {
 
@@ -48,9 +47,12 @@ class BuildTodayTimelineUseCaseTest {
             }
         }
 
+    private val resolveMealAnchorUseCase = ResolveMealAnchorUseCase()
+
     private val useCase = BuildTodayTimelineUseCase(
         upcomingScheduleRepository = upcomingScheduleRepository,
-        buildWidgetDailySnapshotUseCase = fakeBuildWidgetDailySnapshot
+        buildWidgetDailySnapshotUseCase = fakeBuildWidgetDailySnapshot,
+        resolveMealAnchorUseCase = resolveMealAnchorUseCase
     )
 
     private fun supplement(

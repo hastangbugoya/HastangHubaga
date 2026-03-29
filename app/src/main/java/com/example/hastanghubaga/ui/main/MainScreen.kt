@@ -36,6 +36,8 @@ import com.example.hastanghubaga.feature.ingredients.ui.IngredientsViewModel
 import com.example.hastanghubaga.feature.meals.ui.MealEditorSheet
 import com.example.hastanghubaga.feature.meals.ui.MealsScreen
 import com.example.hastanghubaga.feature.meals.ui.MealsViewModel
+import com.example.hastanghubaga.feature.settings.eventtimes.DefaultEventTimesScreen
+import com.example.hastanghubaga.feature.settings.eventtimes.DefaultEventTimesViewModel
 import com.example.hastanghubaga.feature.supplements.ui.SupplementEditorSheet
 import com.example.hastanghubaga.feature.supplements.ui.SupplementsScreen
 import com.example.hastanghubaga.feature.supplements.ui.SupplementsViewModel
@@ -61,7 +63,8 @@ private enum class SettingsSubscreen {
     SUPPLEMENTS,
     ACTIVITIES,
     INGREDIENTS,
-    MEALS
+    MEALS,
+    EVENT_TIMES
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +79,7 @@ fun MainScreen() {
     val ingredientsViewModel: IngredientsViewModel = hiltViewModel()
     val mealsViewModel: MealsViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val defaultEventTimesViewModel: DefaultEventTimesViewModel = hiltViewModel()
 
     val supplementsState by supplementsViewModel.state.collectAsState()
     val activitiesState by activitiesViewModel.state.collectAsState()
@@ -323,6 +327,16 @@ fun MainScreen() {
                             )
                         }
 
+                        SettingsSubscreen.EVENT_TIMES -> {
+                            DefaultEventTimesScreen(
+                                viewModel = defaultEventTimesViewModel,
+                                onBackClick = {
+                                    settingsSubscreen = SettingsSubscreen.ROOT
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         SettingsSubscreen.ROOT -> {
                             SettingsScreen(
                                 onImportFromAdobongKangkong = {
@@ -344,6 +358,9 @@ fun MainScreen() {
                                 },
                                 onOpenMeals = {
                                     settingsSubscreen = SettingsSubscreen.MEALS
+                                },
+                                onOpenEventTimes = {
+                                    settingsSubscreen = SettingsSubscreen.EVENT_TIMES
                                 }
                             )
                         }
