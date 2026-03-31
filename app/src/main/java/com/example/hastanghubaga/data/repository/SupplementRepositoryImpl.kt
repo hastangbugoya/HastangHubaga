@@ -122,8 +122,8 @@ class SupplementRepositoryImpl @Inject constructor(
      * - Prefer persisted rows from supplement_schedules when present.
      * - Fall back to legacy user-settings CSV schedule intent when no persisted rows exist.
      * - FIXED schedules are converted into scheduledTimes for backward-compatible consumers.
-     * - ANCHORED schedules are resolved into scheduledTimes by mapping TimeAnchor -> DoseAnchorType
-     *   and reusing the existing event-time system.
+     * - ANCHORED schedules are exposed as schedule intent and must be resolved later by
+     *   downstream anchor-aware use cases.
      */
     override fun getSupplementsForDate(
         date: String
@@ -166,6 +166,10 @@ class SupplementRepositoryImpl @Inject constructor(
      * Observe a single supplement with live user settings.
      * Used by detail screens.
      */
+//    override fun observeSupplement(id: Long): Flow<List<SupplementWithUserSettings>?> =
+//        throw UnsupportedOperationException("Signature mismatch placeholder")
+//    // Keep your existing signature below if needed by compiler.
+
     override fun observeSupplement(id: Long): Flow<SupplementWithUserSettings?> =
         combine(
             supplementDao.observeSupplementById(id),
@@ -237,13 +241,6 @@ class SupplementRepositoryImpl @Inject constructor(
         ingredientDao.getAllIngredientsFlow()
             .map { it.map(IngredientEntity::toDomain) }
 
-    /**
-     * Aggregates ingredient totals for a day by joining:
-     * - supplement_daily_log
-     * - supplements_with_ingredients
-     *
-     * This is a READ-ONLY aggregation.
-     */
     override suspend fun getDailyIngredientSummary(
         date: LocalDate
     ): List<DailyIngredientSummary> {
@@ -280,12 +277,6 @@ class SupplementRepositoryImpl @Inject constructor(
     /* DOSE LOGGING                                       */
     /* ================================================== */
 
-    /**
-     * Inserts a dose log row.
-     *
-     * Intermediary table:
-     * - supplement_daily_log
-     */
     override suspend fun logDose(
         supplementId: Long,
         date: LocalDate,
@@ -328,17 +319,6 @@ class SupplementRepositoryImpl @Inject constructor(
         dailyStartTimeDao.getStartTime(date.toString())
             ?.let { LocalTime.fromSecondOfDay(it.hourZero) }
 
-    /**
-     * Determines if a supplement should be taken on a date.
-     *
-     * NOTE:
-     * This is intentionally domain-level logic, not SQL.
-     *
-     * Compatibility note:
-     * - This still uses legacy frequency fields currently stored on [Supplement].
-     * - Recurrence redesign is intentionally out of scope for the current anchor-based
-     *   supplement scheduling work.
-     */
     override suspend fun shouldTakeToday(
         supplement: Supplement,
         date: LocalDate
@@ -457,7 +437,6 @@ class SupplementRepositoryImpl @Inject constructor(
         time: LocalTime
     ) {
         // Intentionally no-op.
-        // Default event times are not user-editable yet.
     }
 
     private fun dayRangeUtcMillis(dateMillis: Long): Pair<Long, Long> {
@@ -487,20 +466,16 @@ class SupplementRepositoryImpl @Inject constructor(
             .filter { it.isEnabled }
             .filter { it.isActiveOn(date) }
 
-        val scheduledTimes = if (applicableSchedules.isNotEmpty()) {
-            buildScheduledTimesFromPersistedSchedules(
-                schedules = applicableSchedules,
-                date = date
-            )
-        } else {
-            emptyList()
-        }
-
         val scheduleSpec = if (applicableSchedules.isNotEmpty()) {
             buildScheduleSpecFromPersistedSchedules(applicableSchedules)
                 ?: settings?.toScheduleSpec()
         } else {
             settings?.toScheduleSpec()
+        }
+
+        val scheduledTimes = when (scheduleSpec) {
+            is SupplementScheduleSpec.FixedTimes -> scheduleSpec.times.sorted()
+            else -> emptyList()
         }
 
         return SupplementWithUserSettings(
@@ -512,57 +487,15 @@ class SupplementRepositoryImpl @Inject constructor(
         )
     }
 
-    private suspend fun buildScheduledTimesFromPersistedSchedules(
-        schedules: List<SupplementScheduleEntity>,
-        date: LocalDate
-    ): List<LocalTime> {
-        val fixedTimes = schedules
-            .filter { it.timingType == ScheduleTimingType.FIXED }
-            .flatMap { schedule ->
-                supplementScheduleDao.getFixedTimesForSchedule(schedule.id)
-            }
-            .sortedWith(
-                compareBy(
-                    { it.sortOrder },
-                    { it.time.hour },
-                    { it.time.minute },
-                    { it.id }
-                )
-            )
-            .map { it.time }
-
-        val anchoredTimes = schedules
-            .filter { it.timingType == ScheduleTimingType.ANCHORED }
-            .flatMap { schedule ->
-                supplementScheduleDao.getAnchoredTimesForSchedule(schedule.id)
-            }
-            .sortedWith(
-                compareBy(
-                    { it.sortOrder },
-                    { it.id }
-                )
-            )
-            .mapNotNull { anchored ->
-                resolveAnchoredScheduleTime(
-                    anchored = anchored,
-                    date = date
-                )
-            }
-
-        return (fixedTimes + anchoredTimes)
-            .distinct()
-            .sorted()
-    }
-
     /**
-     * Best-effort schedule intent reconstruction from persisted schedule rows.
+     * Reconstruct schedule intent from persisted schedule rows.
      *
      * Current mapping behavior:
      * - FIXED schedules -> SupplementScheduleSpec.FixedTimes
-     * - ANCHORED schedules are not converted here because persisted rows use TimeAnchor,
-     *   while the current domain schedule spec only models MealType-based anchoring.
+     * - ANCHORED schedules -> SupplementScheduleSpec.Anchored
      *
-     * Concrete anchored daily times are still resolved above into scheduledTimes.
+     * Concrete anchored daily times should be resolved later by downstream
+     * use cases using date-specific anchor context.
      */
     private suspend fun buildScheduleSpecFromPersistedSchedules(
         schedules: List<SupplementScheduleEntity>
@@ -587,38 +520,28 @@ class SupplementRepositoryImpl @Inject constructor(
             return SupplementScheduleSpec.FixedTimes(times = fixedTimes)
         }
 
-        return null
-    }
+        val anchoredRows = schedules
+            .filter { it.timingType == ScheduleTimingType.ANCHORED }
+            .flatMap { schedule ->
+                supplementScheduleDao.getAnchoredTimesForSchedule(schedule.id)
+            }
+            .sortedWith(
+                compareBy(
+                    { it.sortOrder },
+                    { it.id }
+                )
+            )
 
-    private suspend fun resolveAnchoredScheduleTime(
-        anchored: SupplementScheduleAnchoredTimeEntity,
-        date: LocalDate
-    ): LocalTime? {
-        val doseAnchor = anchored.anchor.toDoseAnchorTypeOrNull() ?: return null
-        val baseTime = getEventTime(doseAnchor, date) ?: return null
-        return baseTime.plusMinutesClamped(anchored.offsetMinutes)
-    }
-
-    private fun TimeAnchor.toDoseAnchorTypeOrNull(): DoseAnchorType? {
-        return when (this) {
-            TimeAnchor.MIDNIGHT -> DoseAnchorType.MIDNIGHT
-            TimeAnchor.WAKEUP -> DoseAnchorType.WAKEUP
-            TimeAnchor.BREAKFAST -> DoseAnchorType.BREAKFAST
-            TimeAnchor.LUNCH -> DoseAnchorType.LUNCH
-            TimeAnchor.DINNER -> DoseAnchorType.DINNER
-            TimeAnchor.BEFORE_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
-            TimeAnchor.DURING_WORKOUT -> null
-            TimeAnchor.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
-            TimeAnchor.SLEEP -> DoseAnchorType.SLEEP
+        if (anchoredRows.isNotEmpty()) {
+            val anchors = anchoredRows.map { it.anchor }.toSet()
+            val offsetMinutes = anchoredRows.first().offsetMinutes
+            return SupplementScheduleSpec.Anchored(
+                anchors = anchors,
+                offsetMinutes = offsetMinutes
+            )
         }
-    }
 
-    private fun LocalTime.plusMinutesClamped(minutesToAdd: Int): LocalTime {
-        val totalMinutes = hour * 60 + minute + minutesToAdd
-        val clampedMinutes = totalMinutes.coerceIn(0, (23 * 60) + 59)
-        val resolvedHour = clampedMinutes / 60
-        val resolvedMinute = clampedMinutes % 60
-        return LocalTime(hour = resolvedHour, minute = resolvedMinute)
+        return null
     }
 
     private fun SupplementScheduleEntity.isActiveOn(date: LocalDate): Boolean {
@@ -651,16 +574,6 @@ class SupplementRepositoryImpl @Inject constructor(
         return (endEpochDay - startEpochDay).toInt()
     }
 
-    /**
-     * Maps persisted user scheduling settings into the domain-level supplement schedule intent.
-     *
-     * Rules:
-     * - FIXED_TIMES requires at least one parsable time, otherwise returns null
-     * - MEAL_ANCHORED requires at least one supported meal type, otherwise returns null
-     *
-     * Returning null means downstream scheduling code will fall back to the legacy supplement
-     * timing fields during the transition period.
-     */
     private fun SupplementUserSettingsEntity.toScheduleSpec(): SupplementScheduleSpec? {
         return when (scheduleType) {
             ScheduleTypeEntity.FIXED_TIMES -> {
