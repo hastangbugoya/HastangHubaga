@@ -10,9 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,7 +43,15 @@ fun DefaultEventTimesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Event Times") }
+                title = { Text("Event Times") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
             )
         },
         modifier = modifier
@@ -101,7 +113,7 @@ private fun LocalTime.toDisplayString(): String {
     return "$hour12:$minuteText $amPm"
 }
 
-private fun com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType.toDisplayName(): String =
+private fun DoseAnchorType.toDisplayName(): String =
     when (this) {
         DoseAnchorType.MIDNIGHT -> "Midnight"
         DoseAnchorType.WAKEUP -> "Wake Up"

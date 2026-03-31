@@ -95,6 +95,9 @@ object ScheduleRuleToSupplementMapper {
             AnchorTypeUi.DINNER -> DoseAnchorType.DINNER
             AnchorTypeUi.SLEEP -> DoseAnchorType.SLEEP
             null -> DoseAnchorType.MIDNIGHT
+            AnchorTypeUi.BEFORE_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
+            AnchorTypeUi.DURING_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
+            AnchorTypeUi.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
         }
     }
 

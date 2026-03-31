@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -367,7 +367,8 @@ private fun WeekdaySelector(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             WeekdayUi.entries.forEach { weekday ->
-                AssistChip(
+                FilterChip(
+                    selected = weekday in selectedWeekdays,
                     onClick = { onWeekdayToggled(weekday) },
                     label = { Text(weekday.shortLabel()) }
                 )
@@ -398,7 +399,8 @@ private fun AnchorSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         AnchorTypeUi.entries.forEach { anchor ->
-            AssistChip(
+            FilterChip(
+                selected = anchor == selected,
                 onClick = { onSelected(anchor) },
                 label = { Text(anchor.label()) }
             )
@@ -484,6 +486,9 @@ private fun AnchorTypeUi.label(): String {
         AnchorTypeUi.LUNCH -> "Lunch"
         AnchorTypeUi.DINNER -> "Dinner"
         AnchorTypeUi.SLEEP -> "Sleep"
+        AnchorTypeUi.BEFORE_WORKOUT -> "Pre workout"
+        AnchorTypeUi.DURING_WORKOUT -> "Workout"
+        AnchorTypeUi.AFTER_WORKOUT -> "Post workout"
     }
 }
 

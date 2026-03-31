@@ -9,15 +9,18 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.MealLog
 import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.schedule.model.AnchorDateKey
 import com.example.hastanghubaga.domain.schedule.model.AnchorTimeContext
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
+import com.example.hastanghubaga.domain.schedule.model.WorkoutAnchorWindow
 import com.example.hastanghubaga.domain.schedule.timing.ApplyAnchorOffsetUseCase
 import com.example.hastanghubaga.domain.schedule.timing.ResolveAnchorTimeUseCase
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -27,7 +30,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
-import javax.inject.Inject
 
 /**
  * Returns supplements for a specific date, enriched with resolved daily schedule times.
@@ -51,9 +53,16 @@ import javax.inject.Inject
  * - No persistence changes
  *
  * This use case remains the bridge between schedule intent and concrete "today" times.
+ *
+ * Workout-aware extension:
+ * - Supplement anchor resolution now reacts to workout activities for the same date
+ * - BEFORE_WORKOUT / DURING_WORKOUT / AFTER_WORKOUT can resolve dynamically from
+ *   activities marked with `isWorkout = true`
+ * - If no workout exists, anchor resolution falls back to static event times
  */
 class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private val supplementRepository: SupplementRepository,
+    private val activityRepository: ActivityRepository,
     private val eventTimeDao: EventTimeDao,
     private val resolveAnchorTimeUseCase: ResolveAnchorTimeUseCase,
     private val applyAnchorOffsetUseCase: ApplyAnchorOffsetUseCase,
@@ -67,21 +76,42 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
      * - [scheduledTimes] is still emitted for backward compatibility.
      * - New scheduling behavior should prefer schedule intent models and pure resolvers,
      *   while legacy supplement timing fields remain fallback-only.
+     *
+     * Workout-aware behavior:
+     * - Activity changes for the same date will re-trigger supplement schedule resolution.
+     * - Only activities marked `isWorkout = true` are used as workout anchor sources.
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
     operator fun invoke(
         date: LocalDate
     ): Flow<List<SupplementWithUserSettings>> =
-        supplementRepository
-            .getSupplementsForDate(date.toString())
-            .mapLatest { supplements ->
-                val mealsToday: List<MealLog> = emptyList()
-                val anchorContext = buildAnchorTimeContext(date)
+        combine(
+            supplementRepository.getSupplementsForDate(date.toString()),
+            activityRepository.observeActivitiesForDate(date)
+        ) { supplements, activities ->
+            val mealsToday: List<MealLog> = emptyList()
+            val workoutAnchors = activities
+                .asSequence()
+                .filter { it.isWorkout }
+                .map { activity ->
+                    WorkoutAnchorWindow(
+                        activityId = activity.id,
+                        startTime = activity.start.time,
+                        endTime = activity.end?.time,
+                        label = activity.notes
+                    )
+                }
+                .sortedBy { it.startTime }
+                .toList()
 
-                supplements
-                    .filter { it.shouldTakeOn(date) }
-                    .map { it.withScheduleFor(mealsToday, anchorContext) }
-            }
+            val anchorContext = buildAnchorTimeContext(
+                date = date,
+                workoutAnchors = workoutAnchors
+            )
+
+            supplements
+                .filter { it.shouldTakeOn(date) }
+                .map { it.withScheduleFor(mealsToday, anchorContext) }
+        }
 
     // ---------------------------------------------------------------------
     // Scheduling
@@ -130,6 +160,10 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     private suspend fun SupplementWithUserSettings.resolveScheduledTimes(
         anchorContext: AnchorTimeContext
     ): List<LocalTime> {
+        if (scheduledTimes.isNotEmpty()) {
+            return scheduledTimes.sorted()
+        }
+
         val specTimes = scheduleSpec?.let { spec ->
             resolveFromScheduleSpec(
                 spec = spec,
@@ -222,14 +256,16 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
     /**
      * Builds the anchor context used by shared anchor resolvers.
      *
-     * Current backing storage only provides:
+     * Current backing storage provides:
      * - per-date overrides
      * - global defaults
+     * - workout windows derived from activities marked `isWorkout`
      *
      * Day-of-week overrides are not wired for supplements yet, so they remain empty here.
      */
     private suspend fun buildAnchorTimeContext(
-        date: LocalDate
+        date: LocalDate,
+        workoutAnchors: List<WorkoutAnchorWindow>
     ): AnchorTimeContext {
         val supportedAnchors = listOf(
             TimeAnchor.MIDNIGHT,
@@ -238,6 +274,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             TimeAnchor.LUNCH,
             TimeAnchor.DINNER,
             TimeAnchor.BEFORE_WORKOUT,
+            TimeAnchor.DURING_WORKOUT,
             TimeAnchor.AFTER_WORKOUT,
             TimeAnchor.SLEEP
         )
@@ -267,7 +304,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
 
                 if (time != null) {
                     put(
-                        com.example.hastanghubaga.domain.schedule.model.AnchorDateKey(
+                        AnchorDateKey(
                             anchor = anchor,
                             date = date
                         ),
@@ -281,7 +318,8 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             date = date,
             defaultTimes = defaultTimes,
             dayOfWeekOverrides = emptyMap(),
-            dateOverrides = dateOverrides
+            dateOverrides = dateOverrides,
+            workoutAnchors = workoutAnchors
         )
     }
 
@@ -389,7 +427,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             TimeAnchor.BEFORE_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
             TimeAnchor.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
             TimeAnchor.SLEEP -> DoseAnchorType.SLEEP
-            TimeAnchor.DURING_WORKOUT -> null
+            TimeAnchor.DURING_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
         }
 
     private fun fallbackAnchorTime(anchor: TimeAnchor): LocalTime? =
@@ -402,7 +440,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             TimeAnchor.BEFORE_WORKOUT -> LocalTime(16, 30)
             TimeAnchor.AFTER_WORKOUT -> LocalTime(17, 45)
             TimeAnchor.SLEEP -> LocalTime(22, 0)
-            TimeAnchor.DURING_WORKOUT -> null
+            TimeAnchor.DURING_WORKOUT -> LocalTime(16, 30)
         }
 
     /**

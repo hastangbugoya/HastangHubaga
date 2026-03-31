@@ -20,15 +20,97 @@ import javax.inject.Inject
 /**
  * Builds a single, chronologically ordered timeline for "Today".
  *
- * Important:
- * - Native HH meals and AK imported meals remain separate timeline sources
- * - Imported meals are surfaced read-only
- * - No linking / merging / assignment is performed here
+ * This use case is the central orchestration point that merges all domain
+ * sources into a unified timeline representation:
  *
- * Anchor note:
- * - Native HH meals may resolve an optional anchor via [ResolveMealAnchorUseCase]
- * - This does NOT currently change sorting, rendering, or scheduling behavior
- * - It only prepares meals to act as anchor providers later
+ * - Supplements (scheduled via recurrence / anchors upstream)
+ * - Native HH meals (user-created)
+ * - Imported meals (read-only from AdobongKangkong)
+ * - Activities (including workouts)
+ *
+ * The result is:
+ * - A sorted [TimelineItem] list for UI rendering
+ * - A derived list of [UpcomingSchedule] persisted for widgets and background usage
+ *
+ * ---
+ * 🧠 Responsibilities
+ *
+ * This use case is intentionally **composition-focused**, not logic-heavy:
+ *
+ * - It does NOT resolve supplement anchors (already resolved upstream)
+ * - It does NOT modify timestamps for meals or activities
+ * - It does NOT merge or group entities (e.g., imported meals stay independent)
+ *
+ * It only:
+ * - Maps domain models → timeline items
+ * - Sorts them deterministically
+ * - Persists a simplified schedule representation
+ *
+ * ---
+ * 🍽️ Meal Anchor Behavior
+ *
+ * Native HH meals may optionally expose an anchor via [ResolveMealAnchorUseCase].
+ *
+ * Important:
+ * - The resolved anchor is **informational only** in this stage
+ * - It does NOT affect:
+ *   - timeline sorting
+ *   - placement
+ *   - scheduling
+ *
+ * This allows meals to later act as anchor providers (e.g., supplements anchored
+ * to meals) without breaking current behavior.
+ *
+ * ---
+ * 🏋️ Workout / Activity Behavior
+ *
+ * Activities are included as timeline items using their start time.
+ *
+ * - Activities may be marked with `isWorkout = true`
+ * - This use case currently does NOT use that information
+ *
+ * However, this is the correct integration point for future enhancements:
+ *
+ * 👉 Workout-aware anchor resolution (BEFORE/DURING/AFTER_WORKOUT)
+ *
+ * Planned role:
+ * - Extract workout activities here
+ * - Provide them to anchor resolution context
+ * - Keep supplements + anchor logic decoupled from Activity repository
+ *
+ * ---
+ * 📦 Imported Meals
+ *
+ * Imported meals:
+ * - Are treated as read-only
+ * - Use their logged timestamp (converted from epoch millis)
+ * - Are NOT merged with native meals
+ *
+ * ---
+ * 📊 Sorting Rules
+ *
+ * Timeline items are sorted by:
+ *
+ * 1. Time (ascending)
+ * 2. Type priority:
+ *    Supplement → Meal → Imported Meal → Activity → Dose Log
+ * 3. HashCode (tie-breaker for stability)
+ *
+ * ---
+ * 🧪 Testability Notes
+ *
+ * This use case:
+ * - Is deterministic given inputs
+ * - Has no internal time mutations (uses [DomainTimePolicy.todayLocal])
+ * - Keeps mapping logic simple and verifiable
+ *
+ * ---
+ * @param supplements Supplements with resolved scheduled times
+ * @param meals Native HH meals (optionally anchor-capable)
+ * @param importedMeals External meals (read-only)
+ * @param activities Activities for the day (may include workouts)
+ *
+ * @return Chronologically sorted list of [TimelineItem] for rendering
  */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,

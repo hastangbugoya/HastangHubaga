@@ -7,6 +7,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
@@ -14,9 +15,13 @@ import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.ScheduleRecurrenceType
+import com.example.hastanghubaga.data.local.entity.supplement.ScheduleTimingType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
 import com.example.hastanghubaga.data.local.entity.user.ScheduleTypeEntity
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
@@ -31,15 +36,19 @@ import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
+import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
@@ -79,7 +88,8 @@ class SupplementRepositoryImpl @Inject constructor(
     private val dailyStartTimeDao: DailyStartTimeDao,
     private val eventTimeDao: EventTimeDao,
     private val supplementUserSettingsDao: SupplementUserSettingsDao,
-    private val supplementNutritionDao: SupplementNutritionDao
+    private val supplementNutritionDao: SupplementNutritionDao,
+    private val supplementScheduleDao: SupplementScheduleDao
 ) : SupplementRepository, SupplementDoseLogRepository {
 
     /* ================================================== */
@@ -98,16 +108,22 @@ class SupplementRepositoryImpl @Inject constructor(
      * Flow shape:
      *   Flow<List<SupplementEntity>>
      *     → flatMapLatest
-     *     → combine(settings per supplement)
+     *     → combine(settings + schedules per supplement)
      *     → Flow<List<SupplementWithUserSettings>>
      *
      * Intermediary tables:
      * - supplements
      * - supplement_user_settings
+     * - supplement_schedules
+     * - supplement_schedule_fixed_times
+     * - supplement_schedule_anchored_times
      *
      * Schedule behavior:
-     * - This repository exposes persisted schedule intent through [SupplementWithUserSettings.scheduleSpec].
-     * - It intentionally does not resolve today's concrete schedule times here.
+     * - Prefer persisted rows from supplement_schedules when present.
+     * - Fall back to legacy user-settings CSV schedule intent when no persisted rows exist.
+     * - FIXED schedules are converted into scheduledTimes for backward-compatible consumers.
+     * - ANCHORED schedules are resolved into scheduledTimes by mapping TimeAnchor -> DoseAnchorType
+     *   and reusing the existing event-time system.
      */
     override fun getSupplementsForDate(
         date: String
@@ -117,20 +133,31 @@ class SupplementRepositoryImpl @Inject constructor(
                 if (supplements.isEmpty()) {
                     flowOf(emptyList())
                 } else {
-                    combine(
-                        supplements.map { supplement ->
-                            supplementUserSettingsDao
-                                .observeSettings(supplement.id)
-                                .map { settings ->
-                                    SupplementWithUserSettings(
-                                        supplement = supplement.toDomain(),
-                                        userSettings = settings?.toUserSupplementSettings(),
-                                        doseState = MealAwareDoseState.Unknown,
-                                        scheduleSpec = settings?.toScheduleSpec()
+                    val targetDate = LocalDate.parse(date)
+
+                    val supplementFlows: List<Flow<SupplementWithUserSettings>> = supplements.map { supplement ->
+                        combine(
+                            supplementUserSettingsDao.observeSettings(supplement.id),
+                            supplementScheduleDao.observeSchedulesForSupplement(supplement.id)
+                        ) { settings, schedules ->
+                            settings to schedules
+                        }.flatMapLatest { (settings, schedules) ->
+                            flow {
+                                emit(
+                                    buildSupplementWithUserSettings(
+                                        supplement = supplement,
+                                        settings = settings,
+                                        schedules = schedules,
+                                        date = targetDate
                                     )
-                                }
+                                )
+                            }
                         }
-                    ) { it.toList() }
+                    }
+
+                    combine(supplementFlows) { results ->
+                        results.toList()
+                    }
                 }
             }
     }
@@ -142,14 +169,26 @@ class SupplementRepositoryImpl @Inject constructor(
     override fun observeSupplement(id: Long): Flow<SupplementWithUserSettings?> =
         combine(
             supplementDao.observeSupplementById(id),
-            supplementUserSettingsDao.observeSettings(id)
-        ) { supplement, settings ->
-            supplement?.let {
-                SupplementWithUserSettings(
-                    supplement = it.toDomain(),
-                    userSettings = settings?.toUserSupplementSettings(),
-                    doseState = MealAwareDoseState.Unknown,
-                    scheduleSpec = settings?.toScheduleSpec()
+            supplementUserSettingsDao.observeSettings(id),
+            supplementScheduleDao.observeSchedulesForSupplement(id)
+        ) { supplement, settings, schedules ->
+            Triple(supplement, settings, schedules)
+        }.flatMapLatest { (supplement, settings, schedules) ->
+            flow {
+                val today = Instant
+                    .fromEpochMilliseconds(System.currentTimeMillis())
+                    .toLocalDateTime(TimeZone.currentSystemDefault())
+                    .date
+
+                emit(
+                    supplement?.let {
+                        buildSupplementWithUserSettings(
+                            supplement = it,
+                            settings = settings,
+                            schedules = schedules,
+                            date = today
+                        )
+                    }
                 )
             }
         }
@@ -422,20 +461,194 @@ class SupplementRepositoryImpl @Inject constructor(
     }
 
     private fun dayRangeUtcMillis(dateMillis: Long): Pair<Long, Long> {
-        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
+        val tz = TimeZone.currentSystemDefault()
 
-        val localDate = kotlinx.datetime.Instant
+        val localDate = Instant
             .fromEpochMilliseconds(dateMillis)
             .toLocalDateTime(tz)
             .date
 
         val startMillis = localDate.atStartOfDayIn(tz).toEpochMilliseconds()
         val endMillis = localDate
-            .plus(kotlinx.datetime.DatePeriod(days = 1))
+            .plus(DatePeriod(days = 1))
             .atStartOfDayIn(tz)
             .toEpochMilliseconds()
 
         return startMillis to endMillis
+    }
+
+    private suspend fun buildSupplementWithUserSettings(
+        supplement: SupplementEntity,
+        settings: SupplementUserSettingsEntity?,
+        schedules: List<SupplementScheduleEntity>,
+        date: LocalDate
+    ): SupplementWithUserSettings {
+        val applicableSchedules = schedules
+            .filter { it.isEnabled }
+            .filter { it.isActiveOn(date) }
+
+        val scheduledTimes = if (applicableSchedules.isNotEmpty()) {
+            buildScheduledTimesFromPersistedSchedules(
+                schedules = applicableSchedules,
+                date = date
+            )
+        } else {
+            emptyList()
+        }
+
+        val scheduleSpec = if (applicableSchedules.isNotEmpty()) {
+            buildScheduleSpecFromPersistedSchedules(applicableSchedules)
+                ?: settings?.toScheduleSpec()
+        } else {
+            settings?.toScheduleSpec()
+        }
+
+        return SupplementWithUserSettings(
+            supplement = supplement.toDomain(),
+            userSettings = settings?.toUserSupplementSettings(),
+            doseState = MealAwareDoseState.Unknown,
+            scheduledTimes = scheduledTimes,
+            scheduleSpec = scheduleSpec
+        )
+    }
+
+    private suspend fun buildScheduledTimesFromPersistedSchedules(
+        schedules: List<SupplementScheduleEntity>,
+        date: LocalDate
+    ): List<LocalTime> {
+        val fixedTimes = schedules
+            .filter { it.timingType == ScheduleTimingType.FIXED }
+            .flatMap { schedule ->
+                supplementScheduleDao.getFixedTimesForSchedule(schedule.id)
+            }
+            .sortedWith(
+                compareBy(
+                    { it.sortOrder },
+                    { it.time.hour },
+                    { it.time.minute },
+                    { it.id }
+                )
+            )
+            .map { it.time }
+
+        val anchoredTimes = schedules
+            .filter { it.timingType == ScheduleTimingType.ANCHORED }
+            .flatMap { schedule ->
+                supplementScheduleDao.getAnchoredTimesForSchedule(schedule.id)
+            }
+            .sortedWith(
+                compareBy(
+                    { it.sortOrder },
+                    { it.id }
+                )
+            )
+            .mapNotNull { anchored ->
+                resolveAnchoredScheduleTime(
+                    anchored = anchored,
+                    date = date
+                )
+            }
+
+        return (fixedTimes + anchoredTimes)
+            .distinct()
+            .sorted()
+    }
+
+    /**
+     * Best-effort schedule intent reconstruction from persisted schedule rows.
+     *
+     * Current mapping behavior:
+     * - FIXED schedules -> SupplementScheduleSpec.FixedTimes
+     * - ANCHORED schedules are not converted here because persisted rows use TimeAnchor,
+     *   while the current domain schedule spec only models MealType-based anchoring.
+     *
+     * Concrete anchored daily times are still resolved above into scheduledTimes.
+     */
+    private suspend fun buildScheduleSpecFromPersistedSchedules(
+        schedules: List<SupplementScheduleEntity>
+    ): SupplementScheduleSpec? {
+        val fixedTimes = schedules
+            .filter { it.timingType == ScheduleTimingType.FIXED }
+            .flatMap { schedule ->
+                supplementScheduleDao.getFixedTimesForSchedule(schedule.id)
+            }
+            .sortedWith(
+                compareBy(
+                    { it.sortOrder },
+                    { it.time.hour },
+                    { it.time.minute },
+                    { it.id }
+                )
+            )
+            .map { it.time }
+            .distinct()
+
+        if (fixedTimes.isNotEmpty()) {
+            return SupplementScheduleSpec.FixedTimes(times = fixedTimes)
+        }
+
+        return null
+    }
+
+    private suspend fun resolveAnchoredScheduleTime(
+        anchored: SupplementScheduleAnchoredTimeEntity,
+        date: LocalDate
+    ): LocalTime? {
+        val doseAnchor = anchored.anchor.toDoseAnchorTypeOrNull() ?: return null
+        val baseTime = getEventTime(doseAnchor, date) ?: return null
+        return baseTime.plusMinutesClamped(anchored.offsetMinutes)
+    }
+
+    private fun TimeAnchor.toDoseAnchorTypeOrNull(): DoseAnchorType? {
+        return when (this) {
+            TimeAnchor.MIDNIGHT -> DoseAnchorType.MIDNIGHT
+            TimeAnchor.WAKEUP -> DoseAnchorType.WAKEUP
+            TimeAnchor.BREAKFAST -> DoseAnchorType.BREAKFAST
+            TimeAnchor.LUNCH -> DoseAnchorType.LUNCH
+            TimeAnchor.DINNER -> DoseAnchorType.DINNER
+            TimeAnchor.BEFORE_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
+            TimeAnchor.DURING_WORKOUT -> null
+            TimeAnchor.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
+            TimeAnchor.SLEEP -> DoseAnchorType.SLEEP
+        }
+    }
+
+    private fun LocalTime.plusMinutesClamped(minutesToAdd: Int): LocalTime {
+        val totalMinutes = hour * 60 + minute + minutesToAdd
+        val clampedMinutes = totalMinutes.coerceIn(0, (23 * 60) + 59)
+        val resolvedHour = clampedMinutes / 60
+        val resolvedMinute = clampedMinutes % 60
+        return LocalTime(hour = resolvedHour, minute = resolvedMinute)
+    }
+
+    private fun SupplementScheduleEntity.isActiveOn(date: LocalDate): Boolean {
+        if (date < startDate) return false
+        if (endDate != null && date > endDate) return false
+        if (interval <= 0) return false
+
+        return when (recurrenceType) {
+            ScheduleRecurrenceType.DAILY -> {
+                val daysBetween = daysBetween(startDate, date)
+                daysBetween >= 0 && daysBetween % interval == 0
+            }
+
+            ScheduleRecurrenceType.WEEKLY -> {
+                val weeklySet = weeklyDays ?: emptyList<DayOfWeek>()
+                if (!weeklySet.contains(date.dayOfWeek)) {
+                    false
+                } else {
+                    val daysBetween = daysBetween(startDate, date)
+                    val weeksBetween = daysBetween / 7
+                    weeksBetween >= 0 && weeksBetween % interval == 0
+                }
+            }
+        }
+    }
+
+    private fun daysBetween(start: LocalDate, end: LocalDate): Int {
+        val startEpochDay = start.toJavaLocalDate().toEpochDay()
+        val endEpochDay = end.toJavaLocalDate().toEpochDay()
+        return (endEpochDay - startEpochDay).toInt()
     }
 
     /**

@@ -115,7 +115,11 @@ enum class AnchorTypeUi {
     BREAKFAST,
     LUNCH,
     DINNER,
-    SLEEP
+    SLEEP,
+
+    BEFORE_WORKOUT,
+    DURING_WORKOUT,
+    AFTER_WORKOUT
 }
 
 /**

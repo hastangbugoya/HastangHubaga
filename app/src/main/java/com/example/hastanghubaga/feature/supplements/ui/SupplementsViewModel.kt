@@ -423,23 +423,39 @@ class SupplementsViewModel @Inject constructor(
         return WeekdayUi.valueOf(value.name)
     }
 
+    /**
+     * Maps editor anchor choices to the shared scheduling domain anchor enum.
+     *
+     * Important:
+     * - Use direct enum references rather than string-based valueOf lookups.
+     * - The shared domain enum uses WAKEUP, not WAKE_UP.
+     */
     private fun uiAnchorToTimeAnchor(value: AnchorTypeUi): TimeAnchor {
         return when (value) {
-            AnchorTypeUi.WAKE_UP -> TimeAnchor.valueOf("WAKE_UP")
-            AnchorTypeUi.BREAKFAST -> TimeAnchor.valueOf("BREAKFAST")
-            AnchorTypeUi.LUNCH -> TimeAnchor.valueOf("LUNCH")
-            AnchorTypeUi.DINNER -> TimeAnchor.valueOf("DINNER")
-            AnchorTypeUi.SLEEP -> TimeAnchor.valueOf("SLEEP")
+            AnchorTypeUi.WAKE_UP -> TimeAnchor.WAKEUP
+            AnchorTypeUi.BREAKFAST -> TimeAnchor.BREAKFAST
+            AnchorTypeUi.LUNCH -> TimeAnchor.LUNCH
+            AnchorTypeUi.DINNER -> TimeAnchor.DINNER
+            AnchorTypeUi.SLEEP -> TimeAnchor.SLEEP
+            AnchorTypeUi.BEFORE_WORKOUT -> TimeAnchor.BEFORE_WORKOUT
+            AnchorTypeUi.DURING_WORKOUT -> TimeAnchor.DURING_WORKOUT
+            AnchorTypeUi.AFTER_WORKOUT -> TimeAnchor.AFTER_WORKOUT
         }
     }
 
+    /**
+     * Maps persisted shared scheduling anchors back into the editor UI model.
+     */
     private fun timeAnchorToUi(value: TimeAnchor): AnchorTypeUi {
-        return when (value.name) {
-            "WAKE_UP" -> AnchorTypeUi.WAKE_UP
-            "BREAKFAST" -> AnchorTypeUi.BREAKFAST
-            "LUNCH" -> AnchorTypeUi.LUNCH
-            "DINNER" -> AnchorTypeUi.DINNER
-            "SLEEP" -> AnchorTypeUi.SLEEP
+        return when (value) {
+            TimeAnchor.WAKEUP -> AnchorTypeUi.WAKE_UP
+            TimeAnchor.BREAKFAST -> AnchorTypeUi.BREAKFAST
+            TimeAnchor.LUNCH -> AnchorTypeUi.LUNCH
+            TimeAnchor.DINNER -> AnchorTypeUi.DINNER
+            TimeAnchor.SLEEP -> AnchorTypeUi.SLEEP
+            TimeAnchor.BEFORE_WORKOUT -> AnchorTypeUi.BEFORE_WORKOUT
+            TimeAnchor.DURING_WORKOUT -> AnchorTypeUi.DURING_WORKOUT
+            TimeAnchor.AFTER_WORKOUT -> AnchorTypeUi.AFTER_WORKOUT
             else -> AnchorTypeUi.WAKE_UP
         }
     }
