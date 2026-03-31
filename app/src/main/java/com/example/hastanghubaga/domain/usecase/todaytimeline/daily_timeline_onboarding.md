@@ -297,4 +297,39 @@ Supplement-specific:
 
 ---
 
+---
+
+# 13. Design Philosophy
+
+The timeline is intentionally designed as a **composition layer**, not a source of truth.
+
+Key principles:
+
+- Each domain (supplements, meals, activities) owns its own data
+- The timeline does not mutate or persist data
+- The timeline is a **derived view**
+- All items are treated equally once converted to `TimelineItem`
+
+This allows:
+
+- independent evolution of each domain
+- simple merging logic
+- minimal coupling between features
+
+---
+
+# 14. Current vs Future Model
+
+## Current (v1)
+- Supplements are schedule-based
+- Timeline rows are derived from schedules
+- Logs are separate and loosely linked
+
+## Future (v2 – in progress)
+- Supplements become occurrence-based
+- Each timeline row represents a concrete occurrence
+- Logs link directly to occurrences
+- Extra doses create new occurrences
+
+This document intentionally reflects the **current system**, not the final one.
 # End
