@@ -57,7 +57,7 @@ class MealEntityDaoTest {
                 protein = 25.0,
                 carbs = 10.0,
                 fat = 5.0,
-                calories = 200.0,
+                calories = 200,
                 sodium = 500.0,
                 cholesterol = 100.0,
                 fiber = 2.0
@@ -150,7 +150,7 @@ class MealEntityDaoTest {
                 protein = 20.0,
                 carbs = 10.0,
                 fat = 5.0,
-                calories = 150.0,
+                calories = 150,
                 sodium = 300.0,
                 cholesterol = 50.0,
                 fiber = 1.0

@@ -7,6 +7,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.domain.model.supplement.DoseCondition
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.MealLog
+import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementScheduleEntry
+import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementTimingType
 import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
@@ -68,15 +70,20 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             )
 
             supplements
-                .filter { it.shouldTakeOn(date) }
+                .filter { it.shouldAppearOn(date) }
                 .map { it.withScheduleFor(mealsToday, anchorContext) }
+                .filter { it.scheduledTimes.isNotEmpty() }
         }
 
     private suspend fun SupplementWithUserSettings.withScheduleFor(
         mealsToday: List<MealLog>,
         anchorContext: AnchorTimeContext
     ): SupplementWithUserSettings {
-        val resolvedScheduledTimes = resolveScheduledTimes(anchorContext)
+        val resolvedEntries = resolveScheduleEntries(anchorContext)
+        val resolvedScheduledTimes = resolvedEntries
+            .map { it.time }
+            .distinct()
+            .sorted()
 
         val doseState =
             resolvedScheduledTimes.firstOrNull()?.let { time ->
@@ -89,38 +96,99 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
 
         return copy(
             scheduledTimes = resolvedScheduledTimes,
+            resolvedScheduleEntries = resolvedEntries,
             doseState = doseState
         )
     }
 
-    private suspend fun SupplementWithUserSettings.resolveScheduledTimes(
-        anchorContext: AnchorTimeContext
-    ): List<LocalTime> {
-        if (scheduleSpec is SupplementScheduleSpec.FixedTimes && scheduledTimes.isNotEmpty()) {
-            return scheduledTimes.sorted()
+    /**
+     * Determines whether this supplement should be considered for the target date.
+     *
+     * RULES:
+     * - If persisted or already-resolved schedule entries exist, the repository has already
+     *   determined date applicability and we should not re-filter using legacy supplement-level
+     *   recurrence fields.
+     * - Persisted anchored schedule specs are already date-filtered in the repository.
+     * - Legacy / fallback paths (settings-only fixed/meal-anchored or legacy supplement timing)
+     *   still use supplement-level recurrence behavior for compatibility.
+     */
+    private fun SupplementWithUserSettings.shouldAppearOn(
+        date: LocalDate
+    ): Boolean {
+        if (resolvedScheduleEntries.any { it.scheduleId != null }) {
+            return true
         }
 
-        val specTimes = scheduleSpec?.let { spec ->
-            resolveFromScheduleSpec(
+        if (
+            scheduleSpec is SupplementScheduleSpec.Anchored ||
+            scheduleSpec is SupplementScheduleSpec.AnchoredRows
+        ) {
+            return true
+        }
+
+        return shouldTakeOnLegacyDate(date)
+    }
+
+    private suspend fun SupplementWithUserSettings.resolveScheduleEntries(
+        anchorContext: AnchorTimeContext
+    ): List<ResolvedSupplementScheduleEntry> {
+        val existingEntries = resolvedScheduleEntries
+
+        val specEntries = scheduleSpec?.let { spec ->
+            resolveEntriesFromScheduleSpec(
                 spec = spec,
                 anchorContext = anchorContext
             )
-        }
+        } ?: emptyList()
 
-        if (specTimes != null) {
-            return specTimes
-        }
+        val legacyEntries =
+            if (existingEntries.isEmpty() && specEntries.isEmpty()) {
+                resolveEntriesFromLegacySupplementTiming(anchorContext)
+            } else {
+                emptyList()
+            }
 
-        return resolveFromLegacySupplementTiming(anchorContext)
+        return (existingEntries + specEntries + legacyEntries)
+            .distinctBy { entry ->
+                listOf(
+                    entry.scheduleId,
+                    entry.sourceRowId,
+                    entry.time.toSecondOfDay(),
+                    entry.timingType,
+                    entry.anchor,
+                    entry.label,
+                    entry.sortOrder
+                )
+            }
+            .sortedWith(
+                compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                    .thenBy { it.sortOrder }
+                    .thenBy { it.label ?: "" }
+                    .thenBy { it.scheduleId ?: Long.MAX_VALUE }
+                    .thenBy { it.sourceRowId ?: Long.MAX_VALUE }
+            )
     }
 
-    private suspend fun resolveFromScheduleSpec(
+    private suspend fun resolveEntriesFromScheduleSpec(
         spec: SupplementScheduleSpec,
         anchorContext: AnchorTimeContext
-    ): List<LocalTime> {
+    ): List<ResolvedSupplementScheduleEntry> {
         return when (spec) {
             is SupplementScheduleSpec.FixedTimes -> {
-                spec.times.sorted()
+                spec.times
+                    .distinct()
+                    .sorted()
+                    .mapIndexed { index, time ->
+                        ResolvedSupplementScheduleEntry(
+                            scheduleId = null,
+                            sourceRowId = null,
+                            time = time,
+                            timingType = ResolvedSupplementTimingType.LEGACY,
+                            anchor = null,
+                            label = null,
+                            sortOrder = index
+                        )
+                    }
             }
 
             is SupplementScheduleSpec.MealAnchored -> {
@@ -128,34 +196,76 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
                     .mapNotNull { mealType ->
                         mealType.toTimeAnchorOrNull()
                     }
-                    .mapNotNull { anchor ->
-                        resolveAnchoredTime(
+                    .mapIndexedNotNull { index, anchor ->
+                        resolveAnchoredEntry(
+                            scheduleId = null,
+                            sourceRowId = null,
                             anchor = anchor,
                             offsetMinutes = spec.offsetMinutes,
+                            label = null,
+                            sortOrder = index,
                             context = anchorContext
                         )
                     }
-                    .sorted()
+                    .sortedWith(
+                        compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                            .thenBy { it.sortOrder }
+                    )
             }
 
             is SupplementScheduleSpec.Anchored -> {
                 spec.anchors
-                    .mapNotNull { anchor ->
-                        resolveAnchoredTime(
+                    .toList()
+                    .sortedBy { it.name }
+                    .mapIndexedNotNull { index, anchor ->
+                        resolveAnchoredEntry(
+                            scheduleId = null,
+                            sourceRowId = null,
                             anchor = anchor,
                             offsetMinutes = spec.offsetMinutes,
+                            label = null,
+                            sortOrder = index,
                             context = anchorContext
                         )
                     }
-                    .distinct()
-                    .sorted()
+                    .sortedWith(
+                        compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                            .thenBy { it.sortOrder }
+                    )
+            }
+
+            is SupplementScheduleSpec.AnchoredRows -> {
+                spec.rows
+                    .sortedWith(
+                        compareBy(
+                            { it.sortOrder },
+                            { it.anchor.name },
+                            { it.label ?: "" }
+                        )
+                    )
+                    .mapIndexedNotNull { index, row ->
+                        resolveAnchoredEntry(
+                            scheduleId = null,
+                            sourceRowId = null,
+                            anchor = row.anchor,
+                            offsetMinutes = row.offsetMinutes,
+                            label = row.label,
+                            sortOrder = row.sortOrder.takeIf { it != 0 } ?: index,
+                            context = anchorContext
+                        )
+                    }
+                    .sortedWith(
+                        compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                            .thenBy { it.sortOrder }
+                            .thenBy { it.label ?: "" }
+                    )
             }
         }
     }
 
-    private suspend fun SupplementWithUserSettings.resolveFromLegacySupplementTiming(
+    private suspend fun SupplementWithUserSettings.resolveEntriesFromLegacySupplementTiming(
         anchorContext: AnchorTimeContext
-    ): List<LocalTime> {
+    ): List<ResolvedSupplementScheduleEntry> {
         val dosesPerDay = resolveDosesPerDay()
         val offsetMinutes = supplement.offsetMinutes ?: 0
         val anchor = supplement.doseAnchorType.toLegacyFallbackTimeAnchor() ?: return emptyList()
@@ -169,11 +279,24 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         val doseCount = kotlin.math.ceil(dosesPerDay).toInt()
 
         return List(doseCount) { index ->
-            applyAnchorOffsetUseCase(
+            val resolvedTime = applyAnchorOffsetUseCase(
                 baseTime = baseTime,
                 offsetMinutes = index * offsetMinutes
             )
-        }.sorted()
+
+            ResolvedSupplementScheduleEntry(
+                scheduleId = null,
+                sourceRowId = null,
+                time = resolvedTime,
+                timingType = ResolvedSupplementTimingType.LEGACY,
+                anchor = anchor,
+                label = null,
+                sortOrder = index
+            )
+        }.sortedWith(
+            compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                .thenBy { it.sortOrder }
+        )
     }
 
     private fun SupplementWithUserSettings.resolveDosesPerDay(): Double =
@@ -240,6 +363,32 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         )
     }
 
+    private fun resolveAnchoredEntry(
+        scheduleId: Long?,
+        sourceRowId: Long?,
+        anchor: TimeAnchor,
+        offsetMinutes: Int,
+        label: String?,
+        sortOrder: Int,
+        context: AnchorTimeContext
+    ): ResolvedSupplementScheduleEntry? {
+        val time = resolveAnchoredTime(
+            anchor = anchor,
+            offsetMinutes = offsetMinutes,
+            context = context
+        ) ?: return null
+
+        return ResolvedSupplementScheduleEntry(
+            scheduleId = scheduleId,
+            sourceRowId = sourceRowId,
+            time = time,
+            timingType = ResolvedSupplementTimingType.ANCHORED,
+            anchor = anchor,
+            label = label,
+            sortOrder = sortOrder
+        )
+    }
+
     private fun resolveAnchoredTime(
         anchor: TimeAnchor,
         offsetMinutes: Int,
@@ -256,7 +405,16 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         )
     }
 
-    private fun SupplementWithUserSettings.shouldTakeOn(
+    /**
+     * Legacy supplement-level recurrence compatibility path.
+     *
+     * This remains important for old supplement timing flows and for the future
+     * "strict every N days" interpretation that may depend on actual last-taken data.
+     *
+     * Persisted schedule rows should eventually be evaluated independently from these
+     * supplement-level fields.
+     */
+    private fun SupplementWithUserSettings.shouldTakeOnLegacyDate(
         date: LocalDate
     ): Boolean =
         when (supplement.frequencyType) {

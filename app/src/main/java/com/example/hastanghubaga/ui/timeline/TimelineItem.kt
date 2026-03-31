@@ -3,6 +3,7 @@ package com.example.hastanghubaga.ui.timeline
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementScheduleEntry
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.datetime.LocalTime
@@ -14,6 +15,19 @@ sealed interface TimelineItem {
      * Planned/scheduled supplement timeline row.
      *
      * This row represents a supplement occurrence shown in the Today timeline.
+     *
+     * ## Schedule-aware behavior
+     * [resolvedScheduleEntry] preserves the concrete same-day scheduling output
+     * that produced this row when available.
+     *
+     * This enables the timeline to retain:
+     * - schedule identity
+     * - timing source (fixed / anchored / legacy)
+     * - row-level anchor metadata
+     * - future linkage to stricter recurrence behavior
+     *
+     * It is nullable for backward compatibility while older callers still build
+     * supplement timeline rows from flat [SupplementWithUserSettings.scheduledTimes].
      *
      * ## Occurrence-aware reconciliation
      * [occurrenceId] is optional because the app is transitioning from a
@@ -32,6 +46,7 @@ sealed interface TimelineItem {
         override val time: LocalTime,
         val isTaken: Boolean = false,
         val supplement: SupplementWithUserSettings,
+        val resolvedScheduleEntry: ResolvedSupplementScheduleEntry? = null,
         val occurrenceId: String? = null
     ) : TimelineItem
 
@@ -71,10 +86,10 @@ sealed interface TimelineItem {
     data class SupplementDoseLogTimelineItem(
         val doseLogId: Long,
         val supplementId: Long,
-        val title: String,                 // display name
-        override val time: LocalTime,      // actual taken time
+        val title: String,
+        override val time: LocalTime,
         val amount: Double?,
-        val unit: String?,                 // or your SupplementDoseUnit
-        val scheduledTime: LocalTime? = null // optional
+        val unit: String?,
+        val scheduledTime: LocalTime? = null
     ) : TimelineItem
 }

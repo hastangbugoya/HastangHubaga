@@ -44,7 +44,7 @@ class MealNutritionDaoTest {
             protein = 25.0,
             carbs = 40.0,
             fat = 10.0,
-            calories = 350.0,
+            calories = 350,
             sodium = 120.0,
             cholesterol = 30.0,
             fiber = 5.0
@@ -79,7 +79,7 @@ class MealNutritionDaoTest {
             protein = 10.0,
             carbs = 20.0,
             fat = 5.0,
-            calories = 200.0,
+            calories = 200,
             sodium = 50.0,
             cholesterol = 10.0,
             fiber = 2.0
@@ -110,7 +110,7 @@ class MealNutritionDaoTest {
             protein = 15.0,
             carbs = 30.0,
             fat = 8.0,
-            calories = 280.0,
+            calories = 280,
             sodium = 100.0,
             cholesterol = 20.0,
             fiber = 4.0

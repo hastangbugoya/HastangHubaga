@@ -69,14 +69,7 @@ import javax.inject.Inject
  * - Activities may be marked with `isWorkout = true`
  * - This use case currently does NOT use that information
  *
- * However, this is the correct integration point for future enhancements:
- *
- * 👉 Workout-aware anchor resolution (BEFORE/DURING/AFTER_WORKOUT)
- *
- * Planned role:
- * - Extract workout activities here
- * - Provide them to anchor resolution context
- * - Keep supplements + anchor logic decoupled from Activity repository
+ * However, this is the correct integration point for future enhancements.
  *
  * ---
  * 📦 Imported Meals
@@ -105,7 +98,7 @@ import javax.inject.Inject
  * - Keeps mapping logic simple and verifiable
  *
  * ---
- * @param supplements Supplements with resolved scheduled times
+ * @param supplements Supplements with resolved scheduled entries/times
  * @param meals Native HH meals (optionally anchor-capable)
  * @param importedMeals External meals (read-only)
  * @param activities Activities for the day (may include workouts)
@@ -125,11 +118,24 @@ class BuildTodayTimelineUseCase @Inject constructor(
     ): List<TimelineItem> {
         val supplementItems =
             supplements.flatMap { supplementWithSettings ->
-                supplementWithSettings.scheduledTimes.map { time ->
-                    TimelineItem.SupplementTimelineItem(
-                        time = time,
-                        supplement = supplementWithSettings,
-                    )
+                val resolvedEntries = supplementWithSettings.resolvedScheduleEntries
+
+                if (resolvedEntries.isNotEmpty()) {
+                    resolvedEntries.map { entry ->
+                        TimelineItem.SupplementTimelineItem(
+                            time = entry.time,
+                            supplement = supplementWithSettings,
+                            resolvedScheduleEntry = entry
+                        )
+                    }
+                } else {
+                    supplementWithSettings.scheduledTimes.map { time ->
+                        TimelineItem.SupplementTimelineItem(
+                            time = time,
+                            supplement = supplementWithSettings,
+                            resolvedScheduleEntry = null
+                        )
+                    }
                 }
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementItems: ${supplementItems.size}")

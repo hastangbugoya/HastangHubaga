@@ -3,6 +3,8 @@ package com.example.hastanghubaga.di
 import android.content.Context
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
+import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
@@ -12,7 +14,8 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
-import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
@@ -26,8 +29,6 @@ import dagger.hilt.testing.TestInstallIn
 import javax.inject.Singleton
 
 /**
- * app/src/androidTest/java/com/example/hastanghubaga/di/TestDatabaseModule.kt
- *
  * Hilt test module that replaces the production DatabaseModule.
  *
  * PURPOSE
@@ -41,30 +42,10 @@ import javax.inject.Singleton
  *
  * CRITICAL RULE
  * -------------
- * DAO provider method names MUST MATCH the production module.
- * Hilt generates factories based on method signatures.
+ * DAO provider coverage must stay in sync with the production DatabaseModule.
  *
- * CHECKLIST (MUST VERIFY)
- * -----------------------
- * ✓ Annotated with @TestInstallIn
- * ✓ Replaces DatabaseModule
- * ✓ Uses Room.inMemoryDatabaseBuilder
- * ✓ All DAO providers exist and are named identically to production
- * ✓ No duplicate TestDatabaseModule elsewhere
- *
- * COMMON MISTAKES
- * ---------------
- * ✗ Missing a DAO provider → kapt “cannot find symbol” error
- * ✗ Method name mismatch (provideXDao vs provideXEntityDao)
- * ✗ Keeping multiple TestDatabaseModule files
- *
- * TIPS
- * ----
- * • When a kapt error mentions ProvideXDaoFactory → this file is the issue
- * • If you add a new DAO, update BOTH DatabaseModule and TestDatabaseModule
- * • Always clean & rebuild after changing this file
+ * If you add a new DAO to DatabaseModule, add the matching test provider here too.
  */
-
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
@@ -72,9 +53,6 @@ import javax.inject.Singleton
 )
 object TestDatabaseModule {
 
-    // -------------------------
-    // DATABASE
-    // -------------------------
     @Provides
     @Singleton
     fun provideDatabase(
@@ -87,17 +65,21 @@ object TestDatabaseModule {
             .allowMainThreadQueries()
             .build()
 
-    // -------------------------
-    // DAOs — MUST MATCH NAMES
-    // -------------------------
-
     @Provides
     fun provideSupplementEntityDao(db: AppDatabase): SupplementEntityDao =
         db.supplementEntityDao()
 
     @Provides
+    fun provideSupplementScheduleDao(db: AppDatabase): SupplementScheduleDao =
+        db.supplementScheduleDao()
+
+    @Provides
     fun provideIngredientDao(db: AppDatabase): IngredientEntityDao =
         db.ingredientEntityDao()
+
+    @Provides
+    fun provideSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
+        db.supplementDailyLogDao()
 
     @Provides
     fun provideDailyStartTimeDao(db: AppDatabase): DailyStartTimeDao =
@@ -124,30 +106,34 @@ object TestDatabaseModule {
         db.mealNutritionDao()
 
     @Provides
+    fun provideAkImportedLogDao(db: AppDatabase): AkImportedLogDao =
+        db.akImportedLogDao()
+
+    @Provides
+    fun provideAkImportedMealDao(db: AppDatabase): AkImportedMealDao =
+        db.akImportedMealDao()
+
+    @Provides
     fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
         db.userNutritionGoalsEntityDao()
 
     @Provides
-    fun provideSupplementIngredientDao(db: AppDatabase): SupplementIngredientDao =
-        db.supplementIngredientDao()
-
-    @Provides
-    fun providesIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
-        db.ingredientPreferenceDao()
-
-    @Provides
-    fun providesUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
+    fun provideUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
         db.upcomingScheduleDao()
-    @Provides
-    fun providesSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
-        db.supplementDailyLogDao()
 
     @Provides
-    fun providesNutritionPlanEntityDao(db: AppDatabase): NutritionPlanEntityDao =
+    fun provideNutritionPlanEntityDao(db: AppDatabase): NutritionPlanEntityDao =
         db.nutritionPlanEntityDao()
 
     @Provides
     fun provideNutrientGoalDao(db: AppDatabase): NutrientGoalDao =
         db.nutrientGoalDao()
-}
 
+    @Provides
+    fun provideIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
+        db.ingredientPreferenceDao()
+
+    @Provides
+    fun provideSupplementNutritionDao(db: AppDatabase): SupplementNutritionDao =
+        db.supplementNutritionDao()
+}

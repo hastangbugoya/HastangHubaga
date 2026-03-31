@@ -22,6 +22,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
 import com.example.hastanghubaga.data.local.entity.user.ScheduleTypeEntity
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
@@ -29,14 +30,16 @@ import com.example.hastanghubaga.data.local.mappers.toMealNutritionFromNames
 import com.example.hastanghubaga.data.local.mappers.toUserSupplementSettings
 import com.example.hastanghubaga.domain.model.meal.MealNutrition
 import com.example.hastanghubaga.domain.model.nutrition.DailyIngredientSummary
+import com.example.hastanghubaga.domain.model.supplement.AnchoredRow
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementScheduleEntry
+import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementTimingType
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
-import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -80,25 +83,26 @@ class SupplementRepositoryImpl @Inject constructor(
                 } else {
                     val targetDate = LocalDate.parse(date)
 
-                    val supplementFlows: List<Flow<SupplementWithUserSettings>> = supplements.map { supplement ->
-                        combine(
-                            supplementUserSettingsDao.observeSettings(supplement.id),
-                            supplementScheduleDao.observeSchedulesForSupplement(supplement.id)
-                        ) { settings, schedules ->
-                            settings to schedules
-                        }.flatMapLatest { (settings, schedules) ->
-                            flow {
-                                emit(
-                                    buildSupplementWithUserSettings(
-                                        supplement = supplement,
-                                        settings = settings,
-                                        schedules = schedules,
-                                        date = targetDate
+                    val supplementFlows: List<Flow<SupplementWithUserSettings>> =
+                        supplements.map { supplement ->
+                            combine(
+                                supplementUserSettingsDao.observeSettings(supplement.id),
+                                supplementScheduleDao.observeSchedulesForSupplement(supplement.id)
+                            ) { settings, schedules ->
+                                settings to schedules
+                            }.flatMapLatest { (settings, schedules) ->
+                                flow {
+                                    emit(
+                                        buildSupplementWithUserSettings(
+                                            supplement = supplement,
+                                            settings = settings,
+                                            schedules = schedules,
+                                            date = targetDate
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
-                    }
 
                     combine(supplementFlows) { results ->
                         results.toList()
@@ -385,72 +389,176 @@ class SupplementRepositoryImpl @Inject constructor(
             .filter { it.isEnabled }
             .filter { it.isActiveOn(date) }
 
-        val scheduleSpec = if (applicableSchedules.isNotEmpty()) {
-            buildScheduleSpecFromPersistedSchedules(applicableSchedules)
-                ?: settings?.toScheduleSpec()
-        } else {
-            settings?.toScheduleSpec()
-        }
+        val persistedFixedEntries = buildResolvedFixedEntriesFromPersistedSchedules(
+            schedules = applicableSchedules
+        )
 
-        val scheduledTimes = when (scheduleSpec) {
-            is SupplementScheduleSpec.FixedTimes -> scheduleSpec.times.sorted()
-            else -> emptyList()
-        }
+        val persistedScheduleSpec = buildPersistedScheduleSpecFromSchedules(
+            schedules = applicableSchedules
+        )
+
+        val fallbackScheduleSpec =
+            if (applicableSchedules.isEmpty()) {
+                settings?.toScheduleSpec()
+            } else {
+                persistedScheduleSpec ?: settings?.toScheduleSpec()
+            }
+
+        val fallbackResolvedEntries =
+            if (persistedFixedEntries.isEmpty()) {
+                buildResolvedEntriesFromFallbackScheduleSpec(fallbackScheduleSpec)
+            } else {
+                emptyList()
+            }
+
+        val resolvedEntries = (persistedFixedEntries + fallbackResolvedEntries)
+            .distinctBy { entry ->
+                listOf(
+                    entry.scheduleId,
+                    entry.sourceRowId,
+                    entry.time.toSecondOfDay(),
+                    entry.timingType,
+                    entry.anchor,
+                    entry.label,
+                    entry.sortOrder
+                )
+            }
+            .sortedWith(
+                compareBy<ResolvedSupplementScheduleEntry>({ it.time })
+                    .thenBy { it.sortOrder }
+                    .thenBy { it.label ?: "" }
+                    .thenBy { it.scheduleId ?: Long.MAX_VALUE }
+                    .thenBy { it.sourceRowId ?: Long.MAX_VALUE }
+            )
+
+        val scheduledTimes = resolvedEntries
+            .map { it.time }
+            .distinct()
 
         return SupplementWithUserSettings(
             supplement = supplement.toDomain(),
             userSettings = settings?.toUserSupplementSettings(),
             doseState = MealAwareDoseState.Unknown,
             scheduledTimes = scheduledTimes,
-            scheduleSpec = scheduleSpec
+            scheduleSpec = fallbackScheduleSpec,
+            resolvedScheduleEntries = resolvedEntries
         )
     }
 
-    private suspend fun buildScheduleSpecFromPersistedSchedules(
+    /**
+     * Builds concrete same-day fixed-time outputs from persisted schedule rows.
+     *
+     * This preserves schedule identity and child-row identity instead of flattening
+     * everything into a single plain time list too early.
+     */
+    private suspend fun buildResolvedFixedEntriesFromPersistedSchedules(
         schedules: List<SupplementScheduleEntity>
-    ): SupplementScheduleSpec? {
-        val fixedTimes = schedules
+    ): List<ResolvedSupplementScheduleEntry> {
+        val fixedSchedules = schedules
             .filter { it.timingType == ScheduleTimingType.FIXED }
+
+        if (fixedSchedules.isEmpty()) return emptyList()
+
+        val fixedRows = fixedSchedules
             .flatMap { schedule ->
-                supplementScheduleDao.getFixedTimesForSchedule(schedule.id)
+                supplementScheduleDao
+                    .getFixedTimesForSchedule(schedule.id)
+                    .map { row -> schedule to row }
             }
             .sortedWith(
-                compareBy(
-                    { it.sortOrder },
-                    { it.time.hour },
-                    { it.time.minute },
-                    { it.id }
+                compareBy<Pair<SupplementScheduleEntity, SupplementScheduleFixedTimeEntity>>(
+                    { it.first.id },
+                    { it.second.sortOrder },
+                    { it.second.time.hour },
+                    { it.second.time.minute },
+                    { it.second.id }
                 )
             )
-            .map { it.time }
-            .distinct()
 
-        if (fixedTimes.isNotEmpty()) {
-            return SupplementScheduleSpec.FixedTimes(times = fixedTimes)
+        return fixedRows.map { (schedule, row) ->
+            ResolvedSupplementScheduleEntry(
+                scheduleId = schedule.id,
+                sourceRowId = row.id,
+                time = row.time,
+                timingType = ResolvedSupplementTimingType.FIXED,
+                anchor = null,
+                label = row.label,
+                sortOrder = row.sortOrder
+            )
+        }
+    }
+
+    /**
+     * Builds persisted schedule intent without collapsing anchored child rows into
+     * a shared-offset representation.
+     *
+     * Important:
+     * - Fixed persisted schedules already flow through [resolvedScheduleEntries].
+     * - Anchored persisted schedules are emitted as [SupplementScheduleSpec.AnchoredRows]
+     *   so the use case can resolve them later with anchor context while preserving
+     *   row-level offset/label/order fidelity.
+     */
+    private suspend fun buildPersistedScheduleSpecFromSchedules(
+        schedules: List<SupplementScheduleEntity>
+    ): SupplementScheduleSpec? {
+        val anchoredSchedules = schedules
+            .filter { it.timingType == ScheduleTimingType.ANCHORED }
+
+        if (anchoredSchedules.isEmpty()) {
+            return null
         }
 
-        val anchoredRows = schedules
-            .filter { it.timingType == ScheduleTimingType.ANCHORED }
+        val anchoredRows = anchoredSchedules
             .flatMap { schedule ->
                 supplementScheduleDao.getAnchoredTimesForSchedule(schedule.id)
             }
             .sortedWith(
-                compareBy(
+                compareBy<SupplementScheduleAnchoredTimeEntity>(
+                    { it.scheduleId },
                     { it.sortOrder },
                     { it.id }
                 )
             )
 
-        if (anchoredRows.isNotEmpty()) {
-            val anchors = anchoredRows.map { it.anchor }.toSet()
-            val offsetMinutes = anchoredRows.first().offsetMinutes
-            return SupplementScheduleSpec.Anchored(
-                anchors = anchors,
-                offsetMinutes = offsetMinutes
-            )
+        if (anchoredRows.isEmpty()) {
+            return null
         }
 
-        return null
+        return SupplementScheduleSpec.AnchoredRows(
+            rows = anchoredRows.map { row ->
+                AnchoredRow(
+                    anchor = row.anchor,
+                    offsetMinutes = row.offsetMinutes,
+                    label = row.label,
+                    sortOrder = row.sortOrder
+                )
+            }
+        )
+    }
+
+    private fun buildResolvedEntriesFromFallbackScheduleSpec(
+        scheduleSpec: SupplementScheduleSpec?
+    ): List<ResolvedSupplementScheduleEntry> {
+        return when (scheduleSpec) {
+            is SupplementScheduleSpec.FixedTimes -> {
+                scheduleSpec.times
+                    .distinct()
+                    .sorted()
+                    .mapIndexed { index, time ->
+                        ResolvedSupplementScheduleEntry(
+                            scheduleId = null,
+                            sourceRowId = null,
+                            time = time,
+                            timingType = ResolvedSupplementTimingType.LEGACY,
+                            anchor = null,
+                            label = null,
+                            sortOrder = index
+                        )
+                    }
+            }
+
+            else -> emptyList()
+        }
     }
 
     private fun SupplementScheduleEntity.isActiveOn(date: LocalDate): Boolean {
