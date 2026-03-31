@@ -1,11 +1,11 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import android.util.Log
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import javax.inject.Inject
+
 /**
  * Resolves the **domain meaning** of a tap on a Today timeline item.
  *
@@ -45,6 +45,7 @@ import javax.inject.Inject
  * ## Responsibilities
  * - Identify the type of timeline item tapped
  * - Extract stable domain identifiers (IDs, defaults)
+ * - Preserve occurrence-aware supplement metadata when available
  * - Return an explicit [TimelineTapAction]
  *
  * ## Non-Responsibilities
@@ -71,6 +72,11 @@ class HandleTimelineItemTapUseCase @Inject constructor(
      * The UI model representing a single entry in the Today timeline.
      * This model is treated as read-only input.
      *
+     * For supplement items, this method preserves the optional occurrence ID
+     * carried by [SupplementUiModel]. This enables downstream logging flows to
+     * keep a one-to-one link between a concrete planned supplement occurrence
+     * and the eventual logged dose.
+     *
      * @return
      * A [TimelineTapAction] describing the domain-level outcome of the tap.
      * The result is never `null`; `NoOp` is used when no action is required.
@@ -83,7 +89,8 @@ class HandleTimelineItemTapUseCase @Inject constructor(
                     defaultUnit = item.defaultUnit,
                     suggestedDose = item.suggestedDose,
                     title = item.title,
-                    scheduledTime = item.time
+                    scheduledTime = item.time,
+                    occurrenceId = item.occurrenceId
                 )
 
             else ->

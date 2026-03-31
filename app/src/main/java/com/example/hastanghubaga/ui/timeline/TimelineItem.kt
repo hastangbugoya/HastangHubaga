@@ -10,10 +10,29 @@ import kotlinx.datetime.LocalTime
 sealed interface TimelineItem {
     val time: LocalTime
 
+    /**
+     * Planned/scheduled supplement timeline row.
+     *
+     * This row represents a supplement occurrence shown in the Today timeline.
+     *
+     * ## Occurrence-aware reconciliation
+     * [occurrenceId] is optional because the app is transitioning from a
+     * schedule/log split toward explicit occurrence ↔ log linkage.
+     *
+     * When present, [occurrenceId] identifies the concrete planner occurrence
+     * that this supplement row represents. This enables:
+     * - one-to-one reconciliation with a logged dose
+     * - multi-dose-per-day support
+     * - future promotion of ad-hoc doses into first-class planner items
+     *
+     * When absent, the row still behaves as a normal scheduled supplement item
+     * but downstream logging/reconciliation may treat it as unlinked.
+     */
     data class SupplementTimelineItem(
         override val time: LocalTime,
         val isTaken: Boolean = false,
-        val supplement: SupplementWithUserSettings
+        val supplement: SupplementWithUserSettings,
+        val occurrenceId: String? = null
     ) : TimelineItem
 
     data class ActivityTimelineItem(

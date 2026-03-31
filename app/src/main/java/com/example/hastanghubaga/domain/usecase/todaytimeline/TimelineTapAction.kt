@@ -32,10 +32,29 @@ sealed interface TimelineTapAction {
      * This action is typically translated by the ViewModel into a UI
      * effect such as showing a dose input dialog.
      *
+     * ## Occurrence-aware logging
+     * A supplement timeline item may represent a **concrete planned occurrence**
+     * (e.g. "Creatine at 8:15 AM").
+     *
+     * When available, [occurrenceId] links this action to that specific
+     * planned occurrence so the eventual log can be reconciled 1:1 with
+     * the planner/timeline item.
+     *
+     * If null:
+     * - the action may represent an ad-hoc / extra dose
+     * - or the system is still operating in a log-first mode
+     *
      * @property supplementId
      * The stable identifier of the supplement being logged.
      * This ID must be sufficient for downstream use cases to persist
      * an intake log without relying on UI models.
+     *
+     * @property title
+     * Display name of the supplement. Used for UI presentation only.
+     *
+     * @property scheduledTime
+     * The time associated with the planned occurrence.
+     * Used as a UI hint and may be used as a fallback planned time.
      *
      * @property defaultUnit
      * The preferred or most recently used dose unit for this supplement.
@@ -44,13 +63,18 @@ sealed interface TimelineTapAction {
      * @property suggestedDose
      * A suggested dose amount (e.g., from user settings or schedule).
      * This value is advisory only and must be validated later.
+     *
+     * @property occurrenceId
+     * Optional stable identifier for the specific planned occurrence.
+     * Enables one-to-one reconciliation between planner items and logs.
      */
     data class RequestDoseInput(
         val supplementId: Long,
         val title: String,
         val scheduledTime: LocalTime,
         val defaultUnit: SupplementDoseUnit,
-        val suggestedDose: Double
+        val suggestedDose: Double,
+        val occurrenceId: String? = null
     ) : TimelineTapAction
 
     /**

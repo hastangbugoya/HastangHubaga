@@ -71,6 +71,24 @@ sealed interface TimelineItemUiModel {
     val alertOffsetMinutes: Int?
 }
 
+/**
+ * UI-facing supplement timeline row.
+ *
+ * This usually represents a planned/scheduled supplement occurrence.
+ *
+ * ## Occurrence-aware logging
+ * [occurrenceId] is optional because the app is transitioning from a log-first
+ * timeline toward occurrence-aware reconciliation.
+ *
+ * When present, [occurrenceId] identifies the concrete planned supplement
+ * occurrence that this row represents. This allows tap → dialog → confirm flows
+ * to preserve a one-to-one link between:
+ * - the planner/timeline row
+ * - the eventual supplement log entry
+ *
+ * When absent, the row still behaves as a normal supplement timeline item, but
+ * downstream logging flows may treat it as unlinked/manual.
+ */
 data class SupplementUiModel(
     override val id: Long,
     override val time: LocalTime,
@@ -85,13 +103,14 @@ data class SupplementUiModel(
     val doseState: MealAwareDoseState?,
     val defaultUnit: SupplementDoseUnit,
     val suggestedDose: Double,
+    val occurrenceId: String? = null,
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
         TodayUiRowType.SUPPLEMENT
 
     override val key: String =
-        "SUPPLEMENT-$supplementId-$scheduledTime"
+        "SUPPLEMENT-$supplementId-$scheduledTime-${occurrenceId ?: "NO_OCCURRENCE"}"
 }
 
 data class ActivityUiModel(

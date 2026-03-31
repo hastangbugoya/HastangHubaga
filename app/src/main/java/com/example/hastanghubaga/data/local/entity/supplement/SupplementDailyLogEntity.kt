@@ -13,6 +13,7 @@ import kotlinx.serialization.Serializable
  * - Track what supplements were actually taken versus scheduled.
  * - Compute daily summaries (e.g., ingredient totals, streaks, compliance rates).
  * - Preserve historical accuracy even if supplement dose units change later.
+ * - Optionally link a logged dose to a concrete planned supplement occurrence.
  *
  * ## Fields
  *
@@ -34,11 +35,22 @@ import kotlinx.serialization.Serializable
  * @property timestamp Unix epoch milliseconds representing when the user actually
  * recorded this log. Useful for ordering logs and showing activity history.
  *
+ * @property occurrenceId Optional stable identifier for the concrete planned
+ * supplement occurrence this log belongs to.
+ *
+ * This is nullable because:
+ * - some historical rows may predate occurrence-based reconciliation
+ * - users may record extra/manual doses that are not yet linked
+ * - migration can be incremental while the app transitions from log-first
+ *   to occurrence-aware timeline behavior
+ *
  * ## Notes
  * - This table powers daily intake calculations, ingredient aggregation, and streaks.
  * - If multiple logs exist for the same supplement on the same day,
- * they should be aggregated for daily nutrition summaries.
+ *   they should be aggregated for daily nutrition summaries.
  * - Not all logs must correspond to scheduled doses; users may manually record extra doses.
+ * - When occurrence-aware reconciliation is used, a log may link to a specific
+ *   scheduled or ad-hoc supplement occurrence via [occurrenceId].
  *
  * @see SupplementEntity
  * @see SupplementDoseUnit
@@ -55,6 +67,7 @@ data class SupplementDailyLogEntity(
     val actualServingTaken: Double,
     val doseUnit: SupplementDoseUnit,
 
-    val timestamp: Long
-)
+    val timestamp: Long,
 
+    val occurrenceId: String? = null
+)

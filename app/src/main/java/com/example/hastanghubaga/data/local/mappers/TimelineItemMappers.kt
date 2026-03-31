@@ -2,14 +2,11 @@ package com.example.hastanghubaga.data.local.mappers
 
 import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.time.JavaTimeAdapter
-import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
+import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 fun TimelineItem.toUpcomingSchedule(
     date: LocalDate
@@ -19,7 +16,7 @@ fun TimelineItem.toUpcomingSchedule(
             UpcomingSchedule(
                 type = TodayUiRowType.SUPPLEMENT,
                 referenceId = supplement.supplement.id,
-                scheduledAt =  LocalDateTime(
+                scheduledAt = LocalDateTime(
                     date = date,
                     time = this.time
                 ),
@@ -31,11 +28,13 @@ fun TimelineItem.toUpcomingSchedule(
             UpcomingSchedule(
                 type = TodayUiRowType.MEAL,
                 referenceId = meal.id,
-                scheduledAt =  LocalDateTime(
+                scheduledAt = LocalDateTime(
                     date = date,
                     time = this.time
                 ),
-                title = meal.type.name,
+                title = meal.name
+                    ?.takeIf { it.isNotBlank() }
+                    ?: meal.type.name,
                 subtitle = meal.notes
             )
 
@@ -43,7 +42,7 @@ fun TimelineItem.toUpcomingSchedule(
             UpcomingSchedule(
                 type = TodayUiRowType.ACTIVITY,
                 referenceId = activity.id,
-                scheduledAt =  LocalDateTime(
+                scheduledAt = LocalDateTime(
                     date = date,
                     time = this.time
                 ),
@@ -57,7 +56,6 @@ fun TimelineItem.toUpcomingSchedule(
     }
 }
 
-// data/mapper/UpcomingScheduleMappers.kt
 fun UpcomingSchedule.toEntity(): UpcomingScheduleEntity =
     UpcomingScheduleEntity(
         id = id,

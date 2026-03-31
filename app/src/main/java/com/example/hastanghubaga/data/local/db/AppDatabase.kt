@@ -18,6 +18,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
@@ -36,6 +37,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
@@ -51,6 +53,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         IngredientEntity::class,
         SupplementEntity::class,
         SupplementDailyLogEntity::class,
+        SupplementOccurrenceEntity::class,
         DailyStartTimeEntity::class,
         SupplementIngredientEntity::class,
         EventDefaultTimeEntity::class,
@@ -71,7 +74,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -79,6 +82,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun ingredientEntityDao(): IngredientEntityDao
     abstract fun supplementEntityDao(): SupplementEntityDao
     abstract fun supplementDailyLogDao(): SupplementDailyLogDao
+    abstract fun supplementOccurrenceDao(): SupplementOccurrenceDao
     abstract fun dailyStartTimeDao(): DailyStartTimeDao
     abstract fun supplementIngredientDao(): SupplementIngredientDao
     abstract fun eventTimeDao(): EventTimeDao

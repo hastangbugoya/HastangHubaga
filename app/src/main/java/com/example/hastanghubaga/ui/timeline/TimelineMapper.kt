@@ -26,12 +26,13 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                             supplement.effectiveDoseUnit.toDisplayCase(
                                 supplement.effectiveServingSize
                             ),
-                isCompleted = false,
+                isCompleted = isTaken,
                 supplementId = supplement.supplement.id,
                 scheduledTime = time,
                 doseState = supplement.doseState,
                 defaultUnit = supplement.supplement.recommendedDoseUnit,
-                suggestedDose = supplement.supplement.recommendedServingSize
+                suggestedDose = supplement.supplement.recommendedServingSize,
+                occurrenceId = occurrenceId // ✅ NEW: pass-through
             )
         }
 
@@ -39,7 +40,9 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
             MealUiModel(
                 id = meal.id,
                 time = meal.timestamp.time,
-                title = meal.type.name,
+                title = meal.name
+                    ?.takeIf { it.isNotBlank() }
+                    ?: meal.type.name,
                 subtitle = meal.notes,
                 isCompleted = true,
                 mealId = meal.id,
@@ -117,27 +120,3 @@ private fun importedMealStableId(groupingKey: String): Long {
     val positive = groupingKey.hashCode().toLong() and 0x7fffffffL
     return -positive.coerceAtLeast(1L)
 }
-
-//private fun com.example.hastanghubaga.data.local.entity.meal.MealType.toDomain(): MealType =
-//    when (this) {
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.BREAKFAST ->
-//            MealType.BREAKFAST
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.LUNCH ->
-//            MealType.LUNCH
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.DINNER ->
-//            MealType.DINNER
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.SNACK ->
-//            MealType.SNACK
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.PRE_WORKOUT ->
-//            MealType.PRE_WORKOUT
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.POST_WORKOUT ->
-//            MealType.POST_WORKOUT
-//
-//        com.example.hastanghubaga.data.local.entity.meal.MealType.CUSTOM ->
-//            MealType.CUSTOM
-//    }

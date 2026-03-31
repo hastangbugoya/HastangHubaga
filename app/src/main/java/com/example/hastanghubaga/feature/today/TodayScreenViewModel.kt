@@ -72,6 +72,17 @@ import kotlinx.datetime.toLocalDateTime
  * - Heavy timeline building runs off the main thread via [flowOn] to avoid jank / skipped frames.
  *
  * ---
+ * ## Occurrence-aware supplement logging
+ * Supplement logging is now forward-compatible with occurrence-aware reconciliation.
+ *
+ * The ViewModel passes an optional occurrence ID through the supplement logging flow:
+ * - scheduled supplement row -> may supply an occurrence ID
+ * - extra/manual supplement log -> occurrence ID may be null
+ *
+ * This keeps the UI flow compatible with both current log-first behavior and the
+ * incremental move toward planner occurrence ↔ log linkage.
+ *
+ * ---
  * ## Tips to avoid reintroducing this bug
  * - Do NOT cancel and restart terminal Flow collections unless you are done forever.
  * - Avoid starting new `viewModelScope.launch { flow.collect { ... } }` inside user intents.
@@ -160,7 +171,9 @@ class TodayScreenViewModel @Inject constructor(
                             supplementId = intent.supplementId,
                             fractionTaken = intent.amount,
                             unit = intent.unit,
-                            timeUseIntent = timeUseIntent
+                            timeUseIntent = timeUseIntent,
+                            occurrenceId = intent.occurrenceId,
+                            plannedTime = intent.scheduledTime
                         )
                     )
                 }
@@ -245,13 +258,20 @@ class TodayScreenViewModel @Inject constructor(
                             TodayScreenContract.SupplementLogOption.NowExtra -> null
                         }
 
+                    val occurrenceIdOrNull =
+                        when (intent.option) {
+                            TodayScreenContract.SupplementLogOption.Scheduled -> intent.occurrenceId
+                            TodayScreenContract.SupplementLogOption.NowExtra -> null
+                        }
+
                     _effect.send(
                         ShowDoseInputDialog(
                             supplementId = intent.supplementId,
                             title = intent.title,
                             defaultUnit = intent.defaultUnit,
                             suggestedDose = intent.suggestedDose,
-                            scheduledTime = scheduledOrNull
+                            scheduledTime = scheduledOrNull,
+                            occurrenceId = occurrenceIdOrNull
                         )
                     )
                 }

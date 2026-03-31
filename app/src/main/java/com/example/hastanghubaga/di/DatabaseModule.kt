@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.di
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
@@ -46,6 +47,9 @@ object DatabaseModule {
             .fallbackToDestructiveMigration()
             .addCallback(callback)
             .build()
+            .also {
+                Log.e("Meow", "DB INSTANCE CREATED")
+            }
 
     @Provides
     fun provideSupplementEntityDao(db: AppDatabase): SupplementEntityDao =

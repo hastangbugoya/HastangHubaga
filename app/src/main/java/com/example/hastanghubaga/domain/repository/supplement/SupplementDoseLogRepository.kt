@@ -10,6 +10,7 @@ interface SupplementDoseLogRepository {
         date: LocalDate,
         time: LocalTime,
         fractionTaken: Double,
-        doseUnit: SupplementDoseUnit
+        doseUnit: SupplementDoseUnit,
+        occurrenceId: String?
     )
 }

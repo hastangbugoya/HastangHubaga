@@ -34,12 +34,23 @@ object TodayScreenContract {
         data object Refresh : Intent
         data class TimelineItemClicked(val item: TimelineItemUiModel) : Intent
 
+        /**
+         * Confirms a supplement dose log from the Today screen.
+         *
+         * [occurrenceId] is optional because:
+         * - a scheduled supplement row may map to a concrete planned occurrence
+         * - an extra / manual supplement log may not yet be linked to an occurrence
+         *
+         * This keeps the UI contract forward-compatible with occurrence-aware
+         * reconciliation while still supporting current manual logging flows.
+         */
         data class ConfirmDose(
             val supplementId: Long,
             val amount: Double,
             val unit: SupplementDoseUnit,
             val scheduledTime: LocalTime?,
-            val actualTime: LocalTime?
+            val actualTime: LocalTime?,
+            val occurrenceId: String? = null
         ) : Intent
 
         data class ExerciseTapped(val item: TimelineItemUiModel) : Intent
@@ -56,12 +67,22 @@ object TodayScreenContract {
 
         data object DismissExerciseSheet : Intent
 
+        /**
+         * Result from the small supplement choice sheet shown when the user taps
+         * a supplement row.
+         *
+         * [occurrenceId] identifies the concrete planned occurrence when the tap
+         * came from a scheduled supplement item. It remains nullable for extra/now
+         * flows and for the current incremental transition toward occurrence-aware
+         * logging.
+         */
         data class SupplementLogOptionSelected(
             val supplementId: Long,
             val title: String,
             val defaultUnit: SupplementDoseUnit,
             val suggestedDose: Double?,
             val scheduledTime: LocalTime?,
+            val occurrenceId: String? = null,
             val option: SupplementLogOption
         ) : Intent
 
@@ -98,24 +119,34 @@ object TodayScreenContract {
             val destination: Destination
         ) : Effect
 
+        /**
+         * Shows the supplement dose input dialog.
+         *
+         * [occurrenceId] is optional and allows the dialog confirmation path to
+         * preserve which concrete planned supplement occurrence is being logged.
+         */
         data class ShowDoseInputDialog(
             val supplementId: Long,
             val title: String,
             val scheduledTime: LocalTime? = null,
             val defaultUnit: SupplementDoseUnit,
             val suggestedDose: Double? = null,
+            val occurrenceId: String? = null
         ) : Effect
 
         /**
          * Shows a small choice sheet when user taps a scheduled supplement row.
          * Lets the user decide whether they are logging the scheduled dose or an extra/now dose.
+         *
+         * [occurrenceId] identifies the concrete scheduled planner item when available.
          */
         data class ShowSupplementLogChoice(
             val supplementId: Long,
             val title: String,
             val defaultUnit: SupplementDoseUnit,
             val suggestedDose: Double?,
-            val scheduledTime: LocalTime? = null
+            val scheduledTime: LocalTime? = null,
+            val occurrenceId: String? = null
         ) : Effect
     }
 

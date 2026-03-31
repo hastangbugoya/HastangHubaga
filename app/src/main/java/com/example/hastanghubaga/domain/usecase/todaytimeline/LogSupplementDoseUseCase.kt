@@ -7,9 +7,7 @@ import com.example.hastanghubaga.domain.time.TimeUseIntent
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
-import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
-
 
 /**
  * Logs a confirmed supplement intake to persistent storage.
@@ -37,6 +35,18 @@ import javax.inject.Inject
  * - Business rules are testable without a database
  * - Persistence can change without rewriting validation
  *
+ * ## Occurrence-aware logging
+ * A supplement log may optionally be linked to a concrete planned occurrence.
+ *
+ * This allows the app to:
+ * - Reconcile a logged dose with a scheduled timeline item
+ * - Support supplements that occur multiple times per day
+ * - Preserve a one-to-one link between a planner occurrence and the actual log
+ *
+ * If [LogDoseInput.occurrenceId] is null, the repository currently treats the log
+ * as unlinked/manual. A future occurrence-aware flow may create ad-hoc occurrences
+ * before logging extra doses.
+ *
  * ## What this use case does NOT do
  * - It does not show UI
  * - It does not format display data
@@ -63,9 +73,12 @@ class LogSupplementDoseUseCase @Inject constructor(
      * Validates and persists a supplement intake record.
      *
      * @param input
-     * The confirmed dose information provided by the user.`
+     * The confirmed dose information provided by the user.
      * This input is assumed to come from explicit user confirmation
      * (e.g. a dose input dialog).
+     *
+     * The input may optionally include an occurrence ID identifying the exact
+     * planned supplement occurrence this log belongs to.
      *
      * @throws IllegalArgumentException
      * If the dose amount is zero or negative.
@@ -82,6 +95,7 @@ class LogSupplementDoseUseCase @Inject constructor(
             time = time,
             fractionTaken = input.fractionTaken,
             doseUnit = input.unit,
+            occurrenceId = input.occurrenceId
         )
     }
 

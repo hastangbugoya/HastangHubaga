@@ -59,28 +59,6 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
-/**
- * Central repository for Supplements.
- *
- * Responsibilities:
- * - Timeline construction (active supplements + user settings)
- * - Ingredient aggregation
- * - Dose logging
- * - Scheduling / anchor-time resolution
- *
- * Scheduling note:
- * - Persisted user schedule intent now lives in [SupplementUserSettingsEntity] and is exposed as
- *   [SupplementWithUserSettings.scheduleSpec].
- * - Concrete daily times are still resolved later by downstream use cases into
- *   [SupplementWithUserSettings.scheduledTimes] for backward compatibility.
- * - Legacy timing fields on [Supplement] (such as doseAnchorType / offsetMinutes / frequencyType)
- *   are still retained, but should be treated as compatibility or dosage-guidance metadata rather
- *   than the preferred source of new scheduling behavior.
- *
- * NOTE:
- * - Timeline-related flows are intentionally placed FIRST because they are
- *   performance-sensitive and heavily composed downstream.
- */
 class SupplementRepositoryImpl @Inject constructor(
     private val supplementDao: SupplementEntityDao,
     private val ingredientDao: IngredientEntityDao,
@@ -92,39 +70,6 @@ class SupplementRepositoryImpl @Inject constructor(
     private val supplementScheduleDao: SupplementScheduleDao
 ) : SupplementRepository, SupplementDoseLogRepository {
 
-    /* ================================================== */
-    /* TIMELINE FLOW (PRIMARY CONSUMER PATH)              */
-    /* ================================================== */
-
-    /**
-     * Returns all ACTIVE supplements for a given date,
-     * enriched with user settings.
-     *
-     * Important:
-     * - `date` is NOT applied at the SQL level.
-     * - Date-based filtering happens later in the use-case:
-     *   `shouldTakeToday(date)`
-     *
-     * Flow shape:
-     *   Flow<List<SupplementEntity>>
-     *     → flatMapLatest
-     *     → combine(settings + schedules per supplement)
-     *     → Flow<List<SupplementWithUserSettings>>
-     *
-     * Intermediary tables:
-     * - supplements
-     * - supplement_user_settings
-     * - supplement_schedules
-     * - supplement_schedule_fixed_times
-     * - supplement_schedule_anchored_times
-     *
-     * Schedule behavior:
-     * - Prefer persisted rows from supplement_schedules when present.
-     * - Fall back to legacy user-settings CSV schedule intent when no persisted rows exist.
-     * - FIXED schedules are converted into scheduledTimes for backward-compatible consumers.
-     * - ANCHORED schedules are exposed as schedule intent and must be resolved later by
-     *   downstream anchor-aware use cases.
-     */
     override fun getSupplementsForDate(
         date: String
     ): Flow<List<SupplementWithUserSettings>> {
@@ -161,14 +106,6 @@ class SupplementRepositoryImpl @Inject constructor(
                 }
             }
     }
-
-    /**
-     * Observe a single supplement with live user settings.
-     * Used by detail screens.
-     */
-//    override fun observeSupplement(id: Long): Flow<List<SupplementWithUserSettings>?> =
-//        throw UnsupportedOperationException("Signature mismatch placeholder")
-//    // Keep your existing signature below if needed by compiler.
 
     override fun observeSupplement(id: Long): Flow<SupplementWithUserSettings?> =
         combine(
@@ -210,10 +147,6 @@ class SupplementRepositoryImpl @Inject constructor(
             }
     }
 
-    /* ================================================== */
-    /* SUPPLEMENT LISTING                                 */
-    /* ================================================== */
-
     override fun getAllSupplements(): Flow<List<Supplement>> =
         supplementDao.getAllSupplementsFlow()
             .map { it.map(SupplementEntity::toDomain) }
@@ -232,10 +165,6 @@ class SupplementRepositoryImpl @Inject constructor(
 
     override fun isActive(supplement: Supplement): Boolean =
         supplement.isActive
-
-    /* ================================================== */
-    /* INGREDIENT AGGREGATION                             */
-    /* ================================================== */
 
     override fun getAllIngredients(): Flow<List<Ingredient>> =
         ingredientDao.getAllIngredientsFlow()
@@ -273,16 +202,13 @@ class SupplementRepositoryImpl @Inject constructor(
         return totals.values.toList()
     }
 
-    /* ================================================== */
-    /* DOSE LOGGING                                       */
-    /* ================================================== */
-
     override suspend fun logDose(
         supplementId: Long,
         date: LocalDate,
         time: LocalTime,
         fractionTaken: Double,
-        doseUnit: SupplementDoseUnit
+        doseUnit: SupplementDoseUnit,
+        occurrenceId: String?
     ) {
         val timestamp = date
             .toJavaLocalDate()
@@ -297,14 +223,11 @@ class SupplementRepositoryImpl @Inject constructor(
                 date = date.toString(),
                 actualServingTaken = fractionTaken,
                 doseUnit = doseUnit,
-                timestamp = timestamp
+                timestamp = timestamp,
+                occurrenceId = occurrenceId
             )
         )
     }
-
-    /* ================================================== */
-    /* SCHEDULING / EVENT TIMES                           */
-    /* ================================================== */
 
     override suspend fun setHourZero(date: LocalDate, time: LocalTime) {
         dailyStartTimeDao.upsert(
@@ -417,10 +340,6 @@ class SupplementRepositoryImpl @Inject constructor(
         eventTimeDao.removeOverride(date.toString(), anchor)
     }
 
-    /* ================================================== */
-    /* USER SETTINGS (FUTURE)                             */
-    /* ================================================== */
-
     override suspend fun updateUserPreferredDose(
         supplementId: Long,
         dose: Double,
@@ -487,16 +406,6 @@ class SupplementRepositoryImpl @Inject constructor(
         )
     }
 
-    /**
-     * Reconstruct schedule intent from persisted schedule rows.
-     *
-     * Current mapping behavior:
-     * - FIXED schedules -> SupplementScheduleSpec.FixedTimes
-     * - ANCHORED schedules -> SupplementScheduleSpec.Anchored
-     *
-     * Concrete anchored daily times should be resolved later by downstream
-     * use cases using date-specific anchor context.
-     */
     private suspend fun buildScheduleSpecFromPersistedSchedules(
         schedules: List<SupplementScheduleEntity>
     ): SupplementScheduleSpec? {
