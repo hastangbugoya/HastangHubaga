@@ -50,6 +50,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             activityRepository.observeActivitiesForDate(date)
         ) { supplements, activities ->
             val mealsToday: List<MealLog> = emptyList()
+
             val workoutAnchors = activities
                 .asSequence()
                 .filter { it.isWorkout }
@@ -72,14 +73,29 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             supplements
                 .filter { it.shouldAppearOn(date) }
                 .map { it.withScheduleFor(mealsToday, anchorContext) }
-                .filter { it.scheduledTimes.isNotEmpty() }
+                .filter { it.resolvedScheduleEntries.isNotEmpty() }
         }
 
+    /**
+     * Resolves the concrete same-day schedule output for this supplement.
+     *
+     * Canonical contract:
+     * - [resolvedScheduleEntries] is the authoritative daily scheduling output.
+     * - [scheduledTimes] is only a backward-compatible flattened projection of
+     *   [resolvedScheduleEntries] for older callers that still expect a simple
+     *   list of [LocalTime] values.
+     *
+     * This means:
+     * - timeline / reminders / future occurrence-aware flows should trust
+     *   [resolvedScheduleEntries]
+     * - callers must not infer schedule identity from [scheduledTimes]
+     */
     private suspend fun SupplementWithUserSettings.withScheduleFor(
         mealsToday: List<MealLog>,
         anchorContext: AnchorTimeContext
     ): SupplementWithUserSettings {
         val resolvedEntries = resolveScheduleEntries(anchorContext)
+
         val resolvedScheduledTimes = resolvedEntries
             .map { it.time }
             .distinct()
@@ -129,6 +145,19 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
         return shouldTakeOnLegacyDate(date)
     }
 
+    /**
+     * Produces the canonical resolved schedule entries for this supplement on the
+     * target date.
+     *
+     * Resolution precedence:
+     * 1. Already-resolved persisted entries from repository
+     * 2. Resolved entries derived from [scheduleSpec]
+     * 3. Legacy supplement-level timing fallback
+     *
+     * The returned list is:
+     * - de-duplicated by meaningful scheduling identity fields
+     * - sorted into stable user-facing time order
+     */
     private suspend fun SupplementWithUserSettings.resolveScheduleEntries(
         anchorContext: AnchorTimeContext
     ): List<ResolvedSupplementScheduleEntry> {
@@ -448,6 +477,17 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             else -> null
         }
 
+    /**
+     * Legacy compatibility mapping.
+     *
+     * Important:
+     * - This is intentionally NOT the same as the direct enum mapping below.
+     * - Legacy supplement-level MIDNIGHT behavior currently falls back to WAKEUP
+     *   rather than true midnight handling.
+     *
+     * This is a transitional behavior and should remain explicit so it is not
+     * mistaken for the canonical meaning of MIDNIGHT.
+     */
     private fun DoseAnchorType.toLegacyFallbackTimeAnchor(): TimeAnchor? =
         when (this) {
             DoseAnchorType.MIDNIGHT -> TimeAnchor.WAKEUP
@@ -468,6 +508,15 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             else -> null
         }
 
+    /**
+     * Storage compatibility mapping for anchor defaults / overrides.
+     *
+     * Important:
+     * - DURING_WORKOUT is currently aliased to BEFORE_WORKOUT for persisted
+     *   default/override lookup.
+     * - This is temporary first-pass behavior until DURING_WORKOUT is treated as
+     *   a fully first-class stored anchor.
+     */
     private fun TimeAnchor.toDoseAnchorTypeOrNull(): DoseAnchorType? =
         when (this) {
             TimeAnchor.MIDNIGHT -> DoseAnchorType.MIDNIGHT

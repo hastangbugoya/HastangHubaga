@@ -5,10 +5,14 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLog
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
 import com.example.hastanghubaga.domain.model.supplement.Ingredient
 import com.example.hastanghubaga.domain.model.supplement.Supplement
-import com.example.hastanghubaga.domain.model.supplement.SupplementDailyLog
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 // Supplement
 fun SupplementEntity.toDomain(): Supplement =
@@ -17,7 +21,6 @@ fun SupplementEntity.toDomain(): Supplement =
         name = name,
         brand = brand,
         notes = notes,
-
         recommendedServingSize = recommendedServingSize,
         recommendedDoseUnit = recommendedDoseUnit,
         servingsPerDay = servingsPerDay,
@@ -25,7 +28,6 @@ fun SupplementEntity.toDomain(): Supplement =
         recommendedLiquidInOz = recommendedLiquidInOz,
         recommendedTimeBetweenDailyDosesMinutes = recommendedTimeBetweenDailyDosesMinutes,
         avoidCaffeine = avoidCaffeine,
-
         frequencyType = frequencyType,
         frequencyInterval = frequencyInterval,
         weeklyDays = weeklyDays,
@@ -39,13 +41,12 @@ fun SupplementEntity.toDomain(): Supplement =
         alertOffsetMinutes = alertOffsetMinutes
     )
 
-fun com.example.hastanghubaga.domain.model.supplement.Supplement.toDomain(): com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity =
+fun Supplement.toDomain(): SupplementEntity =
     SupplementEntity(
         id = id,
         name = name,
         brand = brand,
         notes = notes,
-
         recommendedServingSize = recommendedServingSize,
         recommendedDoseUnit = recommendedDoseUnit,
         servingsPerDay = servingsPerDay,
@@ -53,7 +54,6 @@ fun com.example.hastanghubaga.domain.model.supplement.Supplement.toDomain(): com
         recommendedLiquidInOz = recommendedLiquidInOz,
         recommendedTimeBetweenDailyDosesMinutes = recommendedTimeBetweenDailyDosesMinutes,
         avoidCaffeine = avoidCaffeine,
-
         frequencyType = frequencyType,
         frequencyInterval = frequencyInterval,
         weeklyDays = weeklyDays,
@@ -67,35 +67,53 @@ fun com.example.hastanghubaga.domain.model.supplement.Supplement.toDomain(): com
     )
 
 // Ingredient
-fun IngredientEntity.toDomain() = Ingredient(
-    id = this.id,
-    name = this.name,
-    defaultUnit = this.defaultUnit,
-    rdaValue = this.rdaValue,
-    rdaUnit = this.rdaUnit,
-    upperLimitValue = this.upperLimitValue,
-    upperLimitUnit = this.upperLimitUnit,
-    category = this.category
-)
+fun IngredientEntity.toDomain(): Ingredient =
+    Ingredient(
+        id = id,
+        name = name,
+        defaultUnit = defaultUnit,
+        rdaValue = rdaValue,
+        rdaUnit = rdaUnit,
+        upperLimitValue = upperLimitValue,
+        upperLimitUnit = upperLimitUnit,
+        category = category
+    )
 
-fun LocalTime.toLocalTimeLong() = this.atDate(LocalDate.now())
-    .atZone(ZoneId.systemDefault())
-    .toInstant()
-    .toEpochMilli()
+/**
+ * Convenience helper retained for existing callers that need a millis value for "today at this time".
+ *
+ * Prefer more explicit date + time conversion when the target date matters.
+ */
+fun LocalTime.toLocalTimeLong(): Long =
+    LocalDateTime(
+        date = LocalDate(1970, 1, 1),
+        time = this
+    )
+        .toInstant(TimeZone.currentSystemDefault())
+        .toEpochMilliseconds()
 
-fun SupplementDailyLogEntity.toDomain() = SupplementDailyLog(
-    supplementId = this.id,
-    date = this.date,
-    actualServingTaken = this.actualServingTaken,
-    doseUnit = this.doseUnit,
-    timestamp = this.timestamp
-)
+fun SupplementDailyLogEntity.toDomain(): SupplementDoseLog =
+    SupplementDoseLog(
+        id = id,
+        supplementId = supplementId,
+        date = LocalDate.parse(date),
+        actualServingTaken = actualServingTaken,
+        doseUnit = doseUnit,
+        timestamp = Instant
+            .fromEpochMilliseconds(timestamp)
+            .toLocalDateTime(TimeZone.currentSystemDefault()),
+        occurrenceId = occurrenceId
+    )
 
-fun SupplementDailyLog.toEntity() = SupplementDailyLogEntity(
-    supplementId = this.supplementId,
-    date = this.date,
-    actualServingTaken = this.actualServingTaken,
-    doseUnit = this.doseUnit,
-    timestamp = this.timestamp
-)
-
+fun SupplementDoseLog.toEntity(): SupplementDailyLogEntity =
+    SupplementDailyLogEntity(
+        id = id,
+        supplementId = supplementId,
+        date = date.toString(),
+        actualServingTaken = actualServingTaken,
+        doseUnit = doseUnit,
+        timestamp = timestamp
+            .toInstant(TimeZone.currentSystemDefault())
+            .toEpochMilliseconds(),
+        occurrenceId = occurrenceId
+    )

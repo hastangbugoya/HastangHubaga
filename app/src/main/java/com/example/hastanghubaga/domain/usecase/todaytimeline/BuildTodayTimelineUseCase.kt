@@ -5,6 +5,7 @@ import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
@@ -12,98 +13,43 @@ import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
+import javax.inject.Inject
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
-import javax.inject.Inject
 
 /**
  * Builds a single, chronologically ordered timeline for "Today".
  *
- * This use case is the central orchestration point that merges all domain
- * sources into a unified timeline representation:
+ * This use case is the central orchestration point that merges multiple
+ * time-resolved item types into one user-facing day timeline:
  *
- * - Supplements (scheduled via recurrence / anchors upstream)
- * - Native HH meals (user-created)
- * - Imported meals (read-only from AdobongKangkong)
- * - Activities (including workouts)
+ * - Supplements (already scheduled/resolved upstream)
+ * - Actual supplement dose logs
+ * - Native HH meals
+ * - Imported meals
+ * - Activities
  *
- * The result is:
- * - A sorted [TimelineItem] list for UI rendering
- * - A derived list of [UpcomingSchedule] persisted for widgets and background usage
+ * Canonical timeline rule:
+ * - This use case trusts each item's already-resolved [TimelineItem.time]
+ * - It does NOT perform scheduling or anchor resolution for supplements
+ * - It does NOT reinterpret source timestamps once a [TimelineItem] is built
  *
- * ---
- * 🧠 Responsibilities
+ * Its job is to make the mixed timeline make user-sense by:
+ * - mapping source models to timeline rows
+ * - merging heterogeneous rows
+ * - applying deterministic cross-type ordering
+ * - persisting a simplified upcoming schedule snapshot
  *
- * This use case is intentionally **composition-focused**, not logic-heavy:
+ * Same-time ordering policy:
+ * - Supplements first
+ * - Native meals second
+ * - Imported meals third
+ * - Activities fourth
+ * - Supplement dose logs fifth
  *
- * - It does NOT resolve supplement anchors (already resolved upstream)
- * - It does NOT modify timestamps for meals or activities
- * - It does NOT merge or group entities (e.g., imported meals stay independent)
- *
- * It only:
- * - Maps domain models → timeline items
- * - Sorts them deterministically
- * - Persists a simplified schedule representation
- *
- * ---
- * 🍽️ Meal Anchor Behavior
- *
- * Native HH meals may optionally expose an anchor via [ResolveMealAnchorUseCase].
- *
- * Important:
- * - The resolved anchor is **informational only** in this stage
- * - It does NOT affect:
- *   - timeline sorting
- *   - placement
- *   - scheduling
- *
- * This allows meals to later act as anchor providers (e.g., supplements anchored
- * to meals) without breaking current behavior.
- *
- * ---
- * 🏋️ Workout / Activity Behavior
- *
- * Activities are included as timeline items using their start time.
- *
- * - Activities may be marked with `isWorkout = true`
- * - This use case currently does NOT use that information
- *
- * However, this is the correct integration point for future enhancements.
- *
- * ---
- * 📦 Imported Meals
- *
- * Imported meals:
- * - Are treated as read-only
- * - Use their logged timestamp (converted from epoch millis)
- * - Are NOT merged with native meals
- *
- * ---
- * 📊 Sorting Rules
- *
- * Timeline items are sorted by:
- *
- * 1. Time (ascending)
- * 2. Type priority:
- *    Supplement → Meal → Imported Meal → Activity → Dose Log
- * 3. HashCode (tie-breaker for stability)
- *
- * ---
- * 🧪 Testability Notes
- *
- * This use case:
- * - Is deterministic given inputs
- * - Has no internal time mutations (uses [DomainTimePolicy.todayLocal])
- * - Keeps mapping logic simple and verifiable
- *
- * ---
- * @param supplements Supplements with resolved scheduled entries/times
- * @param meals Native HH meals (optionally anchor-capable)
- * @param importedMeals External meals (read-only)
- * @param activities Activities for the day (may include workouts)
- *
- * @return Chronologically sorted list of [TimelineItem] for rendering
+ * Within the same type and time, ordering must be stable and identity-based.
+ * Hash-based ordering is intentionally avoided because it is not a business rule.
  */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,
@@ -112,10 +58,15 @@ class BuildTodayTimelineUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         supplements: List<SupplementWithUserSettings>,
+        supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
         activities: List<Activity> = emptyList()
     ): List<TimelineItem> {
+        val supplementTitleLookup = supplements.associate { item ->
+            item.supplement.id to item.supplement.name
+        }
+
         val supplementItems =
             supplements.flatMap { supplementWithSettings ->
                 val resolvedEntries = supplementWithSettings.resolvedScheduleEntries
@@ -125,7 +76,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                         TimelineItem.SupplementTimelineItem(
                             time = entry.time,
                             supplement = supplementWithSettings,
-                            resolvedScheduleEntry = entry
+                            resolvedScheduleEntry = entry,
+                            occurrenceId = entry.occurrenceId
                         )
                     }
                 } else {
@@ -133,12 +85,27 @@ class BuildTodayTimelineUseCase @Inject constructor(
                         TimelineItem.SupplementTimelineItem(
                             time = time,
                             supplement = supplementWithSettings,
-                            resolvedScheduleEntry = null
+                            resolvedScheduleEntry = null,
+                            occurrenceId = null
                         )
                     }
                 }
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementItems: ${supplementItems.size}")
+
+        val supplementDoseLogItems =
+            supplementDoseLogs.map { doseLog ->
+                TimelineItem.SupplementDoseLogTimelineItem(
+                    doseLogId = doseLog.id,
+                    supplementId = doseLog.supplementId,
+                    title = supplementTitleLookup[doseLog.supplementId] ?: "Supplement",
+                    time = doseLog.timestamp.time,
+                    amount = doseLog.actualServingTaken,
+                    unit = doseLog.doseUnit.name,
+                    scheduledTime = null
+                )
+            }
+        Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
 
         val mealItems =
             meals.map { meal ->
@@ -201,19 +168,17 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
 
-        val merged = (supplementItems + mealItems + importedMealItems + activityItems)
-            .sortedWith(
+        val merged = (
+                supplementItems +
+                        supplementDoseLogItems +
+                        mealItems +
+                        importedMealItems +
+                        activityItems
+                ).sortedWith(
                 compareBy<TimelineItem> { it.time }
-                    .thenBy {
-                        when (it) {
-                            is TimelineItem.SupplementTimelineItem -> 0
-                            is TimelineItem.MealTimelineItem -> 1
-                            is TimelineItem.ImportedMealTimelineItem -> 2
-                            is TimelineItem.ActivityTimelineItem -> 3
-                            is TimelineItem.SupplementDoseLogTimelineItem -> 4
-                        }
-                    }
-                    .thenBy { it.hashCode() }
+                    .thenBy { itemTypeSortOrder(it) }
+                    .thenBy { itemStablePrimaryKey(it) }
+                    .thenBy { itemStableSecondaryKey(it) }
             )
 
         val date: LocalDate = DomainTimePolicy.todayLocal()
@@ -228,4 +193,112 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         return merged
     }
+
+    /**
+     * Cross-type ordering policy for rows that land on the same resolved time.
+     *
+     * This is intentionally a UI/user-sense rule, not a scheduling rule.
+     */
+    private fun itemTypeSortOrder(item: TimelineItem): Int =
+        when (item) {
+            is TimelineItem.SupplementTimelineItem -> 0
+            is TimelineItem.MealTimelineItem -> 1
+            is TimelineItem.ImportedMealTimelineItem -> 2
+            is TimelineItem.ActivityTimelineItem -> 3
+            is TimelineItem.SupplementDoseLogTimelineItem -> 4
+        }
+
+    /**
+     * Stable identity-first tie-breaker.
+     *
+     * For items with identical resolved timeline time and identical cross-type
+     * precedence, use the most stable business identity available.
+     */
+    private fun itemStablePrimaryKey(item: TimelineItem): String =
+        when (item) {
+            is TimelineItem.SupplementTimelineItem -> {
+                val entry = item.resolvedScheduleEntry
+                buildString {
+                    append(item.supplement.supplement.id)
+                    append("|")
+                    append(entry?.scheduleId ?: Long.MAX_VALUE)
+                    append("|")
+                    append(entry?.sourceRowId ?: Long.MAX_VALUE)
+                    append("|")
+                    append(entry?.sortOrder ?: Int.MAX_VALUE)
+                    append("|")
+                    append(entry?.label ?: "")
+                    append("|")
+                    append(entry?.occurrenceId ?: item.occurrenceId ?: "")
+                }
+            }
+
+            is TimelineItem.MealTimelineItem ->
+                item.meal.id.toString()
+
+            is TimelineItem.ImportedMealTimelineItem ->
+                item.meal.groupingKey
+
+            is TimelineItem.ActivityTimelineItem ->
+                item.activity.id.toString()
+
+            is TimelineItem.SupplementDoseLogTimelineItem ->
+                item.doseLogId.toString()
+        }
+
+    /**
+     * Secondary deterministic tie-breaker for edge cases where the primary key is
+     * still equal or partially absent.
+     *
+     * This remains identity/meaning based and avoids hash-driven ordering.
+     */
+    private fun itemStableSecondaryKey(item: TimelineItem): String =
+        when (item) {
+            is TimelineItem.SupplementTimelineItem -> {
+                val entry = item.resolvedScheduleEntry
+                buildString {
+                    append(entry?.timingType?.name ?: "")
+                    append("|")
+                    append(entry?.anchor?.name ?: "")
+                    append("|")
+                    append(item.time.toSecondOfDay())
+                    append("|")
+                    append(item.supplement.supplement.name)
+                }
+            }
+
+            is TimelineItem.MealTimelineItem ->
+                buildString {
+                    append(item.meal.type.name)
+                    append("|")
+                    append(item.meal.name ?: "")
+                    append("|")
+                    append(item.meal.timestamp.time.toSecondOfDay())
+                }
+
+            is TimelineItem.ImportedMealTimelineItem ->
+                buildString {
+                    append(item.meal.type.name)
+                    append("|")
+                    append(item.meal.timestamp)
+                }
+
+            is TimelineItem.ActivityTimelineItem ->
+                buildString {
+                    append(item.activity.type.name)
+                    append("|")
+                    append(item.activity.start.time.toSecondOfDay())
+                    append("|")
+                    append(item.activity.end?.time?.toSecondOfDay() ?: Int.MAX_VALUE)
+                }
+
+            is TimelineItem.SupplementDoseLogTimelineItem ->
+                buildString {
+                    append(item.supplementId)
+                    append("|")
+                    append(item.time.toSecondOfDay())
+                    append("|")
+                    append(item.scheduledTime?.toSecondOfDay() ?: Int.MAX_VALUE)
+                }
+        }
 }

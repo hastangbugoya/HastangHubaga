@@ -12,57 +12,25 @@ import javax.inject.Inject
 /**
  * Logs a confirmed supplement intake to persistent storage.
  *
- * This use case represents a **command** in the domain layer:
- * it validates user-provided input and delegates persistence
- * to the data layer.
- *
- * ## Responsibilities
- * - Validate user input (amount, unit)
- * - Enforce domain rules around supplement intake logging
- * - Decide *what* should be persisted
- * - Delegate *how* it is persisted to a repository
- *
- * ## Validation vs Persistence
- * This class owns **validation and intent**.
- *
- * The repository owns **storage mechanics**.
- *
- * Specifically:
- * - This use case decides *whether* an intake is valid
- * - The repository decides *how* it is stored (Room, SQL, upsert rules)
- *
- * This separation ensures:
- * - Business rules are testable without a database
- * - Persistence can change without rewriting validation
+ * This use case represents a **command** in the domain layer.
  *
  * ## Occurrence-aware logging
+ *
  * A supplement log may optionally be linked to a concrete planned occurrence.
  *
- * This allows the app to:
- * - Reconcile a logged dose with a scheduled timeline item
- * - Support supplements that occur multiple times per day
- * - Preserve a one-to-one link between a planner occurrence and the actual log
+ * IMPORTANT BEHAVIOR:
+ * - [occurrenceId] links the log to a planned timeline row
+ * - The actual logged [time] is resolved from [TimeUseIntent]
+ * - The log time MAY differ from the planned occurrence time
  *
- * If [LogDoseInput.occurrenceId] is null, the repository currently treats the log
- * as unlinked/manual. A future occurrence-aware flow may create ad-hoc occurrences
- * before logging extra doses.
+ * This allows:
+ * - late logging
+ * - early intake
+ * - real-world deviation from schedule
  *
- * ## What this use case does NOT do
- * - It does not show UI
- * - It does not format display data
- * - It does not manage UI state or effects
- * - It does not decide *when* the user is prompted
- *
- * Those concerns belong to the ViewModel and UI layers.
- *
- * ## Invocation
- * This use case uses `operator fun invoke()` because:
- * - It performs a state-changing action
- * - It represents a domain command
- * - It may be executed asynchronously
- *
- * @see HandleTimelineItemTapUseCase
- * @see TimelineTapAction.RequestDoseInput
+ * The system must preserve BOTH:
+ * - planned occurrence identity
+ * - actual intake time
  */
 class LogSupplementDoseUseCase @Inject constructor(
     private val repository: SupplementDoseLogRepository,
@@ -72,16 +40,13 @@ class LogSupplementDoseUseCase @Inject constructor(
     /**
      * Validates and persists a supplement intake record.
      *
-     * @param input
-     * The confirmed dose information provided by the user.
-     * This input is assumed to come from explicit user confirmation
-     * (e.g. a dose input dialog).
+     * Rules enforced:
+     * - Dose must be positive
+     * - Time is resolved from user intent
+     * - OccurrenceId is passed through unchanged
      *
-     * The input may optionally include an occurrence ID identifying the exact
-     * planned supplement occurrence this log belongs to.
-     *
-     * @throws IllegalArgumentException
-     * If the dose amount is zero or negative.
+     * Future extension point:
+     * - occurrence reconciliation (e.g., mark occurrence as taken)
      */
     suspend operator fun invoke(input: LogDoseInput) {
         require(input.fractionTaken > 0) {
@@ -89,6 +54,10 @@ class LogSupplementDoseUseCase @Inject constructor(
         }
 
         val (date, time) = resolveIntent(input.timeUseIntent)
+
+        // IMPORTANT:
+        // We intentionally allow occurrenceId + different actual time.
+        // This reflects real-world behavior and preserves user truth.
         repository.logDose(
             supplementId = input.supplementId,
             date = date,

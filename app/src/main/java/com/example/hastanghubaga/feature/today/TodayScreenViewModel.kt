@@ -15,6 +15,7 @@ import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUse
 import com.example.hastanghubaga.domain.usecase.meal.GetImportedMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementDoseLogsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
@@ -72,6 +73,16 @@ import kotlinx.datetime.toLocalDateTime
  * - Heavy timeline building runs off the main thread via [flowOn] to avoid jank / skipped frames.
  *
  * ---
+ * ## Timeline composition boundary
+ * This ViewModel intentionally keeps the "headline screen juggling" shallow:
+ * - collect clean date-scoped flows
+ * - hand all assembled inputs to [BuildTodayTimelineUseCase]
+ * - treat [BuildTodayTimelineUseCase] as the central composition/debug point
+ *
+ * This keeps the ViewModel easier to reason about as the project grows while preserving
+ * one reliable entry point for timeline-merging issues.
+ *
+ * ---
  * ## Occurrence-aware supplement logging
  * Supplement logging is now forward-compatible with occurrence-aware reconciliation.
  *
@@ -94,6 +105,7 @@ import kotlinx.datetime.toLocalDateTime
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
     private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
+    private val getSupplementDoseLogsForDate: GetSupplementDoseLogsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase,
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
@@ -331,12 +343,14 @@ class TodayScreenViewModel @Inject constructor(
                 .flatMapLatest { date ->
                     combine(
                         getSupplementsForDate(date),
+                        getSupplementDoseLogsForDate(date),
                         getMealsForDate(date),
                         getImportedMealsForDate(date),
                         getActivitiesForDate(date)
-                    ) { supplements, meals, importedMeals, activities ->
+                    ) { supplements, supplementDoseLogs, meals, importedMeals, activities ->
                         buildTodayTimeline(
                             supplements = supplements,
+                            supplementDoseLogs = supplementDoseLogs,
                             meals = meals,
                             importedMeals = importedMeals,
                             activities = activities

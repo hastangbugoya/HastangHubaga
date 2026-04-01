@@ -36,8 +36,10 @@ import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementScheduleEntry
 import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementTimingType
 import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.supplement.SupplementScheduleSpec
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogReadRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +73,7 @@ class SupplementRepositoryImpl @Inject constructor(
     private val supplementUserSettingsDao: SupplementUserSettingsDao,
     private val supplementNutritionDao: SupplementNutritionDao,
     private val supplementScheduleDao: SupplementScheduleDao
-) : SupplementRepository, SupplementDoseLogRepository {
+) : SupplementRepository, SupplementDoseLogRepository, SupplementDoseLogReadRepository {
 
     override fun getSupplementsForDate(
         date: String
@@ -148,6 +150,16 @@ class SupplementRepositoryImpl @Inject constructor(
                     .groupBy { it.logId }
                     .values
                     .map { perLogRows -> perLogRows.toMealNutritionFromNames() }
+            }
+    }
+
+    override fun observeDoseLogsForDate(
+        date: LocalDate
+    ): Flow<List<SupplementDoseLog>> {
+        return supplementDailyLogDao
+            .getDoseLogsForDay(date.toString())
+            .map { rows ->
+                rows.map(SupplementDailyLogEntity::toDomain)
             }
     }
 

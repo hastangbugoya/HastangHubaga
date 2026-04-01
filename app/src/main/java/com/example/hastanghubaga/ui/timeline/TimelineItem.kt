@@ -9,6 +9,18 @@ import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.datetime.LocalTime
 
 sealed interface TimelineItem {
+    /**
+     * Canonical user-facing placement time for this row in the Today timeline.
+     *
+     * This is the time used for:
+     * - sorting
+     * - display
+     * - cross-type timeline merging
+     *
+     * Time resolution belongs upstream to the source-specific scheduling / timing
+     * pipeline. The timeline layer must treat this as already-resolved placement
+     * time and should not reinterpret source model timestamps.
+     */
     val time: LocalTime
 
     /**

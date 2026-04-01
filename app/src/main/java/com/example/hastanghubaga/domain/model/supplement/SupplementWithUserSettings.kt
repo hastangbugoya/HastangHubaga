@@ -20,15 +20,27 @@ import kotlinx.datetime.LocalTime
  * - preserve schedule-level identity for future occurrence-aware logging
  * - support future "strict every N days" behavior without redesigning the domain model
  *
+ * OCCURRENCE IDENTITY
+ *
+ * [occurrenceId] represents the concrete planned occurrence for this resolved
+ * entry on a specific day.
+ *
+ * It is intended to support:
+ * - one-to-one reconciliation between a planned row and a logged dose
+ * - multiple planned doses for the same supplement on the same day
+ * - future "taken / missed / skipped / extra" supplement flows
+ *
  * COMPATIBILITY NOTES
  *
  * - [scheduleId] is nullable so legacy / user-settings-derived timings can still be represented
  * - [sourceRowId] is nullable for the same reason
+ * - [occurrenceId] is nullable during migration until all scheduling paths emit it
  * - [anchor] is only populated for anchored timings
  */
 data class ResolvedSupplementScheduleEntry(
     val scheduleId: Long? = null,
     val sourceRowId: Long? = null,
+    val occurrenceId: String? = null,
     val time: LocalTime,
     val timingType: ResolvedSupplementTimingType,
     val anchor: TimeAnchor? = null,
@@ -83,7 +95,9 @@ data class SupplementWithUserSettings(
      * Backward-compatible flat time list used by older callers.
      *
      * New scheduling code should prefer [resolvedScheduleEntries] because
-     * [scheduledTimes] cannot preserve which schedule row produced each time.
+     * [scheduledTimes] cannot preserve which schedule row produced each time,
+     * whether multiple resolved entries shared the same time, or which concrete
+     * planned occurrence a row belongs to.
      */
     val scheduledTimes: List<LocalTime> = emptyList(),
 
@@ -100,7 +114,7 @@ data class SupplementWithUserSettings(
     /**
      * Concrete resolved same-day schedule outputs for this supplement.
      *
-     * This is the preferred daily scheduling output for timeline, reminders,
+     * This is the canonical daily scheduling output for timeline, reminders,
      * and future occurrence-aware supplement flows.
      *
      * It intentionally coexists with [scheduledTimes] during migration so

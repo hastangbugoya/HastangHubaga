@@ -39,7 +39,8 @@ interface ActivityEntityDao {
     @Query(
         """
         SELECT * FROM activities
-        WHERE startTimestamp BETWEEN :start AND :end
+        WHERE startTimestamp >= :start
+          AND startTimestamp < :end
         ORDER BY startTimestamp ASC
     """
     )

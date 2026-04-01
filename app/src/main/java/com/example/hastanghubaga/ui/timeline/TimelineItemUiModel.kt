@@ -59,7 +59,23 @@ import kotlinx.datetime.LocalTime
  */
 sealed interface TimelineItemUiModel {
     val id: Long
+
+    /**
+     * Canonical user-facing placement time for this row in the Today timeline.
+     *
+     * This is the time used for:
+     * - sorting
+     * - grouping
+     * - visual placement
+     * - primary time display
+     *
+     * Important:
+     * - this is the only time the timeline UI should trust for row placement
+     * - upstream scheduling / timing pipelines are responsible for resolving it
+     * - UI and mappers must not substitute source-model timestamps for this field
+     */
     val time: LocalTime
+
     val rowType: TodayUiRowType
     val key: String
 
@@ -75,6 +91,14 @@ sealed interface TimelineItemUiModel {
  * UI-facing supplement timeline row.
  *
  * This usually represents a planned/scheduled supplement occurrence.
+ *
+ * Important:
+ * - [time] is the canonical timeline placement time
+ * - [scheduledTime] preserves the original planned time for supplement-specific
+ *   flows and informational UI
+ *
+ * In the common case these may be the same, but the UI must still treat [time]
+ * as the authoritative timeline placement field.
  *
  * ## Occurrence-aware logging
  * [occurrenceId] is optional because the app is transitioning from a log-first
@@ -99,6 +123,16 @@ data class SupplementUiModel(
     override val alertOffsetMinutes: Int? = null,
 
     val supplementId: Long,
+
+    /**
+     * Original planned supplement time.
+     *
+     * This is supplement-specific context and may differ from [time] if the
+     * scheduling pipeline later supports additional placement adjustments or
+     * richer occurrence-aware behavior.
+     *
+     * The timeline UI must never prefer this over [time] for placement.
+     */
     val scheduledTime: LocalTime,
     val doseState: MealAwareDoseState?,
     val defaultUnit: SupplementDoseUnit,
@@ -133,7 +167,7 @@ data class ActivityUiModel(
         TodayUiRowType.ACTIVITY
 
     override val key: String =
-        "ACTIVITY-$activityId-$startTime"
+        "ACTIVITY-$activityId"
 }
 
 data class MealUiModel(
@@ -153,7 +187,7 @@ data class MealUiModel(
         TodayUiRowType.MEAL
 
     override val key: String =
-        "MEAL-$mealId-$time"
+        "MEAL-$mealId"
 }
 
 /**
@@ -179,7 +213,7 @@ data class ImportedMealUiModel(
         TodayUiRowType.MEAL
 
     override val key: String =
-        "IMPORTED_MEAL-$importedMealId-$time"
+        "IMPORTED_MEAL-$importedMealId"
 }
 
 /**
@@ -199,6 +233,19 @@ data class SupplementDoseLogUiModel(
     override val alertOffsetMinutes: Int? = null,
 
     val supplementId: Long,
+
+    /**
+     * Original planned time associated with this logged dose when known.
+     *
+     * This is informational only.
+     *
+     * It may differ from [time] when:
+     * - the user force-logs an extra dose
+     * - a log is associated with a planned occurrence but happens at a different time
+     * - future reconciliation rules preserve both planned and actual times
+     *
+     * The timeline UI must always use [time] for placement.
+     */
     val scheduledTime: LocalTime?,
     val amountText: String?,
     val unitText: String?
@@ -207,5 +254,5 @@ data class SupplementDoseLogUiModel(
     override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT_DOSE_LOG
 
     override val key: String =
-        "SUPPLEMENT_DOSE_LOG-$supplementId-$time-$id"
+        "SUPPLEMENT_DOSE_LOG-$id"
 }
