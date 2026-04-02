@@ -15,6 +15,7 @@ import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUse
 import com.example.hastanghubaga.domain.usecase.meal.GetImportedMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.GetActiveSupplementsUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementDoseLogsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
@@ -23,6 +24,7 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseU
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowDoseInputDialog
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
@@ -39,6 +41,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -94,6 +97,18 @@ import kotlinx.datetime.toLocalDateTime
  * incremental move toward planner occurrence ↔ log linkage.
  *
  * ---
+ * ## Force-log supplement flow
+ * A temporary force-log entry path allows the user to choose any active supplement
+ * and log an actual dose even when that supplement is not currently scheduled on
+ * the visible timeline.
+ *
+ * This flow intentionally:
+ * - does not require a scheduled time
+ * - does not require an occurrence ID
+ * - reuses the existing dose dialog
+ * - preserves the distinction between planned schedule items and actual logged events
+ *
+ * ---
  * ## Tips to avoid reintroducing this bug
  * - Do NOT cancel and restart terminal Flow collections unless you are done forever.
  * - Avoid starting new `viewModelScope.launch { flow.collect { ... } }` inside user intents.
@@ -105,6 +120,7 @@ import kotlinx.datetime.toLocalDateTime
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
     private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
+    private val getActiveSupplements: GetActiveSupplementsUseCase,
     private val getSupplementDoseLogsForDate: GetSupplementDoseLogsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase,
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
@@ -164,6 +180,32 @@ class TodayScreenViewModel @Inject constructor(
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
                 handleTimelineItemClicked(intent.item)
+            }
+
+            TodayScreenContract.Intent.ForceLogSupplementTapped -> {
+                viewModelScope.launch {
+                    val supplements = getActiveSupplements().first()
+                    _effect.send(
+                        ShowForceLogSupplementPicker(
+                            supplements = supplements
+                        )
+                    )
+                }
+            }
+
+            is TodayScreenContract.Intent.ForceLogSupplementSelected -> {
+                viewModelScope.launch {
+                    _effect.send(
+                        ShowDoseInputDialog(
+                            supplementId = intent.supplementId,
+                            title = intent.title,
+                            scheduledTime = null,
+                            defaultUnit = intent.defaultUnit,
+                            suggestedDose = intent.suggestedDose,
+                            occurrenceId = null
+                        )
+                    )
+                }
             }
 
             is TodayScreenContract.Intent.ConfirmDose -> {

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.ui.timeline.TimelineItem
@@ -33,6 +34,34 @@ object TodayScreenContract {
         data class LoadDate(val date: LocalDate) : Intent
         data object Refresh : Intent
         data class TimelineItemClicked(val item: TimelineItemUiModel) : Intent
+
+        /**
+         * Opens the temporary force-log supplement picker.
+         *
+         * This is intentionally separate from tapping a scheduled supplement row.
+         * It allows the user to log an actual supplement dose even when the
+         * supplement is not scheduled on the current timeline.
+         */
+        data object ForceLogSupplementTapped : Intent
+
+        /**
+         * Result from the temporary force-log supplement picker.
+         *
+         * The selected supplement should then flow into the existing dose input
+         * dialog with:
+         * - scheduledTime = null
+         * - occurrenceId = null
+         *
+         * This preserves the distinction between:
+         * - planned/scheduled supplement occurrences
+         * - actual manual/force-logged supplement events
+         */
+        data class ForceLogSupplementSelected(
+            val supplementId: Long,
+            val title: String,
+            val defaultUnit: SupplementDoseUnit,
+            val suggestedDose: Double?
+        ) : Intent
 
         /**
          * Confirms a supplement dose log from the Today screen.
@@ -117,6 +146,17 @@ object TodayScreenContract {
 
         data class Navigate(
             val destination: Destination
+        ) : Effect
+
+        /**
+         * Shows the temporary supplement picker for force-log flows.
+         *
+         * The picker should present active supplements only.
+         * Selecting one should lead into the existing dose input dialog with
+         * no scheduled time / no occurrence linkage.
+         */
+        data class ShowForceLogSupplementPicker(
+            val supplements: List<Supplement>
         ) : Effect
 
         /**

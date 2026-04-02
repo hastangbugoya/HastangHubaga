@@ -36,10 +36,24 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.isExercise
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
-import com.example.hastanghubaga.feature.today.ActiveLocalSheet.*
-import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.*
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Dose
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Exercise
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogSupplementPicker
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Meal
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.SupplementLogChoice
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ConfirmDose
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.DismissExerciseSheet
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseConfirmPressed
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseEndTimeChanged
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseIntensityChanged
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseNotesChanged
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseStartPressed
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementSelected
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementTapped
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.SupplementLogOptionSelected
 import com.example.hastanghubaga.ui.common.BannerController
 import com.example.hastanghubaga.ui.common.BottomSheetController
 import com.example.hastanghubaga.ui.common.ErrorView
@@ -65,6 +79,10 @@ sealed interface ActiveLocalSheet {
     data class SupplementLogChoice(
         val data: TodayScreenContract.Effect.ShowSupplementLogChoice,
         val title: String?
+    ) : ActiveLocalSheet
+
+    data class ForceLogSupplementPicker(
+        val supplements: List<Supplement>
     ) : ActiveLocalSheet
 
     data class Exercise(
@@ -135,9 +153,15 @@ fun TodayScreen(
                 }
 
                 is TodayScreenContract.Effect.ShowSupplementLogChoice -> {
-                    activeSheet = ActiveLocalSheet.SupplementLogChoice(
+                    activeSheet = SupplementLogChoice(
                         data = effect,
                         title = effect.title
+                    )
+                }
+
+                is TodayScreenContract.Effect.ShowForceLogSupplementPicker -> {
+                    activeSheet = ForceLogSupplementPicker(
+                        supplements = effect.supplements
                     )
                 }
             }
@@ -151,7 +175,7 @@ fun TodayScreen(
 
             when (item) {
                 is MealUiModel -> {
-                    activeSheet = ActiveLocalSheet.Meal(
+                    activeSheet = Meal(
                         TodayScreenContract.MealLogInput(
                             mealType = item.mealType,
                             timeUseIntent = TimeUseIntent.Scheduled(item.time),
@@ -162,8 +186,6 @@ fun TodayScreen(
                 }
 
                 is ImportedMealUiModel -> {
-                    // Read-only for now.
-                    // Do NOT open the native HH meal logging sheet for imported meals.
                     Unit
                 }
 
@@ -178,18 +200,21 @@ fun TodayScreen(
         },
         onRefresh = {
             viewModel.onIntent(TodayScreenContract.Intent.Refresh)
+        },
+        onForceLogSupplement = {
+            viewModel.onIntent(ForceLogSupplementTapped)
         }
     )
 
     LaunchedEffect(state.exerciseDraft) {
         val draft = state.exerciseDraft
         if (draft != null) {
-            activeSheet = ActiveLocalSheet.Exercise(
+            activeSheet = Exercise(
                 draft = draft,
                 title = draft.activityType.name.replace('_', ' ')
             )
         } else {
-            if (activeSheet is ActiveLocalSheet.Exercise) activeSheet = null
+            if (activeSheet is Exercise) activeSheet = null
         }
     }
 
@@ -204,6 +229,7 @@ fun TodayScreen(
                         activeSheet = null
                     }
                     is SupplementLogChoice -> activeSheet = null
+                    is ForceLogSupplementPicker -> activeSheet = null
                     is Meal -> activeSheet = null
                 }
             }
@@ -227,7 +253,8 @@ fun TodayScreen(
                                     amount = amount,
                                     unit = unit,
                                     scheduledTime = sheet.data.scheduledTime,
-                                    actualTime = null
+                                    actualTime = null,
+                                    occurrenceId = sheet.data.occurrenceId
                                 )
                             )
                             activeSheet = null
@@ -266,6 +293,7 @@ fun TodayScreen(
                                     defaultUnit = sheet.data.defaultUnit,
                                     suggestedDose = sheet.data.suggestedDose,
                                     scheduledTime = sheet.data.scheduledTime,
+                                    occurrenceId = sheet.data.occurrenceId,
                                     option = TodayScreenContract.SupplementLogOption.Scheduled
                                 )
                             )
@@ -279,7 +307,25 @@ fun TodayScreen(
                                     defaultUnit = sheet.data.defaultUnit,
                                     suggestedDose = sheet.data.suggestedDose,
                                     scheduledTime = sheet.data.scheduledTime,
+                                    occurrenceId = sheet.data.occurrenceId,
                                     option = TodayScreenContract.SupplementLogOption.NowExtra
+                                )
+                            )
+                            activeSheet = null
+                        }
+                    )
+                }
+
+                is ForceLogSupplementPicker -> {
+                    ForceLogSupplementPickerSheetContent(
+                        supplements = sheet.supplements,
+                        onSupplementSelected = { supplement ->
+                            viewModel.onIntent(
+                                ForceLogSupplementSelected(
+                                    supplementId = supplement.id,
+                                    title = supplement.name,
+                                    defaultUnit = supplement.recommendedDoseUnit,
+                                    suggestedDose = supplement.recommendedServingSize
                                 )
                             )
                             activeSheet = null
@@ -318,7 +364,7 @@ private fun ExerciseBottomSheetContent(
     draft: TodayScreenContract.ExerciseDraft,
     onNotesChange: (String) -> Unit,
     onIntensityChange: (Int?) -> Unit,
-    onEndTimeChange: (kotlinx.datetime.LocalTime?) -> Unit,
+    onEndTimeChange: (LocalTime?) -> Unit,
     onPrimaryAction: () -> Unit,
 ) {
     Column(
@@ -397,7 +443,8 @@ private fun ExerciseBottomSheetContent(
 fun TodayScreenContent(
     state: TodayScreenContract.State,
     onItemClick: (TimelineItemUiModel) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onForceLogSupplement: () -> Unit
 ) {
     when {
         state.isLoading -> LoadingView()
@@ -408,6 +455,17 @@ fun TodayScreenContent(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
+
+            Button(
+                onClick = onForceLogSupplement,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("Force log supplement")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             TimelineList(
                 modifier = Modifier.weight(1f),
@@ -528,6 +586,58 @@ private fun SupplementLogChoiceSheetContent(
                 .clickable { onLogNowExtra() }
                 .padding(vertical = 12.dp)
         )
+    }
+}
+
+@Composable
+private fun ForceLogSupplementPickerSheetContent(
+    supplements: List<Supplement>,
+    onSupplementSelected: (Supplement) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Force log supplement",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Choose an active supplement to log.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(
+                items = supplements,
+                key = { it.id }
+            ) { supplement ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSupplementSelected(supplement) }
+                        .padding(vertical = 12.dp)
+                ) {
+                    Text(
+                        text = supplement.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    val subtitle =
+                        "${supplement.recommendedServingSize} ${supplement.recommendedDoseUnit.name}"
+
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
     }
 }
 
