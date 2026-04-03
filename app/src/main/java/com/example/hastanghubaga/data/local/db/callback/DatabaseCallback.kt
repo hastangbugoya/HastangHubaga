@@ -349,9 +349,9 @@ VALUES
 INSERT INTO activity_schedule_fixed_times
 (id, scheduleId, time, label, sortOrder)
 VALUES
-    (1, 1, '07:00:00', 'Morning strength', 0),
-    (2, 3, '20:00:00', 'Evening relaxation', 0),
-    (3, 4, '21:00:00', 'Sleep', 0);
+    (1, 1, 25200, 'Morning strength', 0),
+    (2, 3, 72000, 'Evening relaxation', 0),
+    (3, 4, 75600, 'Sleep', 0);
                 """.trimIndent()
             )
         }

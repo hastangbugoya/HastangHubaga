@@ -448,7 +448,7 @@ private fun DoseDateTimeSection(
                     ).show()
                 }
             ) {
-                Text("Time: $actualTime")
+                Text("Time: ${actualTime.toDisplayText()}")
             }
         }
 
@@ -475,12 +475,12 @@ private fun ExerciseBottomSheetContent(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "Start: ${draft.startTime}",
+            text = "Start: ${draft.startTime.toDisplayText()}",
             style = MaterialTheme.typography.titleMedium
         )
 
         Text(
-            text = "End: ${draft.endTime ?: "—"}",
+            text = "End: ${draft.endTime?.toDisplayText() ?: "—"}",
             style = MaterialTheme.typography.titleMedium
         )
 
@@ -615,7 +615,7 @@ fun TimelineRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = item.time.toString(),
+                    text = item.time.toDisplayText(),
                     style = MaterialTheme.typography.labelMedium
                 )
 
@@ -666,7 +666,7 @@ private fun SupplementLogChoiceSheetContent(
             modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
         )
 
-        val scheduledLabel = scheduledTime?.toString() ?: "scheduled time"
+        val scheduledLabel = scheduledTime?.toDisplayText() ?: "scheduled time"
         Text(
             text = "Log scheduled dose ($scheduledLabel)",
             style = MaterialTheme.typography.titleMedium,
@@ -832,3 +832,9 @@ private fun TodayScreenContract.NutritionInput.isAllNull(): Boolean =
             sodiumMg == null &&
             cholesterolMg == null &&
             fiberGrams == null
+
+private fun LocalTime.toDisplayText(): String {
+    val hourText = hour.toString().padStart(2, '0')
+    val minuteText = minute.toString().padStart(2, '0')
+    return "$hourText:$minuteText"
+}

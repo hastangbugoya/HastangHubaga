@@ -38,10 +38,17 @@ interface ActivityEntityDao {
 
     @Query(
         """
-        SELECT * FROM activities
-        WHERE startTimestamp >= :start
-          AND startTimestamp < :end
-        ORDER BY startTimestamp ASC
+        SELECT * FROM activities a
+        WHERE a.isActive = 1
+          AND a.startTimestamp >= :start
+          AND a.startTimestamp < :end
+          AND NOT EXISTS (
+              SELECT 1
+              FROM activity_schedules s
+              WHERE s.activityId = a.id
+                AND s.isEnabled = 1
+          )
+        ORDER BY a.startTimestamp ASC
     """
     )
     fun observeActivitiesForDay(

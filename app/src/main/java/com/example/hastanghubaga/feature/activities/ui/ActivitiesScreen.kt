@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import com.example.hastanghubaga.R
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.hastanghubaga.R
 
 data class ActivityListItemUi(
     val id: Long,
@@ -151,20 +151,26 @@ private fun ActivityRow(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.time_watch_calendar),
-                        contentDescription = "Scheduled",
-                        tint = if (item.hasSchedule)
-                            MaterialTheme.colorScheme.tertiary
-                        else
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        painter = painterResource(
+                            if (item.isActive) R.drawable.check else R.drawable.cross_small
+                        ),
+                        contentDescription = if (item.isActive) "Active" else "Inactive",
+                        tint = if (item.isActive) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        }
                     )
 
-                    if (!item.isActive) {
-                        Icon(
-                            painter = painterResource(if (item.isActive) R.drawable.check else R.drawable.cross_small),
-                            contentDescription = "Inactive"
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.time_watch_calendar),
+                        contentDescription = if (item.hasSchedule) "Scheduled" else "Not scheduled",
+                        tint = if (item.hasSchedule) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        }
+                    )
 
                     Text(
                         text = item.startLabel,

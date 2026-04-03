@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
+import com.example.hastanghubaga.data.local.models.ActivityOccurrenceWithActivity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -15,6 +16,39 @@ interface ActivityOccurrenceDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertOccurrences(entities: List<ActivityOccurrenceEntity>)
+
+    @Query("""
+        SELECT
+            o.id AS occ_id,
+            o.activityId AS occ_activityId,
+            o.scheduleId AS occ_scheduleId,
+            o.date AS occ_date,
+            o.plannedTimeSeconds AS occ_plannedTimeSeconds,
+            o.sourceType AS occ_sourceType,
+            o.isDeleted AS occ_isDeleted,
+            o.isWorkout AS occ_isWorkout,
+
+            a.id AS act_id,
+            a.type AS act_type,
+            a.startTimestamp AS act_startTimestamp,
+            a.endTimestamp AS act_endTimestamp,
+            a.notes AS act_notes,
+            a.intensity AS act_intensity,
+            a.isWorkout AS act_isWorkout,
+            a.isActive AS act_isActive,
+            a.sendAlert AS act_sendAlert,
+            a.alertOffsetMinutes AS act_alertOffsetMinutes
+        FROM activity_occurrences o
+        INNER JOIN activities a
+            ON a.id = o.activityId
+        WHERE o.date = :date
+          AND o.isDeleted = 0
+          AND a.isActive = 1
+        ORDER BY o.plannedTimeSeconds ASC, o.id ASC
+    """)
+    fun observeOccurrencesWithActivityForDate(
+        date: String
+    ): Flow<List<ActivityOccurrenceWithActivity>>
 
     @Query("""
         SELECT * FROM activity_occurrences

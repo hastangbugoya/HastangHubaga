@@ -54,6 +54,10 @@ import kotlinx.datetime.toLocalDateTime
  * - always show the actual/manual activity row
  * - if it heuristically matches a planned occurrence, the matching planned row is suppressed
  *
+ * Important transitional guardrail:
+ * - inactive activities must not appear in the timeline from either path
+ * - if an activity is inactive, it should produce no planned row and no actual/manual row
+ *
  * Other timeline content:
  * - native HH meals
  * - imported meals
@@ -81,7 +85,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
     ): List<TimelineItem> {
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
-        val activityLookup = activities.associateBy { it.id }
+
+        val activeActivities = activities.filter { it.isActive }
+        val activityLookup = activeActivities.associateBy { it.id }
 
         val supplementOccurrenceTimeLookup =
             supplementOccurrences.associate { occurrence ->
@@ -216,7 +222,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
         Log.d("Meow", "BuildTodayTimelineUseCase> plannedActivityItems: ${plannedActivityItems.size}")
 
         val actualActivityItems =
-            activities.map { activity ->
+            activeActivities.map { activity ->
                 val actualTime = activity.start.time
 
                 TimelineItem.ActivityTimelineItem(

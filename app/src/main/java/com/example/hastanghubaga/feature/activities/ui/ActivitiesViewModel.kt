@@ -31,18 +31,17 @@ import com.example.hastanghubaga.feature.schedule.ui.model.ScheduleValidationErr
 import com.example.hastanghubaga.feature.schedule.ui.model.TimingMode
 import com.example.hastanghubaga.feature.schedule.ui.model.WeekdayUi
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 import kotlinx.datetime.DayOfWeek as KtxDayOfWeek
 import kotlinx.datetime.LocalTime as KtxLocalTime
 
@@ -76,29 +75,40 @@ class ActivitiesViewModel @Inject constructor(
 
     private val timeFormatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
     private val zoneId = ZoneId.systemDefault()
+    private val scheduleTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 
     private val itemsFlow =
-        activityEntityDao
-            .observeAllActivities()
-            .map { activities ->
-                activities.map { activity ->
-                    val schedules = activityScheduleDao.getSchedulesForActivity(activity.id)
-                    val hasSchedule = schedules.any { it.isEnabled }
+        combine(
+            activityEntityDao.observeAllActivities(),
+            activityScheduleDao.observeAllSchedules(),
+            activityScheduleDao.observeAllFixedTimes(),
+            activityScheduleDao.observeAllAnchoredTimes()
+        ) { activities, schedules, fixedTimes, anchoredTimes ->
+            activities.map { activity ->
+                val enabledSchedules = schedules
+                    .filter { it.activityId == activity.id && it.isEnabled }
 
-                    ActivityListItemUi(
-                        id = activity.id,
-                        typeLabel = activity.type.toDisplayLabel(),
-                        notes = activity.notes,
-                        intensityLabel = buildIntensityLabel(
-                            activity = activity,
-                            hasSchedule = hasSchedule
-                        ),
-                        startLabel = formatTimestamp(activity.startTimestamp),
-                        isActive = activity.isActive,
+                val hasSchedule = enabledSchedules.isNotEmpty()
+
+                ActivityListItemUi(
+                    id = activity.id,
+                    typeLabel = activity.type.toDisplayLabel(),
+                    notes = activity.notes,
+                    intensityLabel = buildIntensityLabel(
+                        activity = activity,
                         hasSchedule = hasSchedule
-                    )
-                }
+                    ),
+                    startLabel = buildStartLabel(
+                        activity = activity,
+                        enabledSchedules = enabledSchedules,
+                        fixedTimes = fixedTimes,
+                        anchoredTimes = anchoredTimes
+                    ),
+                    isActive = activity.isActive,
+                    hasSchedule = hasSchedule
+                )
             }
+        }
 
     val state: StateFlow<ActivitiesUiState> =
         combine(
@@ -442,6 +452,68 @@ class ActivitiesViewModel @Inject constructor(
             label = null,
             sortOrder = sortOrder
         )
+    }
+
+    private fun buildStartLabel(
+        activity: ActivityEntity,
+        enabledSchedules: List<ActivityScheduleEntity>,
+        fixedTimes: List<ActivityScheduleFixedTimeEntity>,
+        anchoredTimes: List<ActivityScheduleAnchoredTimeEntity>
+    ): String {
+        val firstEnabledSchedule = enabledSchedules.minByOrNull { it.id }
+            ?: return formatTimestamp(activity.startTimestamp)
+
+        return when (firstEnabledSchedule.timingType) {
+            ScheduleTimingType.FIXED -> {
+                val firstFixed = fixedTimes
+                    .filter { it.scheduleId == firstEnabledSchedule.id }
+                    .minWithOrNull(compareBy<ActivityScheduleFixedTimeEntity> { it.sortOrder }.thenBy { it.id })
+
+                firstFixed?.time?.let(::formatScheduleTime) ?: formatTimestamp(activity.startTimestamp)
+            }
+
+            ScheduleTimingType.ANCHORED -> {
+                val firstAnchored = anchoredTimes
+                    .filter { it.scheduleId == firstEnabledSchedule.id }
+                    .minWithOrNull(compareBy<ActivityScheduleAnchoredTimeEntity> { it.sortOrder }.thenBy { it.id })
+
+                firstAnchored?.let { anchored ->
+                    buildAnchoredLabel(
+                        anchor = anchored.anchor,
+                        offsetMinutes = anchored.offsetMinutes
+                    )
+                } ?: "Anchored"
+            }
+        }
+    }
+
+    private fun buildAnchoredLabel(
+        anchor: TimeAnchor,
+        offsetMinutes: Int
+    ): String {
+        val anchorLabel = when (anchor) {
+            TimeAnchor.MIDNIGHT -> "Midnight"
+            TimeAnchor.WAKEUP -> "Wake up"
+            TimeAnchor.BREAKFAST -> "Breakfast"
+            TimeAnchor.LUNCH -> "Lunch"
+            TimeAnchor.DINNER -> "Dinner"
+            TimeAnchor.SNACK -> "Snack"
+            TimeAnchor.BEFORE_WORKOUT -> "Before workout"
+            TimeAnchor.DURING_WORKOUT -> "During workout"
+            TimeAnchor.AFTER_WORKOUT -> "After workout"
+            TimeAnchor.SLEEP -> "Sleep"
+        }
+
+        return when {
+            offsetMinutes == 0 -> anchorLabel
+            offsetMinutes > 0 -> "$anchorLabel +${offsetMinutes}m"
+            else -> "$anchorLabel ${offsetMinutes}m"
+        }
+    }
+
+    private fun formatScheduleTime(time: KtxLocalTime): String {
+        return java.time.LocalTime.of(time.hour, time.minute, time.second)
+            .format(scheduleTimeFormatter)
     }
 
     private fun uiWeekdayToKtx(value: WeekdayUi): KtxDayOfWeek {

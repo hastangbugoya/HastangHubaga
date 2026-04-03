@@ -2,6 +2,7 @@ package com.example.hastanghubaga.data.repository
 
 import android.util.Log
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
 import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
@@ -10,12 +11,14 @@ import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
 
 class ActivityRepositoryImpl @Inject constructor(
-    private val dao: ActivityEntityDao
+    private val dao: ActivityEntityDao,
+    private val occurrenceDao: ActivityOccurrenceDao
 ) : ActivityRepository {
 
     override fun observeAll(): Flow<List<Activity>> =
@@ -33,22 +36,20 @@ class ActivityRepositoryImpl @Inject constructor(
     override fun observeActivitiesForDate(date: LocalDate): Flow<List<Activity>> {
         val (start, end) = DomainTimePolicy.utcMillisRangeForLocalDate(date)
 
-        Log.d("ActivityDebug", "Query date=$date")
-        Log.d("ActivityDebug", "UTC range: $start → $end")
+        val unscheduledFlow = dao.observeActivitiesForDay(start, end)
 
-        return dao.observeActivitiesForDay(start, end)
-            .map { list ->
-                Log.d("ActivityDebug", "DB returned ${list.size} activities")
+        val scheduledFlow =
+            occurrenceDao.observeOccurrencesWithActivityForDate(date.toString())
 
-                list.forEach {
-                    Log.d(
-                        "ActivityDebug",
-                        "Activity id=${it.id} type=${it.type} start=${it.startTimestamp}"
-                    )
-                }
+        return combine(unscheduledFlow, scheduledFlow) { unscheduled, scheduled ->
 
-                list.map { it.toDomain() }
-            }
+            val unscheduledMapped = unscheduled.map { it.toDomain() }
+
+            val scheduledMapped = scheduled.map { it.toDomain() }
+
+            (unscheduledMapped + scheduledMapped)
+                .sortedBy { it.start }
+        }
     }
 
     override suspend fun insertActivity(

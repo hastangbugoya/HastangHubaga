@@ -147,11 +147,7 @@ private fun SupplementRow(
                 // Enabled icon
                 Icon(
                     painter = painterResource(if (item.isActive) R.drawable.check else R.drawable.cross_small),
-//                    imageVector = if (item.isActive)
-//                        Icons.Default.CheckCircle
-//                    else
-//                        Icons.Default.RadioButtonUnchecked,
-                    contentDescription = "Enabled",
+                    contentDescription = if (item.isActive) "Enabled" else "Not enabled",
                     tint = if (item.isActive)
                         MaterialTheme.colorScheme.primary
                     else
@@ -165,7 +161,7 @@ private fun SupplementRow(
 //                        Icons.Default.Schedule
 //                    else
 //                        Icons.Default.Schedule, // same icon, different tint
-                    contentDescription = "Scheduled",
+                    contentDescription = if (item.isScheduled) "Scheduled" else "Not scheduled",
                     tint = if (item.isScheduled)
                         MaterialTheme.colorScheme.tertiary
                     else

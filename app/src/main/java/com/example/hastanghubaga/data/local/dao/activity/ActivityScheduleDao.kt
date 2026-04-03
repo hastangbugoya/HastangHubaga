@@ -10,24 +10,20 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleEnti
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleFixedTimeEntity
 import kotlinx.coroutines.flow.Flow
 
-/**
- * DAO for persisted activity schedules.
- *
- * This DAO stores the actual planning/scheduling rules for activities.
- * It is intentionally separate from ActivityEntity, which may continue to
- * represent the reusable activity definition/template.
- */
 @Dao
 interface ActivityScheduleDao {
 
-    // -------------------------
-    // Parent schedule rows
-    // -------------------------
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSchedule(schedule: ActivityScheduleEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSchedules(schedules: List<ActivityScheduleEntity>): List<Long>
+
+    @Query("""
+        SELECT * FROM activity_schedules
+        ORDER BY activityId ASC, id ASC
+    """)
+    fun observeAllSchedules(): Flow<List<ActivityScheduleEntity>>
 
     @Query("""
         SELECT * FROM activity_schedules
@@ -49,14 +45,17 @@ interface ActivityScheduleDao {
     """)
     suspend fun deleteSchedulesForActivity(activityId: Long)
 
-    // -------------------------
-    // Fixed child rows
-    // -------------------------
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFixedTime(fixedTime: ActivityScheduleFixedTimeEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFixedTimes(fixedTimes: List<ActivityScheduleFixedTimeEntity>): List<Long>
+
+    @Query("""
+        SELECT * FROM activity_schedule_fixed_times
+        ORDER BY scheduleId ASC, sortOrder ASC, id ASC
+    """)
+    fun observeAllFixedTimes(): Flow<List<ActivityScheduleFixedTimeEntity>>
 
     @Query("""
         SELECT * FROM activity_schedule_fixed_times
@@ -71,9 +70,6 @@ interface ActivityScheduleDao {
     """)
     suspend fun deleteFixedTimesForSchedule(scheduleId: Long)
 
-    // -------------------------
-    // Anchored child rows
-    // -------------------------
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAnchoredTime(anchoredTime: ActivityScheduleAnchoredTimeEntity): Long
 
@@ -81,6 +77,12 @@ interface ActivityScheduleDao {
     suspend fun insertAnchoredTimes(
         anchoredTimes: List<ActivityScheduleAnchoredTimeEntity>
     ): List<Long>
+
+    @Query("""
+        SELECT * FROM activity_schedule_anchored_times
+        ORDER BY scheduleId ASC, sortOrder ASC, id ASC
+    """)
+    fun observeAllAnchoredTimes(): Flow<List<ActivityScheduleAnchoredTimeEntity>>
 
     @Query("""
         SELECT * FROM activity_schedule_anchored_times
@@ -95,16 +97,6 @@ interface ActivityScheduleDao {
     """)
     suspend fun deleteAnchoredTimesForSchedule(scheduleId: Long)
 
-    // -------------------------
-    // Transactional replace/upsert
-    // -------------------------
-    /**
-     * Replaces the full persisted schedule set for one activity.
-     *
-     * This mirrors the supplement schedule save path:
-     * - user edits the full schedule collection in memory
-     * - save replaces persisted schedules atomically
-     */
     @Transaction
     suspend fun replaceSchedulesForActivity(
         activityId: Long,
@@ -145,13 +137,6 @@ interface ActivityScheduleDao {
     }
 }
 
-/**
- * Write model used by the editor save path.
- *
- * One parent schedule row plus its child occurrence rows.
- * Exactly one of fixedTimes or anchoredTimes should normally be non-empty,
- * matching the parent timingType.
- */
 data class ActivityScheduleWriteModel(
     val schedule: ActivityScheduleEntity,
     val fixedTimes: List<ActivityScheduleFixedTimeEntity> = emptyList(),
