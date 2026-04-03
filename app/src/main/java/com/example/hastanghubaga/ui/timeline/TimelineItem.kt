@@ -1,10 +1,10 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.model.supplement.ResolvedSupplementScheduleEntry
-import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.datetime.LocalTime
 
@@ -24,42 +24,43 @@ sealed interface TimelineItem {
     val time: LocalTime
 
     /**
-     * Planned/scheduled supplement timeline row.
+     * Planned supplement timeline row.
      *
-     * This row represents a supplement occurrence shown in the Today timeline.
+     * This row now represents the PLANNED side of supplement behavior:
+     * one concrete supplement occurrence for the selected day.
      *
-     * ## Schedule-aware behavior
-     * [resolvedScheduleEntry] preserves the concrete same-day scheduling output
-     * that produced this row when available.
+     * Canonical identity:
+     * - [occurrenceId] is the stable planner occurrence ID
+     * - one planned occurrence = one planned timeline row
      *
-     * This enables the timeline to retain:
-     * - schedule identity
-     * - timing source (fixed / anchored / legacy)
-     * - row-level anchor metadata
-     * - future linkage to stricter recurrence behavior
+     * Architectural intent:
+     * - planned rows come from the planned occurrence ledger
+     * - actual logged doses remain separate rows
+     * - reconciliation happens by occurrence ID
      *
-     * It is nullable for backward compatibility while older callers still build
-     * supplement timeline rows from flat [SupplementWithUserSettings.scheduledTimes].
+     * Important:
+     * - [time] is the canonical timeline placement time
+     * - [scheduledTime] preserves the original planned time context
+     * - in the common case they are the same
+     * - UI/logging flows should preserve [occurrenceId] when this planned row
+     *   is logged as an actual dose
      *
-     * ## Occurrence-aware reconciliation
-     * [occurrenceId] is optional because the app is transitioning from a
-     * schedule/log split toward explicit occurrence ↔ log linkage.
-     *
-     * When present, [occurrenceId] identifies the concrete planner occurrence
-     * that this supplement row represents. This enables:
-     * - one-to-one reconciliation with a logged dose
-     * - multi-dose-per-day support
-     * - future promotion of ad-hoc doses into first-class planner items
-     *
-     * When absent, the row still behaves as a normal scheduled supplement item
-     * but downstream logging/reconciliation may treat it as unlinked.
+     * This model intentionally avoids embedding rich schedule-resolution
+     * objects directly into the timeline layer. The timeline should carry the
+     * planner occurrence identity and the display/logging data it needs, but
+     * should not remain coupled to upstream schedule-resolution internals.
      */
     data class SupplementTimelineItem(
         override val time: LocalTime,
-        val isTaken: Boolean = false,
-        val supplement: SupplementWithUserSettings,
-        val resolvedScheduleEntry: ResolvedSupplementScheduleEntry? = null,
-        val occurrenceId: String? = null
+        val occurrenceId: String,
+        val supplementId: Long,
+        val title: String,
+        val subtitle: String?,
+        val defaultUnit: SupplementDoseUnit,
+        val suggestedDose: Double,
+        val doseState: MealAwareDoseState? = null,
+        val scheduledTime: LocalTime = time,
+        val isTaken: Boolean = false
     ) : TimelineItem
 
     data class ActivityTimelineItem(
@@ -95,6 +96,17 @@ sealed interface TimelineItem {
         val meal: AkImportedMealEntity
     ) : TimelineItem
 
+    /**
+     * Actual recorded supplement dose event.
+     *
+     * This is the ACTUAL side of supplement behavior.
+     *
+     * Important:
+     * - this is not the planned row
+     * - multiple actual logs may exist for the same supplement on the same day
+     * - [scheduledTime] is informational only and must not replace [time] for
+     *   timeline placement
+     */
     data class SupplementDoseLogTimelineItem(
         val doseLogId: Long,
         val supplementId: Long,

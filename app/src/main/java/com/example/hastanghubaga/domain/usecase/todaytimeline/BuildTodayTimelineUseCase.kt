@@ -2,54 +2,52 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import android.util.Log
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
+import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
-import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
 import com.example.hastanghubaga.ui.timeline.TimelineItem
+import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
 import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
 import javax.inject.Inject
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toLocalDateTime
 
 /**
- * Builds a single, chronologically ordered timeline for "Today".
+ * Builds a single, chronologically ordered timeline for the selected day.
  *
- * This use case is the central orchestration point that merges multiple
- * time-resolved item types into one user-facing day timeline:
+ * Canonical supplement model:
+ * - planned rows come from persisted supplement occurrences
+ * - actual rows come from supplement dose logs
+ * - reconciliation happens by occurrenceId
  *
- * - Supplements (already scheduled/resolved upstream)
- * - Actual supplement dose logs
- * - Native HH meals
- * - Imported meals
- * - Activities
+ * Planned row rule:
+ * - show the planned occurrence if it has not yet been satisfied by a linked log
  *
- * Canonical timeline rule:
- * - This use case trusts each item's already-resolved [TimelineItem.time]
- * - It does NOT perform scheduling or anchor resolution for supplements
- * - It does NOT reinterpret source timestamps once a [TimelineItem] is built
+ * Actual row rule:
+ * - always show the actual user-declared log event
+ * - if the log links to a planned occurrence, the matching planned row is suppressed
+ * - if the log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
  *
- * Its job is to make the mixed timeline make user-sense by:
- * - mapping source models to timeline rows
- * - merging heterogeneous rows
- * - applying deterministic cross-type ordering
- * - persisting a simplified upcoming schedule snapshot
+ * Other timeline content:
+ * - native HH meals
+ * - imported meals
+ * - activities
  *
- * Same-time ordering policy:
- * - Supplements first
- * - Native meals second
- * - Imported meals third
- * - Activities fourth
- * - Supplement dose logs fifth
- *
- * Within the same type and time, ordering must be stable and identity-based.
- * Hash-based ordering is intentionally avoided because it is not a business rule.
+ * This use case trusts upstream time resolution and only performs:
+ * - mapping to timeline rows
+ * - planned-vs-actual supplement reconciliation
+ * - deterministic merge/sort
+ * - simplified upcoming schedule snapshot persistence
  */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,
@@ -57,41 +55,65 @@ class BuildTodayTimelineUseCase @Inject constructor(
     private val resolveMealAnchorUseCase: ResolveMealAnchorUseCase
 ) {
     suspend operator fun invoke(
-        supplements: List<SupplementWithUserSettings>,
+        date: LocalDate,
+        supplementOccurrences: List<SupplementOccurrenceEntity>,
+        supplements: List<Supplement>,
         supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
         activities: List<Activity> = emptyList()
     ): List<TimelineItem> {
-        val supplementTitleLookup = supplements.associate { item ->
-            item.supplement.id to item.supplement.name
-        }
+        val supplementLookup = supplements.associateBy { it.id }
+        val supplementTitleLookup = supplements.associate { it.id to it.name }
 
-        val supplementItems =
-            supplements.flatMap { supplementWithSettings ->
-                val resolvedEntries = supplementWithSettings.resolvedScheduleEntries
-
-                if (resolvedEntries.isNotEmpty()) {
-                    resolvedEntries.map { entry ->
-                        TimelineItem.SupplementTimelineItem(
-                            time = entry.time,
-                            supplement = supplementWithSettings,
-                            resolvedScheduleEntry = entry,
-                            occurrenceId = entry.occurrenceId
-                        )
-                    }
-                } else {
-                    supplementWithSettings.scheduledTimes.map { time ->
-                        TimelineItem.SupplementTimelineItem(
-                            time = time,
-                            supplement = supplementWithSettings,
-                            resolvedScheduleEntry = null,
-                            occurrenceId = null
-                        )
-                    }
-                }
+        val occurrenceTimeLookup =
+            supplementOccurrences.associate { occurrence ->
+                occurrence.id to LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> supplementItems: ${supplementItems.size}")
+
+        val plannedSupplementItems =
+            supplementOccurrences.mapNotNull { occurrence ->
+                val supplement = supplementLookup[occurrence.supplementId] ?: return@mapNotNull null
+
+                val plannedTime = LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
+                val subtitle =
+                    "${supplement.recommendedServingSize.asDisplayTextNonComposable()} " +
+                            supplement.recommendedDoseUnit.toDisplayCase(
+                                supplement.recommendedServingSize
+                            )
+
+                TimelineItem.SupplementTimelineItem(
+                    time = plannedTime,
+                    occurrenceId = occurrence.id,
+                    supplementId = supplement.id,
+                    title = supplement.name,
+                    subtitle = subtitle,
+                    defaultUnit = supplement.recommendedDoseUnit,
+                    suggestedDose = supplement.recommendedServingSize,
+                    doseState = null,
+                    scheduledTime = plannedTime,
+                    isTaken = false
+                )
+            }
+        Log.d("Meow", "BuildTodayTimelineUseCase> plannedSupplementItems: ${plannedSupplementItems.size}")
+
+        val satisfiedOccurrenceIds =
+            supplementDoseLogs
+                .mapNotNull { it.occurrenceId }
+                .toSet()
+        Log.d(
+            "Meow",
+            "BuildTodayTimelineUseCase> satisfiedOccurrenceIds: ${satisfiedOccurrenceIds.size}"
+        )
+
+        val filteredPlannedSupplementItems =
+            plannedSupplementItems.filterNot { item ->
+                item.occurrenceId in satisfiedOccurrenceIds
+            }
+        Log.d(
+            "Meow",
+            "BuildTodayTimelineUseCase> filteredPlannedSupplementItems: ${filteredPlannedSupplementItems.size}"
+        )
 
         val supplementDoseLogItems =
             supplementDoseLogs.map { doseLog ->
@@ -102,7 +124,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     time = doseLog.timestamp.time,
                     amount = doseLog.actualServingTaken,
                     unit = doseLog.doseUnit.name,
-                    scheduledTime = null
+                    scheduledTime = doseLog.occurrenceId?.let(occurrenceTimeLookup::get)
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
@@ -169,7 +191,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
         Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
 
         val merged = (
-                supplementItems +
+                filteredPlannedSupplementItems +
                         supplementDoseLogItems +
                         mealItems +
                         importedMealItems +
@@ -181,7 +203,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     .thenBy { itemStableSecondaryKey(it) }
             )
 
-        val date: LocalDate = DomainTimePolicy.todayLocal()
         val upcomingItems =
             merged.mapNotNull<TimelineItem, UpcomingSchedule> { item ->
                 item.toUpcomingSchedule(date = date)
@@ -216,22 +237,14 @@ class BuildTodayTimelineUseCase @Inject constructor(
      */
     private fun itemStablePrimaryKey(item: TimelineItem): String =
         when (item) {
-            is TimelineItem.SupplementTimelineItem -> {
-                val entry = item.resolvedScheduleEntry
+            is TimelineItem.SupplementTimelineItem ->
                 buildString {
-                    append(item.supplement.supplement.id)
+                    append(item.supplementId)
                     append("|")
-                    append(entry?.scheduleId ?: Long.MAX_VALUE)
+                    append(item.occurrenceId)
                     append("|")
-                    append(entry?.sourceRowId ?: Long.MAX_VALUE)
-                    append("|")
-                    append(entry?.sortOrder ?: Int.MAX_VALUE)
-                    append("|")
-                    append(entry?.label ?: "")
-                    append("|")
-                    append(entry?.occurrenceId ?: item.occurrenceId ?: "")
+                    append(item.scheduledTime.toSecondOfDay())
                 }
-            }
 
             is TimelineItem.MealTimelineItem ->
                 item.meal.id.toString()
@@ -254,18 +267,16 @@ class BuildTodayTimelineUseCase @Inject constructor(
      */
     private fun itemStableSecondaryKey(item: TimelineItem): String =
         when (item) {
-            is TimelineItem.SupplementTimelineItem -> {
-                val entry = item.resolvedScheduleEntry
+            is TimelineItem.SupplementTimelineItem ->
                 buildString {
-                    append(entry?.timingType?.name ?: "")
-                    append("|")
-                    append(entry?.anchor?.name ?: "")
+                    append(item.title)
                     append("|")
                     append(item.time.toSecondOfDay())
                     append("|")
-                    append(item.supplement.supplement.name)
+                    append(item.defaultUnit.name)
+                    append("|")
+                    append(item.suggestedDose)
                 }
-            }
 
             is TimelineItem.MealTimelineItem ->
                 buildString {

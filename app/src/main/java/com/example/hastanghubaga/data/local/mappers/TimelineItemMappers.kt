@@ -12,16 +12,18 @@ fun TimelineItem.toUpcomingSchedule(
     date: LocalDate
 ): UpcomingSchedule? {
     return when (this) {
+
+        // ✅ FIXED: use new planned-occurrence fields
         is TimelineItem.SupplementTimelineItem ->
             UpcomingSchedule(
                 type = TodayUiRowType.SUPPLEMENT,
-                referenceId = supplement.supplement.id,
+                referenceId = supplementId,
                 scheduledAt = LocalDateTime(
                     date = date,
                     time = this.time
                 ),
-                title = supplement.supplement.name,
-                subtitle = "later"
+                title = title,
+                subtitle = subtitle ?: "later"
             )
 
         is TimelineItem.MealTimelineItem ->

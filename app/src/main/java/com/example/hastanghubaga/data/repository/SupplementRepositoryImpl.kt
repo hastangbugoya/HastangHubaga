@@ -402,7 +402,9 @@ class SupplementRepositoryImpl @Inject constructor(
             .filter { it.isActiveOn(date) }
 
         val persistedFixedEntries = buildResolvedFixedEntriesFromPersistedSchedules(
-            schedules = applicableSchedules
+            supplementId = supplement.id,
+            schedules = applicableSchedules,
+            date = date
         )
 
         val persistedScheduleSpec = buildPersistedScheduleSpecFromSchedules(
@@ -418,7 +420,11 @@ class SupplementRepositoryImpl @Inject constructor(
 
         val fallbackResolvedEntries =
             if (persistedFixedEntries.isEmpty()) {
-                buildResolvedEntriesFromFallbackScheduleSpec(fallbackScheduleSpec)
+                buildResolvedEntriesFromFallbackScheduleSpec(
+                    supplementId = supplement.id,
+                    scheduleSpec = fallbackScheduleSpec,
+                    date = date
+                )
             } else {
                 emptyList()
             }
@@ -464,7 +470,9 @@ class SupplementRepositoryImpl @Inject constructor(
      * everything into a single plain time list too early.
      */
     private suspend fun buildResolvedFixedEntriesFromPersistedSchedules(
-        schedules: List<SupplementScheduleEntity>
+        supplementId: Long,
+        schedules: List<SupplementScheduleEntity>,
+        date: LocalDate
     ): List<ResolvedSupplementScheduleEntry> {
         val fixedSchedules = schedules
             .filter { it.timingType == ScheduleTimingType.FIXED }
@@ -491,6 +499,14 @@ class SupplementRepositoryImpl @Inject constructor(
             ResolvedSupplementScheduleEntry(
                 scheduleId = schedule.id,
                 sourceRowId = row.id,
+                occurrenceId = buildOccurrenceId(
+                    date = date,
+                    supplementId = supplementId,
+                    scheduleId = schedule.id,
+                    sourceRowId = row.id,
+                    time = row.time,
+                    sortOrder = row.sortOrder
+                ),
                 time = row.time,
                 timingType = ResolvedSupplementTimingType.FIXED,
                 anchor = null,
@@ -549,7 +565,9 @@ class SupplementRepositoryImpl @Inject constructor(
     }
 
     private fun buildResolvedEntriesFromFallbackScheduleSpec(
-        scheduleSpec: SupplementScheduleSpec?
+        supplementId: Long,
+        scheduleSpec: SupplementScheduleSpec?,
+        date: LocalDate
     ): List<ResolvedSupplementScheduleEntry> {
         return when (scheduleSpec) {
             is SupplementScheduleSpec.FixedTimes -> {
@@ -560,6 +578,14 @@ class SupplementRepositoryImpl @Inject constructor(
                         ResolvedSupplementScheduleEntry(
                             scheduleId = null,
                             sourceRowId = null,
+                            occurrenceId = buildOccurrenceId(
+                                date = date,
+                                supplementId = supplementId,
+                                scheduleId = null,
+                                sourceRowId = null,
+                                time = time,
+                                sortOrder = index
+                            ),
                             time = time,
                             timingType = ResolvedSupplementTimingType.LEGACY,
                             anchor = null,
@@ -571,6 +597,24 @@ class SupplementRepositoryImpl @Inject constructor(
 
             else -> emptyList()
         }
+    }
+
+    private fun buildOccurrenceId(
+        date: LocalDate,
+        supplementId: Long,
+        scheduleId: Long?,
+        sourceRowId: Long?,
+        time: LocalTime,
+        sortOrder: Int
+    ): String {
+        return listOf(
+            date.toString(),
+            supplementId.toString(),
+            scheduleId?.toString() ?: "ns",
+            sourceRowId?.toString() ?: "nr",
+            time.toSecondOfDay().toString(),
+            sortOrder.toString()
+        ).joinToString(separator = "|")
     }
 
     private fun SupplementScheduleEntity.isActiveOn(date: LocalDate): Boolean {

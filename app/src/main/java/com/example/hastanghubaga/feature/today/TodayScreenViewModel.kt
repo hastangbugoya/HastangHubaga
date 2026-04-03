@@ -17,7 +17,8 @@ import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetActiveSupplementsUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementDoseLogsForDateUseCase
-import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementsWithUserSettingsForDateUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementOccurrencesForDateUseCase
+import com.example.hastanghubaga.domain.usecase.supplement.MaterializeSupplementOccurrencesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.BuildTodayTimelineUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.HandleTimelineItemTapUseCase
 import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseUseCase
@@ -29,6 +30,7 @@ import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSu
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
+import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
@@ -54,6 +56,13 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
+import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
+import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
+import kotlinx.coroutines.flow.map
 
 /**
  * TodayScreenViewModel drives the Today timeline UI (supplements, meals, activities, dose logs)
@@ -97,6 +106,22 @@ import kotlinx.datetime.toLocalDateTime
  * incremental move toward planner occurrence ↔ log linkage.
  *
  * ---
+ * ## Planned occurrence materialization
+ * As part of the planned-vs-actual refactor, opening a date now also triggers
+ * materialization of that date's supplement occurrences.
+ *
+ * Current behavior:
+ * - the day snapshot is materialized when Today initializes
+ * - the day snapshot is rematerialized when the selected date changes
+ *
+ * The timeline now reads:
+ * - planned supplement occurrences for the date
+ * - active supplement metadata for display/logging defaults
+ * - actual logged supplement doses
+ *
+ * This is the core planned-vs-actual day merge path.
+ *
+ * ---
  * ## Force-log supplement flow
  * A temporary force-log entry path allows the user to choose any active supplement
  * and log an actual dose even when that supplement is not currently scheduled on
@@ -119,12 +144,13 @@ import kotlinx.datetime.toLocalDateTime
  */
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
-    private val getSupplementsForDate: GetSupplementsWithUserSettingsForDateUseCase,
+    private val getSupplementOccurrencesForDate: GetSupplementOccurrencesForDateUseCase,
     private val getActiveSupplements: GetActiveSupplementsUseCase,
     private val getSupplementDoseLogsForDate: GetSupplementDoseLogsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase,
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
+    private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
@@ -161,6 +187,7 @@ class TodayScreenViewModel @Inject constructor(
     init {
         restoreExerciseDraftIfPresent()
         _state.update { it.copy(selectedDate = selectedDate.value) }
+        materializeSelectedDate(selectedDate.value)
         observeTimeline()
         Log.d("Meow", "TodayVM init: ${hashCode()}")
     }
@@ -176,7 +203,10 @@ class TodayScreenViewModel @Inject constructor(
 
         when (intent) {
             is TodayScreenContract.Intent.LoadDate -> loadToday(intent.date)
-            is TodayScreenContract.Intent.Refresh -> loadToday(selectedDate.value)
+            is TodayScreenContract.Intent.Refresh -> {
+                materializeSelectedDate(selectedDate.value)
+                loadToday(selectedDate.value)
+            }
 
             is TodayScreenContract.Intent.TimelineItemClicked -> {
                 handleTimelineItemClicked(intent.item)
@@ -374,9 +404,17 @@ class TodayScreenViewModel @Inject constructor(
                 selectedDate = date
             )
         }
+        materializeSelectedDate(date)
         selectedDate.value = date
     }
 
+    private data class SupplementTimelineInputs(
+        val supplementOccurrences: List<SupplementOccurrenceEntity>,
+        val supplements: List<Supplement>,
+        val supplementDoseLogs: List<SupplementDoseLog>,
+        val meals: List<Meal>,
+        val importedMeals: List<AkImportedMealEntity>
+    )
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeTimeline() {
         Log.d("Meow", "TodayVM observeTimeline()")
@@ -384,21 +422,32 @@ class TodayScreenViewModel @Inject constructor(
             selectedDate
                 .flatMapLatest { date ->
                     combine(
-                        getSupplementsForDate(date),
+                        getSupplementOccurrencesForDate(date),
+                        getActiveSupplements(),
                         getSupplementDoseLogsForDate(date),
                         getMealsForDate(date),
-                        getImportedMealsForDate(date),
-                        getActivitiesForDate(date)
-                    ) { supplements, supplementDoseLogs, meals, importedMeals, activities ->
-                        buildTodayTimeline(
+                        getImportedMealsForDate(date)
+                    ) { supplementOccurrences, supplements, supplementDoseLogs, meals, importedMeals ->
+                        SupplementTimelineInputs(
+                            supplementOccurrences = supplementOccurrences,
                             supplements = supplements,
                             supplementDoseLogs = supplementDoseLogs,
                             meals = meals,
-                            importedMeals = importedMeals,
-                            activities = activities
+                            importedMeals = importedMeals
                         )
-                    }
-                        .flowOn(Dispatchers.Default)
+                    }.flatMapLatest { inputs ->
+                        getActivitiesForDate(date).map { activities ->
+                            buildTodayTimeline(
+                                date = date,
+                                supplementOccurrences = inputs.supplementOccurrences,
+                                supplements = inputs.supplements,
+                                supplementDoseLogs = inputs.supplementDoseLogs,
+                                meals = inputs.meals,
+                                importedMeals = inputs.importedMeals,
+                                activities = activities
+                            )
+                        }
+                    }.flowOn(Dispatchers.Default)
                 }
                 .collect { timeline ->
                     Log.d("Meow", "Timeline update size=${timeline.size}")
@@ -411,6 +460,12 @@ class TodayScreenViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    private fun materializeSelectedDate(date: LocalDate) {
+        viewModelScope.launch {
+            materializeSupplementOccurrencesForDate(date)
         }
     }
 
@@ -442,7 +497,8 @@ class TodayScreenViewModel @Inject constructor(
                             title = action.title,
                             defaultUnit = action.defaultUnit,
                             suggestedDose = action.suggestedDose,
-                            scheduledTime = action.scheduledTime
+                            scheduledTime = action.scheduledTime,
+                            occurrenceId = action.occurrenceId
                         )
                     )
                 }
@@ -473,9 +529,11 @@ class TodayScreenViewModel @Inject constructor(
         return state.value.domainTimelineItems.firstOrNull { domainItem ->
             when {
                 identity.type == TodayUiRowType.SUPPLEMENT &&
+                        uiItem is SupplementUiModel &&
                         domainItem is TimelineItem.SupplementTimelineItem ->
-                    domainItem.supplement.supplement.id == identity.id &&
-                            domainItem.time == identity.time
+                    domainItem.supplementId == identity.id &&
+                            domainItem.time == identity.time &&
+                            domainItem.occurrenceId == (uiItem.occurrenceId ?: domainItem.occurrenceId)
 
                 identity.type == TodayUiRowType.ACTIVITY &&
                         domainItem is TimelineItem.ActivityTimelineItem ->

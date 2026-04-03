@@ -1,15 +1,19 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
+import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
+import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceSourceType
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
+import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
 import com.example.hastanghubaga.factory.FakeActivityFactory
 import com.example.hastanghubaga.factory.FakeMealFactory
-import com.example.hastanghubaga.factory.FakeSupplementWithUserSettingsFactory
-import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.widget.snapshot.BuildWidgetDailySnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -17,12 +21,15 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
-import org.junit.Assert
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
 
 @Ignore("Temporarily disabled while stabilizing scheduling refactor")
 class BuildTodayTimelineUseCaseTest {
+
+    private val testDate = LocalDate(2025, 1, 1)
 
     private val fakeBuildWidgetDailySnapshot =
         object : BuildWidgetDailySnapshot {
@@ -56,12 +63,64 @@ class BuildTodayTimelineUseCaseTest {
     )
 
     private fun supplement(
-        name: String,
-        times: List<LocalTime>
-    ): SupplementWithUserSettings =
-        FakeSupplementWithUserSettingsFactory.create(
+        id: Long,
+        name: String
+    ): Supplement =
+        Supplement(
+            id = id,
             name = name,
-            scheduledTimes = times
+            brand = null,
+            notes = null,
+            recommendedServingSize = 1.0,
+            recommendedDoseUnit = SupplementDoseUnit.TABLET,
+            servingsPerDay = 1.0,
+            recommendedWithFood = null,
+            recommendedLiquidInOz = null,
+            recommendedTimeBetweenDailyDosesMinutes = null,
+            avoidCaffeine = null,
+            doseConditions = emptySet(),
+            doseAnchorType = DoseAnchorType.ANYTIME,
+            frequencyType = FrequencyType.DAILY,
+            frequencyInterval = null,
+            weeklyDays = null,
+            offsetMinutes = null,
+            startDate = null,
+            lastTakenDate = null,
+            ingredients = emptyList(),
+            isActive = true,
+            sendAlert = false,
+            alertOffsetMinutes = null
+        )
+
+    private fun occurrence(
+        id: String,
+        supplementId: Long,
+        time: LocalTime
+    ): SupplementOccurrenceEntity =
+        SupplementOccurrenceEntity(
+            id = id,
+            supplementId = supplementId,
+            scheduleId = null,
+            date = testDate.toString(),
+            plannedTimeSeconds = time.toSecondOfDay(),
+            sourceType = SupplementOccurrenceSourceType.SCHEDULED,
+            isDeleted = false
+        )
+
+    private fun doseLog(
+        id: Long,
+        supplementId: Long,
+        timestamp: LocalDateTime,
+        occurrenceId: String? = null
+    ): SupplementDoseLog =
+        SupplementDoseLog(
+            id = id,
+            supplementId = supplementId,
+            date = timestamp.date,
+            actualServingTaken = 1.0,
+            doseUnit = SupplementDoseUnit.TABLET,
+            timestamp = timestamp,
+            occurrenceId = occurrenceId
         )
 
     private fun meal(
@@ -85,30 +144,107 @@ class BuildTodayTimelineUseCaseTest {
     @Test
     fun `empty inputs returns empty list`() = runTest {
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = emptyList(),
             supplements = emptyList(),
+            supplementDoseLogs = emptyList(),
             meals = emptyList(),
+            importedMeals = emptyList(),
             activities = emptyList()
         )
 
-        Assert.assertTrue(result.isEmpty())
+        assertTrue(result.isEmpty())
     }
 
     @Test
-    fun `supplements expand into multiple timeline items`() = runTest {
+    fun `planned occurrences expand into multiple supplement timeline items`() = runTest {
         val supplement = supplement(
-            name = "Vitamin D",
-            times = listOf(
-                LocalTime(8, 0),
-                LocalTime(20, 0)
-            )
+            id = 1L,
+            name = "Vitamin D"
         )
 
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = listOf(
+                occurrence(
+                    id = "occ-1",
+                    supplementId = 1L,
+                    time = LocalTime(8, 0)
+                ),
+                occurrence(
+                    id = "occ-2",
+                    supplementId = 1L,
+                    time = LocalTime(20, 0)
+                )
+            ),
             supplements = listOf(supplement)
         )
 
-        Assert.assertEquals(2, result.size)
-        Assert.assertTrue(result.all { it is TimelineItem.SupplementTimelineItem })
+        assertEquals(2, result.size)
+        assertTrue(result.all { it is com.example.hastanghubaga.ui.timeline.TimelineItem.SupplementTimelineItem })
+    }
+
+    @Test
+    fun `logged occurrence suppresses matching planned row`() = runTest {
+        val supplement = supplement(
+            id = 1L,
+            name = "Vitamin D"
+        )
+
+        val result = useCase(
+            date = testDate,
+            supplementOccurrences = listOf(
+                occurrence(
+                    id = "occ-1",
+                    supplementId = 1L,
+                    time = LocalTime(8, 0)
+                )
+            ),
+            supplements = listOf(supplement),
+            supplementDoseLogs = listOf(
+                doseLog(
+                    id = 100L,
+                    supplementId = 1L,
+                    timestamp = LocalDateTime(2025, 1, 1, 8, 5),
+                    occurrenceId = "occ-1"
+                )
+            )
+        )
+
+        assertEquals(1, result.size)
+        assertTrue(result.single() is com.example.hastanghubaga.ui.timeline.TimelineItem.SupplementDoseLogTimelineItem)
+    }
+
+    @Test
+    fun `manual log does not suppress planned row`() = runTest {
+        val supplement = supplement(
+            id = 1L,
+            name = "Vitamin D"
+        )
+
+        val result = useCase(
+            date = testDate,
+            supplementOccurrences = listOf(
+                occurrence(
+                    id = "occ-1",
+                    supplementId = 1L,
+                    time = LocalTime(8, 0)
+                )
+            ),
+            supplements = listOf(supplement),
+            supplementDoseLogs = listOf(
+                doseLog(
+                    id = 100L,
+                    supplementId = 1L,
+                    timestamp = LocalDateTime(2025, 1, 1, 8, 5),
+                    occurrenceId = null
+                )
+            )
+        )
+
+        assertEquals(2, result.size)
+        assertTrue(result.any { it is com.example.hastanghubaga.ui.timeline.TimelineItem.SupplementTimelineItem })
+        assertTrue(result.any { it is com.example.hastanghubaga.ui.timeline.TimelineItem.SupplementDoseLogTimelineItem })
     }
 
     @Test
@@ -119,13 +255,15 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = emptyList(),
             supplements = emptyList(),
             meals = listOf(meal)
         )
 
-        val item = result.single() as TimelineItem.MealTimelineItem
-        Assert.assertEquals(LocalTime(12, 30), item.time)
-        Assert.assertEquals(meal, item.meal)
+        val item = result.single() as com.example.hastanghubaga.ui.timeline.TimelineItem.MealTimelineItem
+        assertEquals(LocalTime(12, 30), item.time)
+        assertEquals(meal, item.meal)
     }
 
     @Test
@@ -136,20 +274,22 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = emptyList(),
             supplements = emptyList(),
             activities = listOf(activity)
         )
 
-        val item = result.single() as TimelineItem.ActivityTimelineItem
-        Assert.assertEquals(LocalTime(6, 0), item.time)
-        Assert.assertEquals(activity, item.activity)
+        val item = result.single() as com.example.hastanghubaga.ui.timeline.TimelineItem.ActivityTimelineItem
+        assertEquals(LocalTime(6, 0), item.time)
+        assertEquals(activity, item.activity)
     }
 
     @Test
     fun `mixed inputs are merged and sorted by time`() = runTest {
         val supplement = supplement(
-            "Magnesium",
-            listOf(LocalTime(22, 0))
+            id = 1L,
+            name = "Magnesium"
         )
 
         val meal = meal(
@@ -163,12 +303,20 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = listOf(
+                occurrence(
+                    id = "occ-1",
+                    supplementId = 1L,
+                    time = LocalTime(22, 0)
+                )
+            ),
             supplements = listOf(supplement),
             meals = listOf(meal),
             activities = listOf(activity)
         )
 
-        Assert.assertEquals(
+        assertEquals(
             listOf(
                 LocalTime(6, 30),
                 LocalTime(8, 0),
@@ -181,8 +329,8 @@ class BuildTodayTimelineUseCaseTest {
     @Test
     fun `items with same time do not crash`() = runTest {
         val supplement = supplement(
-            "Zinc",
-            listOf(LocalTime(9, 0))
+            id = 1L,
+            name = "Zinc"
         )
 
         val meal = meal(
@@ -191,12 +339,20 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val result = useCase(
+            date = testDate,
+            supplementOccurrences = listOf(
+                occurrence(
+                    id = "occ-1",
+                    supplementId = 1L,
+                    time = LocalTime(9, 0)
+                )
+            ),
             supplements = listOf(supplement),
             meals = listOf(meal)
         )
 
-        Assert.assertEquals(2, result.size)
-        Assert.assertEquals(LocalTime(9, 0), result[0].time)
-        Assert.assertEquals(LocalTime(9, 0), result[1].time)
+        assertEquals(2, result.size)
+        assertEquals(LocalTime(9, 0), result[0].time)
+        assertEquals(LocalTime(9, 0), result[1].time)
     }
 }
