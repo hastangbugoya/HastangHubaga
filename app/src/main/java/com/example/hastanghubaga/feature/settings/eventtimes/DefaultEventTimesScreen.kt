@@ -121,6 +121,7 @@ private fun DoseAnchorType.toDisplayName(): String =
         DoseAnchorType.LUNCH -> "Lunch"
         DoseAnchorType.DINNER -> "Dinner"
         DoseAnchorType.BEFORE_WORKOUT -> "Before Workout"
+        DoseAnchorType.DURING_WORKOUT -> "During Workout"
         DoseAnchorType.AFTER_WORKOUT -> "After Workout"
         DoseAnchorType.SLEEP -> "Sleep"
         DoseAnchorType.ANYTIME -> "Anytime"

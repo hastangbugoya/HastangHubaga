@@ -128,6 +128,11 @@ enum class DoseAnchorType(
      */
     BEFORE_WORKOUT(MealType.PRE_WORKOUT),
 
+    /** Scheduled during workout.
+     *  First-pass anchor for supplements intended mid-session.
+     */
+    DURING_WORKOUT(MealType.PRE_WORKOUT),
+
     /** Scheduled after workout completes.
      *  Common for recovery supplements.
      */
