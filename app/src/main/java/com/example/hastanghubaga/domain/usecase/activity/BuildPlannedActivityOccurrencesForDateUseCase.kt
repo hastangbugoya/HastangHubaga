@@ -38,6 +38,7 @@ import kotlinx.datetime.toLocalDateTime
  * Canonical rules:
  * - Only persisted activity schedules are considered authoritative here
  * - Legacy inline activity timing / alert fields are intentionally ignored
+ * - Inactive activity templates are excluded from planning
  * - One fixed-time child row => one planned occurrence
  * - One anchored child row that resolves successfully => one planned occurrence
  * - occurrenceId is deterministic and stable for the same:
@@ -75,7 +76,10 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList()
     ): List<ActivityOccurrenceEntity> {
-        val activityDefinitions = activityEntityDao.getAllActivities()
+        val activityDefinitions = activityEntityDao
+            .getAllActivities()
+            .filter { it.isActive }
+
         val actualActivities = activityRepository.observeActivitiesForDate(date).first()
 
         val workoutAnchors = actualActivities

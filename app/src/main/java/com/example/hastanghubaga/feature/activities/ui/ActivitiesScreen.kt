@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.example.hastanghubaga.R
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,7 +24,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 
 data class ActivityListItemUi(
@@ -31,7 +34,9 @@ data class ActivityListItemUi(
     val typeLabel: String,
     val notes: String?,
     val intensityLabel: String?,
-    val startLabel: String
+    val startLabel: String,
+    val isActive: Boolean = true,
+    val hasSchedule: Boolean = false
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,16 +138,39 @@ private fun ActivityRow(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = item.typeLabel,
                     style = MaterialTheme.typography.titleMedium
                 )
-                Text(
-                    text = item.startLabel,
-                    style = MaterialTheme.typography.labelMedium
-                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.time_watch_calendar),
+                        contentDescription = "Scheduled",
+                        tint = if (item.hasSchedule)
+                            MaterialTheme.colorScheme.tertiary
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+
+                    if (!item.isActive) {
+                        Icon(
+                            painter = painterResource(if (item.isActive) R.drawable.check else R.drawable.cross_small),
+                            contentDescription = "Inactive"
+                        )
+                    }
+
+                    Text(
+                        text = item.startLabel,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
 
             val intensity = item.intensityLabel

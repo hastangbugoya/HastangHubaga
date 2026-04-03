@@ -57,6 +57,7 @@ data class ActivityEditorUiState(
     val notes: String = "",
     val intensity: String = "",
     val isWorkout: Boolean = false,
+    val isActive: Boolean = true,
     val isNew: Boolean = true,
     val scheduleEditors: List<ScheduleEditorState> = listOf(
         ScheduleEditorReducer.initialState()
@@ -82,14 +83,19 @@ class ActivitiesViewModel @Inject constructor(
             .map { activities ->
                 activities.map { activity ->
                     val schedules = activityScheduleDao.getSchedulesForActivity(activity.id)
-                    val isScheduled = schedules.any { it.isEnabled }
+                    val hasSchedule = schedules.any { it.isEnabled }
 
                     ActivityListItemUi(
                         id = activity.id,
                         typeLabel = activity.type.toDisplayLabel(),
                         notes = activity.notes,
-                        intensityLabel = buildIntensityLabel(activity, isScheduled),
-                        startLabel = formatTimestamp(activity.startTimestamp)
+                        intensityLabel = buildIntensityLabel(
+                            activity = activity,
+                            hasSchedule = hasSchedule
+                        ),
+                        startLabel = formatTimestamp(activity.startTimestamp),
+                        isActive = activity.isActive,
+                        hasSchedule = hasSchedule
                     )
                 }
             }
@@ -112,6 +118,8 @@ class ActivitiesViewModel @Inject constructor(
     fun onAddClick() {
         editorState.value = ActivityEditorUiState(
             isNew = true,
+            isWorkout = false,
+            isActive = true,
             scheduleEditors = listOf(ScheduleEditorReducer.initialState())
         )
     }
@@ -141,6 +149,7 @@ class ActivitiesViewModel @Inject constructor(
                 notes = activity.notes.orEmpty(),
                 intensity = activity.intensity?.toString().orEmpty(),
                 isWorkout = activity.isWorkout,
+                isActive = activity.isActive,
                 isNew = false,
                 scheduleEditors = mappedScheduleEditors,
                 scheduleSaveErrors = emptyList()
@@ -162,6 +171,10 @@ class ActivitiesViewModel @Inject constructor(
 
     fun onIsWorkoutChanged(value: Boolean) {
         editorState.update { current -> current?.copy(isWorkout = value) }
+    }
+
+    fun onIsActiveChanged(value: Boolean) {
+        editorState.update { current -> current?.copy(isActive = value) }
     }
 
     fun onAddScheduleClick() {
@@ -238,7 +251,8 @@ class ActivitiesViewModel @Inject constructor(
                         endTimestamp = null,
                         notes = editor.notes.trim().ifBlank { null },
                         intensity = parsedIntensity,
-                        isWorkout = editor.isWorkout
+                        isWorkout = editor.isWorkout,
+                        isActive = editor.isActive
                     )
                 )
             } else {
@@ -250,7 +264,8 @@ class ActivitiesViewModel @Inject constructor(
                         type = editor.type,
                         notes = editor.notes.trim().ifBlank { null },
                         intensity = parsedIntensity,
-                        isWorkout = editor.isWorkout
+                        isWorkout = editor.isWorkout,
+                        isActive = editor.isActive
                     )
                 )
                 existing.id
@@ -481,12 +496,13 @@ class ActivitiesViewModel @Inject constructor(
 
     private fun buildIntensityLabel(
         activity: ActivityEntity,
-        isScheduled: Boolean
+        hasSchedule: Boolean
     ): String? {
         val pieces = buildList {
             activity.intensity?.let { add("Intensity: $it") }
             if (activity.isWorkout) add("Workout")
-            if (isScheduled) add("Scheduled")
+            if (!activity.isActive) add("Inactive")
+            if (hasSchedule) add("Scheduled")
         }
 
         return pieces.takeIf { it.isNotEmpty() }?.joinToString(" • ")

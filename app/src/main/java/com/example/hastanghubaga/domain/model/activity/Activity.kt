@@ -10,6 +10,16 @@ data class Activity(
     val notes: String? = null,
     val intensity: Int? = null,
     val isWorkout: Boolean = false,
+
+    /**
+     * Mirrors ActivityEntity.isActive.
+     *
+     * Planner contract:
+     * - false = excluded from scheduling + occurrence generation
+     * - true = normal behavior
+     */
+    val isActive: Boolean = true,
+
     val sendAlert: Boolean = false,
     val alertOffsetMinutes: Int? = null
 )

@@ -65,7 +65,10 @@ class ActivityRepositoryImpl @Inject constructor(
                 startTimestamp = startTimestamp,
                 endTimestamp = endTimestamp,
                 notes = notes,
-                intensity = intensity
+                intensity = intensity,
+
+                // 🔑 NEW: align with supplement behavior
+                isActive = true
             )
         )
     }

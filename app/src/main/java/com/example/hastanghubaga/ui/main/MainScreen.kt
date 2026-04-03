@@ -410,6 +410,10 @@ fun MainScreen() {
                     onNotesChanged = activitiesViewModel::onNotesChanged,
                     onIntensityChanged = activitiesViewModel::onIntensityChanged,
                     onIsWorkoutChanged = activitiesViewModel::onIsWorkoutChanged,
+                    onIsActiveChanged = activitiesViewModel::onIsActiveChanged,
+                    onAddScheduleClick = activitiesViewModel::onAddScheduleClick,
+                    onRemoveScheduleClick = activitiesViewModel::onRemoveScheduleClick,
+                    onScheduleAction = activitiesViewModel::onScheduleAction,
                     onSaveClick = activitiesViewModel::onSaveClick,
                     onDeleteClick = activitiesViewModel::onDeleteClick,
                     onDismiss = activitiesViewModel::onDismissEditor

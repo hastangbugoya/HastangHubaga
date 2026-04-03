@@ -167,7 +167,26 @@ data class ActivityUiModel(
         TodayUiRowType.ACTIVITY
 
     override val key: String =
-        "ACTIVITY-$activityId"
+        buildString {
+            append("ACTIVITY-")
+            append(activityId)
+            append("-")
+            append(time)
+            append("-")
+            append(startTime)
+            endTime?.let {
+                append("-")
+                append(it)
+            }
+            intensity?.let {
+                append("-I")
+                append(it)
+            }
+            if (!subtitle.isNullOrBlank()) {
+                append("-")
+                append(subtitle)
+            }
+        }
 }
 
 data class MealUiModel(

@@ -13,6 +13,7 @@ fun ActivityEntity.toDomain(): Activity =
         notes = notes,
         intensity = intensity,
         isWorkout = isWorkout,
+        isActive = isActive,
         sendAlert = sendAlert,
         alertOffsetMinutes = alertOffsetMinutes
     )
@@ -26,6 +27,7 @@ fun Activity.toEntity(): ActivityEntity =
         notes = notes,
         intensity = intensity,
         isWorkout = isWorkout,
+        isActive = isActive,
         sendAlert = sendAlert,
         alertOffsetMinutes = alertOffsetMinutes
     )

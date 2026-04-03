@@ -315,18 +315,56 @@ VALUES
         runSection("activities") {
             db.execSQL(
                 """
-INSERT INTO activities (type, startTimestamp, endTimestamp, notes, isWorkout, sendAlert, alertOffsetMinutes)
+INSERT INTO activities
+(id, type, startTimestamp, endTimestamp, notes, intensity, isWorkout, isActive, sendAlert, alertOffsetMinutes)
 VALUES
-    ('STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 1, 0, 0),
-    ('WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 1, 0, 0),
-    ('WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', 0, 0, 0),
-    ('MEAL', ${millisAt(12, 0)}, ${millisAt(12, 30)}, 'Lunch break', 0, 0, 0),
-    ('RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', 0, 0, 0),
-    ('SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', 0, 0, 0);
+    (1, 'STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 7, 1, 1, 0, 0),
+    (2, 'WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 3, 1, 1, 0, 0),
+    (3, 'WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', NULL, 0, 1, 0, 0),
+    (4, 'RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', NULL, 0, 1, 0, 0),
+    (5, 'SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', NULL, 0, 0, 0, 0);
                 """.trimIndent()
             )
             Log.d("SeedDebug", "Inserted activities for date=$today")
             Log.d("SeedDebug", "Sample activity ts=${millisAt(7, 0)}")
+        }
+
+        runSection("activity_schedules") {
+            db.execSQL(
+                """
+INSERT INTO activity_schedules
+(id, activityId, recurrenceType, interval, weeklyDays, startDate, endDate, timingType, isEnabled)
+VALUES
+    (1, 1, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (2, 2, 'DAILY', 1, NULL, '${today}', NULL, 'ANCHORED', 1),
+    (3, 4, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (4, 5, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1);
+                """.trimIndent()
+            )
+        }
+
+        runSection("activity_schedule_fixed_times") {
+            db.execSQL(
+                """
+INSERT INTO activity_schedule_fixed_times
+(id, scheduleId, time, label, sortOrder)
+VALUES
+    (1, 1, '07:00:00', 'Morning strength', 0),
+    (2, 3, '20:00:00', 'Evening relaxation', 0),
+    (3, 4, '21:00:00', 'Sleep', 0);
+                """.trimIndent()
+            )
+        }
+
+        runSection("activity_schedule_anchored_times") {
+            db.execSQL(
+                """
+INSERT INTO activity_schedule_anchored_times
+(id, scheduleId, anchor, offsetMinutes, label, sortOrder)
+VALUES
+    (1, 2, 'AFTER_WORKOUT', 30, 'Post-workout walk', 0);
+                """.trimIndent()
+            )
         }
 
         runSection("nutrition_goals") {
@@ -362,8 +400,6 @@ VALUES (
 );
                 """.trimIndent()
             )
-
-
         }
 
         Log.d("SeedDebug", "Room onCreate() callback FINISHED")

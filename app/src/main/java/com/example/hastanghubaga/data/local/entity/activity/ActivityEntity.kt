@@ -19,6 +19,7 @@ data class ActivityEntity(
     val endTimestamp: Long?,
 
     val notes: String? = null,
+
     /**
      * Optional user-reported intensity for the activity.
      *
@@ -36,13 +37,21 @@ data class ActivityEntity(
     /**
      * Gentle user-defined flag indicating that this activity should be treated
      * as a workout anchor source for supplement timing.
-     *
-     * This is intentionally user-controlled rather than inferred from type,
-     * so something like a walk, work shift, or any custom activity can count
-     * as a workout if the user wants pre/post workout reminders around it.
      */
     @ColumnInfo(defaultValue = "0")
     val isWorkout: Boolean = false,
+
+    /**
+     * Controls whether this activity participates in planning/scheduling.
+     *
+     * Parallels Supplement.isActive:
+     * - false = hidden from planner + no occurrences generated
+     * - true = eligible for scheduling + timeline
+     *
+     * Does NOT delete historical logs/occurrences.
+     */
+    @ColumnInfo(defaultValue = "1")
+    val isActive: Boolean = true,
 
     @ColumnInfo(defaultValue = "0")
     val sendAlert: Boolean = false,
