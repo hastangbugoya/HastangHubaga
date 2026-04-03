@@ -489,6 +489,8 @@ private fun AnchorTypeUi.label(): String {
         AnchorTypeUi.BEFORE_WORKOUT -> "Pre workout"
         AnchorTypeUi.DURING_WORKOUT -> "Workout"
         AnchorTypeUi.AFTER_WORKOUT -> "Post workout"
+        AnchorTypeUi.MIDNIGHT -> "Midnight"
+        AnchorTypeUi.SNACK -> "Snack"
     }
 }
 

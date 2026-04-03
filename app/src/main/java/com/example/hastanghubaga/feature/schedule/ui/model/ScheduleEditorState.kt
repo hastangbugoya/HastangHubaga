@@ -111,15 +111,16 @@ data class AnchoredTimeRowUi(
  * (Mapped later to domain TimeAnchor)
  */
 enum class AnchorTypeUi {
+    MIDNIGHT,
     WAKE_UP,
     BREAKFAST,
     LUNCH,
     DINNER,
-    SLEEP,
-
+    SNACK,
     BEFORE_WORKOUT,
     DURING_WORKOUT,
-    AFTER_WORKOUT
+    AFTER_WORKOUT,
+    SLEEP
 }
 
 /**

@@ -6,6 +6,7 @@ enum class TimeAnchor {
     BREAKFAST,
     LUNCH,
     DINNER,
+    SNACK,
     BEFORE_WORKOUT,
     DURING_WORKOUT,
     AFTER_WORKOUT,

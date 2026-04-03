@@ -126,12 +126,12 @@ enum class DoseAnchorType(
     /** Scheduled before workout begins.
      *  Common for pre-workout supplements.
      */
-    BEFORE_WORKOUT(null),
+    BEFORE_WORKOUT(MealType.PRE_WORKOUT),
 
     /** Scheduled after workout completes.
      *  Common for recovery supplements.
      */
-    AFTER_WORKOUT(null),
+    AFTER_WORKOUT(MealType.POST_WORKOUT),
 
     /** User-defined or externally triggered event.
      *  Allows future extensibility without schema changes.

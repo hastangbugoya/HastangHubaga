@@ -15,6 +15,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementSchedule
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
+import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import com.example.hastanghubaga.domain.usecase.supplement.MaterializeSupplementOccurrencesForDateUseCase
 import com.example.hastanghubaga.feature.schedule.ui.model.AnchorTypeUi
 import com.example.hastanghubaga.feature.schedule.ui.model.AnchoredTimeRowUi
 import com.example.hastanghubaga.feature.schedule.ui.model.FixedTimeRowUi
@@ -64,7 +66,8 @@ data class SupplementEditorUiState(
 @HiltViewModel
 class SupplementsViewModel @Inject constructor(
     private val supplementEntityDao: SupplementEntityDao,
-    private val supplementScheduleDao: SupplementScheduleDao
+    private val supplementScheduleDao: SupplementScheduleDao,
+    private val materializeSupplementOccurrencesForDateUseCase: MaterializeSupplementOccurrencesForDateUseCase
 ) : ViewModel() {
 
     private val editorState = MutableStateFlow<SupplementEditorUiState?>(null)
@@ -74,12 +77,18 @@ class SupplementsViewModel @Inject constructor(
             .getAllSupplementsFlow()
             .map { supplements ->
                 supplements.map { supplement ->
+                    val schedules = supplementScheduleDao
+                        .getSchedulesForSupplement(supplement.id)
+
+                    val isScheduled = schedules.any { it.isEnabled }
+
                     SupplementListItemUi(
                         id = supplement.id,
                         name = supplement.name,
                         brand = supplement.brand,
                         notes = supplement.notes,
-                        isActive = supplement.isActive
+                        isActive = supplement.isActive,
+                        isScheduled = isScheduled
                     )
                 }
             }
@@ -261,6 +270,10 @@ class SupplementsViewModel @Inject constructor(
                 schedules = writeModels
             )
 
+            materializeSupplementOccurrencesForDateUseCase(
+                date = DomainTimePolicy.todayLocal()
+            )
+
             editorState.value = null
         }
     }
@@ -272,6 +285,9 @@ class SupplementsViewModel @Inject constructor(
         viewModelScope.launch {
             val existing = supplementEntityDao.getSupplementById(id) ?: return@launch
             supplementEntityDao.deleteSupplement(existing)
+            materializeSupplementOccurrencesForDateUseCase(
+                date = DomainTimePolicy.todayLocal()
+            )
             editorState.value = null
         }
     }
@@ -423,13 +439,6 @@ class SupplementsViewModel @Inject constructor(
         return WeekdayUi.valueOf(value.name)
     }
 
-    /**
-     * Maps editor anchor choices to the shared scheduling domain anchor enum.
-     *
-     * Important:
-     * - Use direct enum references rather than string-based valueOf lookups.
-     * - The shared domain enum uses WAKEUP, not WAKE_UP.
-     */
     private fun uiAnchorToTimeAnchor(value: AnchorTypeUi): TimeAnchor {
         return when (value) {
             AnchorTypeUi.WAKE_UP -> TimeAnchor.WAKEUP
@@ -440,12 +449,11 @@ class SupplementsViewModel @Inject constructor(
             AnchorTypeUi.BEFORE_WORKOUT -> TimeAnchor.BEFORE_WORKOUT
             AnchorTypeUi.DURING_WORKOUT -> TimeAnchor.DURING_WORKOUT
             AnchorTypeUi.AFTER_WORKOUT -> TimeAnchor.AFTER_WORKOUT
+            AnchorTypeUi.MIDNIGHT -> TimeAnchor.MIDNIGHT
+            AnchorTypeUi.SNACK -> TimeAnchor.SNACK
         }
     }
 
-    /**
-     * Maps persisted shared scheduling anchors back into the editor UI model.
-     */
     private fun timeAnchorToUi(value: TimeAnchor): AnchorTypeUi {
         return when (value) {
             TimeAnchor.WAKEUP -> AnchorTypeUi.WAKE_UP
@@ -456,6 +464,8 @@ class SupplementsViewModel @Inject constructor(
             TimeAnchor.BEFORE_WORKOUT -> AnchorTypeUi.BEFORE_WORKOUT
             TimeAnchor.DURING_WORKOUT -> AnchorTypeUi.DURING_WORKOUT
             TimeAnchor.AFTER_WORKOUT -> AnchorTypeUi.AFTER_WORKOUT
+            TimeAnchor.SNACK -> AnchorTypeUi.SNACK
+            TimeAnchor.MIDNIGHT -> AnchorTypeUi.MIDNIGHT
             else -> AnchorTypeUi.WAKE_UP
         }
     }

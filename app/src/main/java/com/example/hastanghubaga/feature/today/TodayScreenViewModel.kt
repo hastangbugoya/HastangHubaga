@@ -384,6 +384,7 @@ class TodayScreenViewModel @Inject constructor(
                         ),
                         clock = Clock.System
                     )
+                    materializeSelectedDate(selectedDate.value)
                 }
             }
 
@@ -477,8 +478,15 @@ class TodayScreenViewModel @Inject constructor(
     }
 
     private fun materializeSelectedDate(date: LocalDate) {
-        viewModelScope.launch {
-            materializeSupplementOccurrencesForDate(date)
+        viewModelScope.launch(Dispatchers.IO) {
+            val meals = getMealsForDate(date).first()
+            val importedMeals = getImportedMealsForDate(date).first()
+
+            materializeSupplementOccurrencesForDate(
+                date = date,
+                meals = meals,
+                importedMeals = importedMeals
+            )
         }
     }
 

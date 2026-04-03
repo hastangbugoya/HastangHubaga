@@ -9,73 +9,106 @@ import java.time.DayOfWeek
 /**
  * Represents a supplement defined by the user or preloaded into the system.
  *
- * This entity describes *what the supplement is*, *how it should be taken*, and
- * *its scheduling rules*. It does **not** describe nutritional ingredients
- * directly—those are modeled via `SupplementIngredientEntity`.
+ * -------------------------------------------------------------------------
+ * CURRENT ARCHITECTURE NOTE (IMPORTANT)
+ * -------------------------------------------------------------------------
+ * This entity currently contains **two generations of scheduling data**:
  *
- * ### Purpose
- * `SupplementEntity` is the core model powering:
- * - Daily schedule generation
- * - Reminder widgets + notifications
- * - Logging supplement intake
- * - Calculating daily nutrient totals
- * - Customizing dose units and serving sizes
+ * 1) ⚠️ LEGACY (DEPRECATED FOR SCHEDULING)
+ *    - doseAnchorType
+ *    - frequencyType
+ *    - frequencyInterval
+ *    - weeklyDays
+ *    - offsetMinutes
+ *    - startDate
  *
- * ### Scheduling Overview
- * Supplements can be taken:
- * - **Daily**
- * - **Every X days** (`frequencyInterval`)
- * - **Weekly** (`weeklyDays`)
+ *    These fields were part of the original "inline scheduling model".
+ *    They are **NO LONGER USED by the scheduling engine**.
  *
- * Each supplement also anchors to a day-relative event (e.g., wakeup, dinner)
- * via `doseAnchorType`, with optional `offsetMinutes`.
+ * 2) ✅ CURRENT SYSTEM (AUTHORITATIVE)
+ *    Scheduling is now fully driven by:
+ *    - SupplementScheduleEntity
+ *    - SupplementScheduleFixedTimeEntity
+ *    - SupplementScheduleAnchoredTimeEntity
  *
- * ### Dose & Serving Overview
- * This class stores:
- * - Recommended serving size and unit
- * - Whether to take with food or liquids
- * - Whether caffeine interactions should be avoided
- * - Optional overrides for custom serving amounts
+ *    These define:
+ *    - recurrence rules
+ *    - timing (fixed or anchored)
+ *    - enable/disable state
  *
- * ### Important Notes
- * - `startDate` is stored as ISO-8601 (`YYYY-MM-DD`)
- * - `lastTakenDate` is updated when the user logs an intake
- * - If a supplement becomes inactive (`isActive = false`), it is hidden from
- *   scheduling and reminders but preserved for history
+ * -------------------------------------------------------------------------
+ * RULE OF TRUTH
+ * -------------------------------------------------------------------------
+ * The deterministic planner ONLY reads from:
  *
+ * 👉 supplement_schedules + child tables
+ *
+ * It DOES NOT read any scheduling fields from this entity.
+ *
+ * -------------------------------------------------------------------------
+ * WHY LEGACY FIELDS STILL EXIST
+ * -------------------------------------------------------------------------
+ * - Backward compatibility with existing DB
+ * - Avoid destructive migrations during active development
+ * - May be used for:
+ *   - display hints
+ *   - future migration/backfill
+ *
+ * -------------------------------------------------------------------------
+ * IMPORTANT FOR DEVELOPERS
+ * -------------------------------------------------------------------------
+ * ❌ DO NOT use legacy fields for scheduling logic
+ * ❌ DO NOT read these fields in planner or timeline code
+ *
+ * ✅ ONLY use schedule tables for scheduling decisions
+ *
+ * -------------------------------------------------------------------------
+ * PURPOSE
+ * -------------------------------------------------------------------------
+ * This entity now primarily represents:
+ *
+ * - supplement identity (name, brand, notes)
+ * - dosing characteristics
+ * - user preferences
+ *
+ * NOT scheduling logic.
+ *
+ * -------------------------------------------------------------------------
  * @property id Primary key.
  * @property name Display name of the supplement.
  * @property brand Optional manufacturer or product line.
- * @property notes Optional user notes about the supplement.
+ * @property notes Optional user notes.
  *
- * @property recommendedServingSize Default serving size (e.g., 2 capsules).
- * @property recommendedDoseUnit Unit describing *how* the supplement is taken.
- * @property servingsPerDay How many times per day the serving is taken.
- * @property recommendedWithFood Whether food intake is recommended.
- * @property recommendedLiquidInOz Optional liquid amount recommended for swallowing.
- * @property recommendedTimeBetweenDailyDosesMinutes Minimum spacing between servings.
- * @property avoidCaffeine Whether caffeine should be avoided near this supplement.
+ * @property recommendedServingSize Default serving size.
+ * @property recommendedDoseUnit Unit describing intake form.
+ * @property servingsPerDay Suggested number of servings.
+ * @property recommendedWithFood Whether food is recommended.
+ * @property recommendedLiquidInOz Optional liquid recommendation.
+ * @property recommendedTimeBetweenDailyDosesMinutes Suggested spacing.
+ * @property avoidCaffeine Whether caffeine should be avoided.
  *
- * @property doseAnchorType The daily event used to anchor dose timing
- * (e.g., WAKEUP, DINNER, BEFORE_WORKOUT).
- * @property frequencyType Daily, weekly, or every X days.
- * @property frequencyInterval Number of days between doses (for EVERY_X_DAYS).
- * @property weeklyDays Days of the week to take it (for WEEKLY frequency).
- * @property offsetMinutes Minutes offset from the anchor time (can be negative).
+ * -------------------------------------------------------------------------
+ * ⚠️ LEGACY SCHEDULING FIELDS (DO NOT USE FOR NEW LOGIC)
+ * -------------------------------------------------------------------------
+ * @property doseAnchorType Legacy anchor reference
+ * @property frequencyType Legacy recurrence type
+ * @property frequencyInterval Legacy interval (EVERY_X_DAYS)
+ * @property weeklyDays Legacy weekly schedule
+ * @property offsetMinutes Legacy offset from anchor
+ * @property startDate Legacy schedule start date
  *
- * @property customDose User-defined override of serving size (optional).
- * @property customDoseUnit Unit for the custom dose (optional).
+ * -------------------------------------------------------------------------
+ * @property customDose Optional override for serving size.
+ * @property customDoseUnit Unit for custom dose.
  *
- * @property startDate ISO date when the user started taking this supplement.
- * @property lastTakenDate ISO date when user last logged this supplement.
+ * @property lastTakenDate Last logged intake (still valid).
  *
- * @property isActive Whether the supplement is currently part of the user's regimen.
+ * @property isActive Whether supplement is part of regimen.
  *
- * @see SupplementDoseUnit
- * @see DoseAnchorType
- * @see FrequencyType
- * @see com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
- * @see com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
+ * @property sendAlert Whether alerts are enabled.
+ * @property alertOffsetMinutes Alert offset.
+ *
+ * @see SupplementScheduleEntity (NEW scheduling system)
  */
 @Serializable
 @Entity(tableName = "supplements")
@@ -87,27 +120,32 @@ data class SupplementEntity(
     val brand: String?,
     val notes: String? = null,
 
-    val recommendedServingSize: Double,    // e.g., 2 capsules
+    val recommendedServingSize: Double,
     val recommendedDoseUnit: SupplementDoseUnit,
     val servingsPerDay: Double,
-    val recommendedWithFood: Boolean? = null,   // recommended to be taken with food
-    val recommendedLiquidInOz: Double? = null,  // recommended with liquid in oz
-    val recommendedTimeBetweenDailyDosesMinutes: Int? = null, // time between doses in minutes
-    val avoidCaffeine: Boolean? = null, // should avoid taking with caffeine
+    val recommendedWithFood: Boolean? = null,
+    val recommendedLiquidInOz: Double? = null,
+    val recommendedTimeBetweenDailyDosesMinutes: Int? = null,
+    val avoidCaffeine: Boolean? = null,
 
+    // ---------------------------------------------------------------------
+    // ⚠️ LEGACY SCHEDULING FIELDS (NO LONGER USED BY PLANNER)
+    // ---------------------------------------------------------------------
     val doseAnchorType: DoseAnchorType = DoseAnchorType.MIDNIGHT,
     val frequencyType: FrequencyType = FrequencyType.DAILY,
-    val frequencyInterval: Int? = null,              // used when EVERY_X_DAYS
-    val weeklyDays: List<DayOfWeek>? = null,         // used when WEEKLY
+    val frequencyInterval: Int? = null,
+    val weeklyDays: List<DayOfWeek>? = null,
     val offsetMinutes: Int? = null,
 
     val customDose: Double? = null,
     val customDoseUnit: SupplementDoseUnit? = null,
-    val startDate: String? = null, // ISO-8601 "YYYY-MM-DD"
-    val lastTakenDate: String? = null, // ISO-8601 "YYYY-MM-DD"
+    val startDate: String? = null, // legacy scheduling start date
+    val lastTakenDate: String? = null,
 
     val isActive: Boolean = true,
+
     @ColumnInfo(defaultValue = "0")
     val sendAlert: Boolean = false,
+
     val alertOffsetMinutes: Int? = null
 )

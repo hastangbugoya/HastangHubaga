@@ -204,6 +204,38 @@ VALUES
             )
         }
 
+        runSection("supplement_schedules") {
+            db.execSQL(
+                """
+INSERT INTO supplement_schedules
+(id, supplementId, recurrenceType, interval, weeklyDays, startDate, endDate, timingType, isEnabled)
+VALUES
+    (1, 1, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (2, 2, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (3, 3, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (4, 4, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1),
+    (5, 5, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED', 1)
+;
+        """.trimIndent()
+            )
+        }
+
+        runSection("supplement_schedule_fixed_times") {
+            db.execSQL(
+                """
+INSERT INTO supplement_schedule_fixed_times
+(id, scheduleId, time, label, sortOrder)
+VALUES
+    (1, 1, '08:00:00', 'Morning', 0),
+    (2, 2, '12:00:00', 'Lunch', 0),
+    (3, 3, '17:00:00', 'Afternoon', 0),
+    (4, 4, '21:00:00', 'Evening', 0),
+    (5, 5, '22:00:00', 'Night', 0)
+;
+        """.trimIndent()
+            )
+        }
+
         runSection("daily_start_time") {
             db.execSQL(
                 """
@@ -223,10 +255,12 @@ VALUES
     ('BREAKFAST',       28800),
     ('LUNCH',           43200),
     ('DINNER',          64800),
+    ('SNACK',           52200),
     ('BEFORE_WORKOUT',  59400),
+    ('DURING_WORKOUT',  61200),
     ('AFTER_WORKOUT',   63900),
     ('SLEEP',           75600);
-                """.trimIndent()
+        """.trimIndent()
             )
         }
 
@@ -328,6 +362,8 @@ VALUES (
 );
                 """.trimIndent()
             )
+
+
         }
 
         Log.d("SeedDebug", "Room onCreate() callback FINISHED")

@@ -123,6 +123,7 @@ class FormatScheduleSummaryUseCase {
             TimeAnchor.AFTER_WORKOUT -> "after workout"
             TimeAnchor.SLEEP -> "sleep"
             TimeAnchor.DURING_WORKOUT -> "during workout"
+            TimeAnchor.SNACK -> "snack"
         }
     }
 

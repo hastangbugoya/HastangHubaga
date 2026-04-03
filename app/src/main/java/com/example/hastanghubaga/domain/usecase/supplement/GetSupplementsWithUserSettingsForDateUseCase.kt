@@ -528,6 +528,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             TimeAnchor.AFTER_WORKOUT -> DoseAnchorType.AFTER_WORKOUT
             TimeAnchor.SLEEP -> DoseAnchorType.SLEEP
             TimeAnchor.DURING_WORKOUT -> DoseAnchorType.BEFORE_WORKOUT
+            TimeAnchor.SNACK -> DoseAnchorType.SNACK
         }
 
     private fun fallbackAnchorTime(anchor: TimeAnchor): LocalTime? =
@@ -541,6 +542,7 @@ class GetSupplementsWithUserSettingsForDateUseCase @Inject constructor(
             TimeAnchor.AFTER_WORKOUT -> LocalTime(17, 45)
             TimeAnchor.SLEEP -> LocalTime(22, 0)
             TimeAnchor.DURING_WORKOUT -> LocalTime(16, 30)
+            TimeAnchor.SNACK -> LocalTime(14, 30)
         }
 
     fun resolveDoseState(

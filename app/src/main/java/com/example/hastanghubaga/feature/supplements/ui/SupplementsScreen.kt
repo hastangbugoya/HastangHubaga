@@ -27,13 +27,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.res.painterResource
+import com.example.hastanghubaga.R
 
 data class SupplementListItemUi(
     val id: Long,
     val name: String,
     val brand: String?,
     val notes: String?,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val isScheduled: Boolean
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -136,10 +140,38 @@ private fun SupplementRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Checkbox(
-                checked = item.isActive,
-                onCheckedChange = null
-            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Enabled icon
+                Icon(
+                    painter = painterResource(if (item.isActive) R.drawable.check else R.drawable.cross_small),
+//                    imageVector = if (item.isActive)
+//                        Icons.Default.CheckCircle
+//                    else
+//                        Icons.Default.RadioButtonUnchecked,
+                    contentDescription = "Enabled",
+                    tint = if (item.isActive)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+
+                // Scheduled icon
+                Icon(
+                    painter = painterResource(R.drawable.time_watch_calendar),
+//                    imageVector = if (item.isScheduled)
+//                        Icons.Default.Schedule
+//                    else
+//                        Icons.Default.Schedule, // same icon, different tint
+                    contentDescription = "Scheduled",
+                    tint = if (item.isScheduled)
+                        MaterialTheme.colorScheme.tertiary
+                    else
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                )
+            }
 
             Column(
                 modifier = Modifier.weight(1f),

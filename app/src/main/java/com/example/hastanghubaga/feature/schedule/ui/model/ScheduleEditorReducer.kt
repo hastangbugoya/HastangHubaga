@@ -163,7 +163,7 @@ object ScheduleEditorReducer {
      */
     fun initialState(): ScheduleEditorState {
         val base = ScheduleEditorState(
-            isEnabled = true,
+            isEnabled = false,
             recurrenceMode = RecurrenceMode.DAILY,
             intervalInput = "1",
             timingMode = TimingMode.FIXED,
