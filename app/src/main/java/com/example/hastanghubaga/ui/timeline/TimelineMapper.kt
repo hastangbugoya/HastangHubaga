@@ -1,8 +1,8 @@
 package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
-import com.example.hastanghubaga.ui.util.UiFormatter
 import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
 
 fun SupplementWithUserSettings.toPreviewTimelineItems(): List<TimelineItem> {
@@ -103,19 +103,19 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
 
         is TimelineItem.ActivityTimelineItem ->
             ActivityUiModel(
-                id = activity.id,
+                id = activityId,
                 time = time,
-                title = activity.type.name,
-                subtitle = UiFormatter.formatTimeRange(
-                    start = activity.start,
-                    end = activity.end
+                title = title,
+                subtitle = buildActivitySubtitle(
+                    scheduledTime = scheduledTime,
+                    isWorkout = isWorkout
                 ),
-                isCompleted = activity.end != null,
-                activityId = activity.id,
-                activityType = activity.type,
-                startTime = activity.start.time,
-                endTime = activity.end?.time,
-                intensity = activity.intensity
+                isCompleted = false,
+                activityId = activityId,
+                activityType = title.toActivityTypeOrOther(),
+                startTime = scheduledTime,
+                endTime = null,
+                intensity = null
             )
 
         is TimelineItem.SupplementDoseLogTimelineItem ->
@@ -157,6 +157,17 @@ private fun buildDoseLogSubtitle(
     }.ifBlank { null }
 }
 
+private fun buildActivitySubtitle(
+    scheduledTime: kotlinx.datetime.LocalTime,
+    isWorkout: Boolean
+): String {
+    return if (isWorkout) {
+        "Scheduled $scheduledTime • Workout"
+    } else {
+        "Scheduled $scheduledTime"
+    }
+}
+
 private fun buildImportedMealSubtitle(notes: String?): String {
     val base = notes?.takeIf { it.isNotBlank() }
     return if (base != null) {
@@ -187,3 +198,10 @@ private fun buildPreviewOccurrenceId(
         sortOrder.toString()
     ).joinToString(separator = "|")
 }
+
+private fun String.toActivityTypeOrOther(): ActivityType =
+    runCatching {
+        ActivityType.valueOf(
+            uppercase().replace(" ", "_")
+        )
+    }.getOrDefault(ActivityType.OTHER)

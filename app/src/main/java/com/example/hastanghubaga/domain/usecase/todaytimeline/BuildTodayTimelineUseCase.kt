@@ -1,11 +1,13 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
 import android.util.Log
+import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
@@ -30,22 +32,35 @@ import kotlinx.datetime.toLocalDateTime
  * - actual rows come from supplement dose logs
  * - reconciliation happens by occurrenceId
  *
- * Planned row rule:
+ * Planned supplement row rule:
  * - show the planned occurrence if it has not yet been satisfied by a linked log
  *
- * Actual row rule:
+ * Actual supplement row rule:
  * - always show the actual user-declared log event
  * - if the log links to a planned occurrence, the matching planned row is suppressed
  * - if the log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
  *
+ * Canonical activity model (first-pass transitional rule):
+ * - planned rows come from persisted activity occurrences
+ * - actual/manual rows still come from current Activity rows
+ * - until ActivityLogEntity + occurrenceId linkage exists, reconciliation uses
+ *   a deterministic heuristic match:
+ *   same activityId + same timeline time-of-day
+ *
+ * Planned activity row rule:
+ * - show the planned occurrence if it is not matched by an actual/manual activity
+ *
+ * Actual/manual activity row rule:
+ * - always show the actual/manual activity row
+ * - if it heuristically matches a planned occurrence, the matching planned row is suppressed
+ *
  * Other timeline content:
  * - native HH meals
  * - imported meals
- * - activities
  *
  * This use case trusts upstream time resolution and only performs:
  * - mapping to timeline rows
- * - planned-vs-actual supplement reconciliation
+ * - planned-vs-actual reconciliation
  * - deterministic merge/sort
  * - simplified upcoming schedule snapshot persistence
  */
@@ -61,12 +76,14 @@ class BuildTodayTimelineUseCase @Inject constructor(
         supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
+        activityOccurrences: List<ActivityOccurrenceEntity> = emptyList(),
         activities: List<Activity> = emptyList()
     ): List<TimelineItem> {
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
+        val activityLookup = activities.associateBy { it.id }
 
-        val occurrenceTimeLookup =
+        val supplementOccurrenceTimeLookup =
             supplementOccurrences.associate { occurrence ->
                 occurrence.id to LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
             }
@@ -97,18 +114,18 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> plannedSupplementItems: ${plannedSupplementItems.size}")
 
-        val satisfiedOccurrenceIds =
+        val satisfiedSupplementOccurrenceIds =
             supplementDoseLogs
                 .mapNotNull { it.occurrenceId }
                 .toSet()
         Log.d(
             "Meow",
-            "BuildTodayTimelineUseCase> satisfiedOccurrenceIds: ${satisfiedOccurrenceIds.size}"
+            "BuildTodayTimelineUseCase> satisfiedSupplementOccurrenceIds: ${satisfiedSupplementOccurrenceIds.size}"
         )
 
         val filteredPlannedSupplementItems =
             plannedSupplementItems.filterNot { item ->
-                item.occurrenceId in satisfiedOccurrenceIds
+                item.occurrenceId in satisfiedSupplementOccurrenceIds
             }
         Log.d(
             "Meow",
@@ -124,7 +141,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     time = doseLog.timestamp.time,
                     amount = doseLog.actualServingTaken,
                     unit = doseLog.doseUnit.name,
-                    scheduledTime = doseLog.occurrenceId?.let(occurrenceTimeLookup::get)
+                    scheduledTime = doseLog.occurrenceId?.let(supplementOccurrenceTimeLookup::get)
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
@@ -181,21 +198,73 @@ class BuildTodayTimelineUseCase @Inject constructor(
             )
         }
 
-        val activityItems =
-            activities.map { activity ->
+        val plannedActivityItems =
+            activityOccurrences.mapNotNull { occurrence ->
+                val activity = activityLookup[occurrence.activityId] ?: return@mapNotNull null
+                val plannedTime = LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
+
                 TimelineItem.ActivityTimelineItem(
-                    time = activity.start.time,
-                    activity = activity,
+                    time = plannedTime,
+                    occurrenceId = occurrence.id,
+                    activityId = activity.id,
+                    title = activity.type.toDisplayLabel(),
+                    subtitle = activity.notes,
+                    isWorkout = occurrence.isWorkout,
+                    scheduledTime = plannedTime
                 )
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> activityItems: ${activityItems.size}")
+        Log.d("Meow", "BuildTodayTimelineUseCase> plannedActivityItems: ${plannedActivityItems.size}")
+
+        val actualActivityItems =
+            activities.map { activity ->
+                val actualTime = activity.start.time
+
+                TimelineItem.ActivityTimelineItem(
+                    time = actualTime,
+                    occurrenceId = buildActualActivityTimelineId(
+                        activityId = activity.id,
+                        time = actualTime
+                    ),
+                    activityId = activity.id,
+                    title = activity.type.toDisplayLabel(),
+                    subtitle = activity.notes,
+                    isWorkout = activity.isWorkout,
+                    scheduledTime = actualTime
+                )
+            }
+        Log.d("Meow", "BuildTodayTimelineUseCase> actualActivityItems: ${actualActivityItems.size}")
+
+        val satisfiedPlannedActivityKeys =
+            actualActivityItems.map {
+                ActivityTimelineMatchKey(
+                    activityId = it.activityId,
+                    secondOfDay = it.time.toSecondOfDay()
+                )
+            }.toSet()
+        Log.d(
+            "Meow",
+            "BuildTodayTimelineUseCase> satisfiedPlannedActivityKeys: ${satisfiedPlannedActivityKeys.size}"
+        )
+
+        val filteredPlannedActivityItems =
+            plannedActivityItems.filterNot { item ->
+                ActivityTimelineMatchKey(
+                    activityId = item.activityId,
+                    secondOfDay = item.time.toSecondOfDay()
+                ) in satisfiedPlannedActivityKeys
+            }
+        Log.d(
+            "Meow",
+            "BuildTodayTimelineUseCase> filteredPlannedActivityItems: ${filteredPlannedActivityItems.size}"
+        )
 
         val merged = (
                 filteredPlannedSupplementItems +
                         supplementDoseLogItems +
                         mealItems +
                         importedMealItems +
-                        activityItems
+                        filteredPlannedActivityItems +
+                        actualActivityItems
                 ).sortedWith(
                 compareBy<TimelineItem> { it.time }
                     .thenBy { itemTypeSortOrder(it) }
@@ -253,7 +322,13 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 item.meal.groupingKey
 
             is TimelineItem.ActivityTimelineItem ->
-                item.activity.id.toString()
+                buildString {
+                    append(item.activityId)
+                    append("|")
+                    append(item.occurrenceId)
+                    append("|")
+                    append(item.scheduledTime.toSecondOfDay())
+                }
 
             is TimelineItem.SupplementDoseLogTimelineItem ->
                 item.doseLogId.toString()
@@ -296,11 +371,11 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
             is TimelineItem.ActivityTimelineItem ->
                 buildString {
-                    append(item.activity.type.name)
+                    append(item.title)
                     append("|")
-                    append(item.activity.start.time.toSecondOfDay())
+                    append(item.time.toSecondOfDay())
                     append("|")
-                    append(item.activity.end?.time?.toSecondOfDay() ?: Int.MAX_VALUE)
+                    append(if (item.isWorkout) "W" else "N")
                 }
 
             is TimelineItem.SupplementDoseLogTimelineItem ->
@@ -312,4 +387,28 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     append(item.scheduledTime?.toSecondOfDay() ?: Int.MAX_VALUE)
                 }
         }
+
+    private fun buildActualActivityTimelineId(
+        activityId: Long,
+        time: LocalTime
+    ): String {
+        return buildString {
+            append("actual")
+            append("|")
+            append(activityId)
+            append("|")
+            append(time.toSecondOfDay())
+        }
+    }
+
+    private data class ActivityTimelineMatchKey(
+        val activityId: Long,
+        val secondOfDay: Int
+    )
 }
+
+private fun ActivityType.toDisplayLabel(): String =
+    name
+        .lowercase()
+        .split("_")
+        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }

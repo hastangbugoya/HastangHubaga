@@ -18,8 +18,8 @@ abstract class SupplementDoseLogModule {
         impl: SupplementRepositoryImpl
     ): SupplementDoseLogRepository
 
-    @Binds
-    abstract fun bindSupplementOccurrenceRepository(
-        impl: SupplementOccurrenceRepositoryImpl
-    ): SupplementOccurrenceRepository
+//    @Binds
+//    abstract fun bindSupplementOccurrenceRepository(
+//        impl: SupplementOccurrenceRepositoryImpl
+//    ): SupplementOccurrenceRepository
 }

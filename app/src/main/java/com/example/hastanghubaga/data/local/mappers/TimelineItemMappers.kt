@@ -13,7 +13,6 @@ fun TimelineItem.toUpcomingSchedule(
 ): UpcomingSchedule? {
     return when (this) {
 
-        // ✅ FIXED: use new planned-occurrence fields
         is TimelineItem.SupplementTimelineItem ->
             UpcomingSchedule(
                 type = TodayUiRowType.SUPPLEMENT,
@@ -43,18 +42,18 @@ fun TimelineItem.toUpcomingSchedule(
         is TimelineItem.ActivityTimelineItem ->
             UpcomingSchedule(
                 type = TodayUiRowType.ACTIVITY,
-                referenceId = activity.id,
+                referenceId = activityId,
                 scheduledAt = LocalDateTime(
                     date = date,
                     time = this.time
                 ),
-                title = activity.type.name,
-                subtitle = "later"
+                title = title,
+                subtitle = subtitle ?: "later"
             )
 
         is TimelineItem.SupplementDoseLogTimelineItem -> null
 
-        else -> null
+        is TimelineItem.ImportedMealTimelineItem -> null
     }
 }
 

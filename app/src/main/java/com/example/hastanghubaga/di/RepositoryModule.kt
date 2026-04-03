@@ -1,9 +1,13 @@
 package com.example.hastanghubaga.di
 
+import com.example.hastanghubaga.data.repository.ActivityOccurrenceRepositoryImpl
 import com.example.hastanghubaga.data.repository.NutritionAggregateRepositoryImpl
+import com.example.hastanghubaga.data.repository.SupplementOccurrenceRepositoryImpl
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
+import com.example.hastanghubaga.domain.repository.activity.ActivityOccurrenceRepository
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionAggregateRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogReadRepository
+import com.example.hastanghubaga.domain.repository.supplement.SupplementOccurrenceRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
 import dagger.Binds
 import dagger.Module
@@ -28,6 +32,19 @@ abstract class RepositoryModule {
     ): SupplementDoseLogReadRepository
 
     @Binds
+    @Singleton
+    abstract fun bindSupplementOccurrenceRepository(
+        impl: SupplementOccurrenceRepositoryImpl
+    ): SupplementOccurrenceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindActivityOccurrenceRepository(
+        impl: ActivityOccurrenceRepositoryImpl
+    ): ActivityOccurrenceRepository
+
+    @Binds
+    @Singleton
     abstract fun bindNutritionAggregateRepository(
         impl: NutritionAggregateRepositoryImpl
     ): NutritionAggregateRepository

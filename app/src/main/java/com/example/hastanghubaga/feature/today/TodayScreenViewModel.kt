@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
@@ -17,6 +18,8 @@ import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
+import com.example.hastanghubaga.domain.usecase.activity.GetActivityOccurrencesForDateUseCase
+import com.example.hastanghubaga.domain.usecase.activity.MaterializeActivityOccurrencesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.SaveExerciseActivityUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetImportedMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
@@ -64,84 +67,6 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * TodayScreenViewModel drives the Today timeline UI (supplements, meals, activities, dose logs)
- * and the sheet-based interaction flows (supplement logging, exercise start/confirm, meal logging).
- *
- * ---
- * ## Problem solved (2026-01)
- * The timeline would intermittently render as empty (e.g. "Rendering 0 items") and feel "broken",
- * especially after switching panels/screens.
- *
- * Root cause:
- * - A previous implementation cancelled a long-lived Flow collection job and then relied on
- *   recomposition/navigation timing to restart it. In some cases the upstream flows did not
- *   re-emit, leaving state stuck empty.
- *
- * Fix:
- * - The timeline is collected exactly once in [init] via a single pipeline driven by a
- *   [selectedDate] StateFlow.
- * - Changing dates (or "refresh") updates [selectedDate] only; it does not create new collectors.
- * - Heavy timeline building runs off the main thread via [flowOn] to avoid jank / skipped frames.
- *
- * ---
- * ## Timeline composition boundary
- * This ViewModel intentionally keeps the "headline screen juggling" shallow:
- * - collect clean date-scoped flows
- * - hand all assembled inputs to [BuildTodayTimelineUseCase]
- * - treat [BuildTodayTimelineUseCase] as the central composition/debug point
- *
- * This keeps the ViewModel easier to reason about as the project grows while preserving
- * one reliable entry point for timeline-merging issues.
- *
- * ---
- * ## Occurrence-aware supplement logging
- * Supplement logging is now forward-compatible with occurrence-aware reconciliation.
- *
- * The ViewModel passes an optional occurrence ID through the supplement logging flow:
- * - scheduled supplement row -> may supply an occurrence ID
- * - extra/manual supplement log -> occurrence ID may be null
- *
- * This keeps the UI flow compatible with both current log-first behavior and the
- * incremental move toward planner occurrence ↔ log linkage.
- *
- * ---
- * ## Planned occurrence materialization
- * As part of the planned-vs-actual refactor, opening a date now also triggers
- * materialization of that date's supplement occurrences.
- *
- * Current behavior:
- * - the day snapshot is materialized when Today initializes
- * - the day snapshot is rematerialized when the selected date changes
- *
- * The timeline now reads:
- * - planned supplement occurrences for the date
- * - active supplement metadata for display/logging defaults
- * - actual logged supplement doses
- *
- * This is the core planned-vs-actual day merge path.
- *
- * ---
- * ## Force-log supplement flow
- * A temporary force-log entry path allows the user to choose any active supplement
- * and log an actual dose even when that supplement is not currently scheduled on
- * the visible timeline.
- *
- * This flow intentionally:
- * - does not require a scheduled time
- * - does not require an occurrence ID
- * - reuses the existing dose dialog
- * - preserves the distinction between planned schedule items and actual logged events
- *
- * ---
- * ## Tips to avoid reintroducing this bug
- * - Do NOT cancel and restart terminal Flow collections unless you are done forever.
- * - Avoid starting new `viewModelScope.launch { flow.collect { ... } }` inside user intents.
- *   Prefer a single long-lived collector (or explicit `shareIn/stateIn`) and drive it with state.
- * - If you must catch exceptions around flows, rethrow kotlinx.coroutines.CancellationException so
- *   cancellation remains cooperative.
- * - Keep heavy sorting/mapping/building off main (`Dispatchers.Default`), and IO on `Dispatchers.IO`.
- */
 @HiltViewModel
 class TodayScreenViewModel @Inject constructor(
     private val getSupplementOccurrencesForDate: GetSupplementOccurrencesForDateUseCase,
@@ -149,8 +74,10 @@ class TodayScreenViewModel @Inject constructor(
     private val getSupplementDoseLogsForDate: GetSupplementDoseLogsForDateUseCase,
     private val getMealsForDate: GetMealsForDateUseCase,
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
+    private val getActivityOccurrencesForDate: GetActivityOccurrencesForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
     private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
+    private val materializeActivityOccurrencesForDate: MaterializeActivityOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
@@ -165,23 +92,15 @@ class TodayScreenViewModel @Inject constructor(
     private val _effect = Channel<Effect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
-    /**
-     * Single source of truth for which day the Today timeline is displaying.
-     * Changing this updates the long-lived timeline collector via `flatMapLatest`.
-     */
     private val selectedDate = MutableStateFlow(DomainTimePolicy.todayLocal())
 
-    /**
-     * SavedStateHandle keys for persisting the “in-progress exercise draft”.
-     * Times are stored as "minutes since midnight" for stability.
-     */
     private object ExerciseSavedStateKeys {
         const val TYPE = "exercise.type"
         const val START_MIN = "exercise.startMin"
         const val END_MIN = "exercise.endMin"
         const val NOTES = "exercise.notes"
         const val INTENSITY = "exercise.intensity"
-        const val PHASE = "exercise.phase" // "Draft" / "Running"
+        const val PHASE = "exercise.phase"
     }
 
     init {
@@ -199,7 +118,6 @@ class TodayScreenViewModel @Inject constructor(
 
     fun onIntent(intent: TodayScreenContract.Intent) {
         val clock = Clock.System
-        val today = DomainTimePolicy.todayLocal(clock)
 
         when (intent) {
             is TodayScreenContract.Intent.LoadDate -> loadToday(intent.date)
@@ -335,6 +253,7 @@ class TodayScreenViewModel @Inject constructor(
                         intensity = draft.intensity
                     )
 
+                    materializeSelectedDate(selectedDate.value)
                     clearExerciseDraft()
                 }
             }
@@ -392,10 +311,6 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Public entry point for changing which day is displayed.
-     * This does not create new collectors; it only updates [selectedDate].
-     */
     fun loadToday(date: LocalDate = DomainTimePolicy.todayLocal()) {
         if (selectedDate.value == date) {
             Log.d("Meow", "TodayVM loadToday ignored (same date=$date)")
@@ -421,46 +336,67 @@ class TodayScreenViewModel @Inject constructor(
         selectedDate.value = date
     }
 
-    private data class SupplementTimelineInputs(
+    private data class TimelineInputs(
         val supplementOccurrences: List<SupplementOccurrenceEntity>,
         val supplements: List<Supplement>,
         val supplementDoseLogs: List<SupplementDoseLog>,
         val meals: List<Meal>,
-        val importedMeals: List<AkImportedMealEntity>
+        val importedMeals: List<AkImportedMealEntity>,
+        val activityOccurrences: List<ActivityOccurrenceEntity>,
+        val activities: List<Activity>
     )
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeTimeline() {
         Log.d("Meow", "TodayVM observeTimeline()")
         viewModelScope.launch {
             selectedDate
                 .flatMapLatest { date ->
                     combine(
-                        getSupplementOccurrencesForDate(date),
-                        getActiveSupplements(),
-                        getSupplementDoseLogsForDate(date),
-                        getMealsForDate(date),
-                        getImportedMealsForDate(date)
-                    ) { supplementOccurrences, supplements, supplementDoseLogs, meals, importedMeals ->
-                        SupplementTimelineInputs(
-                            supplementOccurrences = supplementOccurrences,
-                            supplements = supplements,
-                            supplementDoseLogs = supplementDoseLogs,
-                            meals = meals,
-                            importedMeals = importedMeals
-                        )
-                    }.flatMapLatest { inputs ->
-                        getActivitiesForDate(date).map { activities ->
-                            buildTodayTimeline(
-                                date = date,
-                                supplementOccurrences = inputs.supplementOccurrences,
-                                supplements = inputs.supplements,
-                                supplementDoseLogs = inputs.supplementDoseLogs,
-                                meals = inputs.meals,
-                                importedMeals = inputs.importedMeals,
+                        combine(
+                            getSupplementOccurrencesForDate(date),
+                            getActiveSupplements(),
+                            getSupplementDoseLogsForDate(date),
+                            getMealsForDate(date)
+                        ) { supplementOccurrences, supplements, supplementDoseLogs, meals ->
+                            QuadA(
+                                supplementOccurrences = supplementOccurrences,
+                                supplements = supplements,
+                                supplementDoseLogs = supplementDoseLogs,
+                                meals = meals
+                            )
+                        },
+                        combine(
+                            getImportedMealsForDate(date),
+                            getActivityOccurrencesForDate(date),
+                            getActivitiesForDate(date)
+                        ) { importedMeals, activityOccurrences, activities ->
+                            TripleB(
+                                importedMeals = importedMeals,
+                                activityOccurrences = activityOccurrences,
                                 activities = activities
                             )
                         }
+                    ) { a, b ->
+                        TimelineInputs(
+                            supplementOccurrences = a.supplementOccurrences,
+                            supplements = a.supplements,
+                            supplementDoseLogs = a.supplementDoseLogs,
+                            meals = a.meals,
+                            importedMeals = b.importedMeals,
+                            activityOccurrences = b.activityOccurrences,
+                            activities = b.activities
+                        )
+                    }.map { inputs ->
+                        buildTodayTimeline(
+                            date = date,
+                            supplementOccurrences = inputs.supplementOccurrences,
+                            supplements = inputs.supplements,
+                            supplementDoseLogs = inputs.supplementDoseLogs,
+                            meals = inputs.meals,
+                            importedMeals = inputs.importedMeals,
+                            activityOccurrences = inputs.activityOccurrences,
+                            activities = inputs.activities
+                        )
                     }.flowOn(Dispatchers.Default)
                 }
                 .collect { timeline ->
@@ -477,6 +413,19 @@ class TodayScreenViewModel @Inject constructor(
         }
     }
 
+    private data class QuadA(
+        val supplementOccurrences: List<SupplementOccurrenceEntity>,
+        val supplements: List<Supplement>,
+        val supplementDoseLogs: List<SupplementDoseLog>,
+        val meals: List<Meal>
+    )
+
+    private data class TripleB(
+        val importedMeals: List<AkImportedMealEntity>,
+        val activityOccurrences: List<ActivityOccurrenceEntity>,
+        val activities: List<Activity>
+    )
+
     private fun materializeSelectedDate(date: LocalDate) {
         viewModelScope.launch(Dispatchers.IO) {
             val meals = getMealsForDate(date).first()
@@ -486,6 +435,10 @@ class TodayScreenViewModel @Inject constructor(
                 date = date,
                 meals = meals,
                 importedMeals = importedMeals
+            )
+
+            materializeActivityOccurrencesForDate(
+                date = date
             )
         }
     }
@@ -558,7 +511,7 @@ class TodayScreenViewModel @Inject constructor(
 
                 identity.type == TodayUiRowType.ACTIVITY &&
                         domainItem is TimelineItem.ActivityTimelineItem ->
-                    domainItem.activity.id == identity.id &&
+                    domainItem.activityId == identity.id &&
                             domainItem.time == identity.time
 
                 identity.type == TodayUiRowType.MEAL &&
@@ -606,8 +559,6 @@ class TodayScreenViewModel @Inject constructor(
         val positive = groupingKey.hashCode().toLong() and 0x7fffffffL
         return -positive.coerceAtLeast(1L)
     }
-
-    // ---- Exercise draft helpers (State + SavedStateHandle) ----
 
     private fun setExerciseDraft(draft: ExerciseDraft) {
         _state.update { it.copy(exerciseDraft = draft) }

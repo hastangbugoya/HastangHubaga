@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import androidx.room.Room
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
+import com.example.hastanghubaga.data.local.dao.activity.ActivityScheduleDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
@@ -84,6 +86,14 @@ object DatabaseModule {
     @Provides
     fun provideActivityEntityDao(db: AppDatabase): ActivityEntityDao =
         db.activityEntityDao()
+
+    @Provides
+    fun provideActivityScheduleDao(db: AppDatabase): ActivityScheduleDao =
+        db.activityScheduleDao()
+
+    @Provides
+    fun provideActivityOccurrenceDao(db: AppDatabase): ActivityOccurrenceDao =
+        db.activityOccurrenceDao()
 
     @Provides
     fun provideMealEntityDao(db: AppDatabase): MealEntityDao =

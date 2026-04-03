@@ -2,7 +2,6 @@ package com.example.hastanghubaga.ui.timeline
 
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
-import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
@@ -63,9 +62,34 @@ sealed interface TimelineItem {
         val isTaken: Boolean = false
     ) : TimelineItem
 
+    /**
+     * Planned activity timeline row.
+     *
+     * This row represents the PLANNED side of activity behavior:
+     * one concrete activity occurrence for the selected day.
+     *
+     * Canonical identity:
+     * - [occurrenceId] is the stable planner occurrence ID
+     * - one planned occurrence = one planned timeline row
+     *
+     * Architectural intent:
+     * - planned rows come from the planned activity occurrence ledger
+     * - future actual activity logs remain separate rows
+     * - reconciliation should later happen by occurrence ID, mirroring supplements
+     *
+     * Important:
+     * - [time] is the canonical resolved timeline placement time
+     * - [scheduledTime] preserves the original planned time context
+     * - [isWorkout] is the occurrence-level planner snapshot, not the template default
+     */
     data class ActivityTimelineItem(
         override val time: LocalTime,
-        val activity: Activity
+        val occurrenceId: String,
+        val activityId: Long,
+        val title: String,
+        val subtitle: String? = null,
+        val isWorkout: Boolean = false,
+        val scheduledTime: LocalTime = time
     ) : TimelineItem
 
     /**
