@@ -4,9 +4,15 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
+import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
+import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.NutritionInput
+import com.example.hastanghubaga.domain.model.supplement.Supplement
+import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
@@ -46,6 +52,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -56,13 +63,6 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
-import com.example.hastanghubaga.domain.model.activity.Activity
-import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.model.supplement.Supplement
-import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
-import kotlinx.coroutines.flow.map
 
 /**
  * TodayScreenViewModel drives the Today timeline UI (supplements, meals, activities, dose logs)
@@ -224,6 +224,9 @@ class TodayScreenViewModel @Inject constructor(
             }
 
             is TodayScreenContract.Intent.ForceLogSupplementSelected -> {
+                val initialDate = selectedDate.value
+                val initialTime = nowLocalTime(clock)
+
                 viewModelScope.launch {
                     _effect.send(
                         ShowDoseInputDialog(
@@ -232,7 +235,9 @@ class TodayScreenViewModel @Inject constructor(
                             scheduledTime = null,
                             defaultUnit = intent.defaultUnit,
                             suggestedDose = intent.suggestedDose,
-                            occurrenceId = null
+                            occurrenceId = null,
+                            initialActualDate = initialDate,
+                            initialActualTime = initialTime
                         )
                     )
                 }
@@ -240,10 +245,12 @@ class TodayScreenViewModel @Inject constructor(
 
             is TodayScreenContract.Intent.ConfirmDose -> {
                 viewModelScope.launch {
+                    val explicitDate = intent.actualDate ?: selectedDate.value
+
                     val timeUseIntent =
                         when {
                             intent.actualTime != null ->
-                                TimeUseIntent.Explicit(today, intent.actualTime)
+                                TimeUseIntent.Explicit(explicitDate, intent.actualTime)
                             intent.scheduledTime != null ->
                                 TimeUseIntent.Scheduled(intent.scheduledTime)
                             else ->
@@ -335,6 +342,9 @@ class TodayScreenViewModel @Inject constructor(
             TodayScreenContract.Intent.DismissExerciseSheet -> clearExerciseDraft()
 
             is TodayScreenContract.Intent.SupplementLogOptionSelected -> {
+                val initialDate = selectedDate.value
+                val initialTime = intent.scheduledTime ?: nowLocalTime(clock)
+
                 viewModelScope.launch {
                     val scheduledOrNull =
                         when (intent.option) {
@@ -355,7 +365,9 @@ class TodayScreenViewModel @Inject constructor(
                             defaultUnit = intent.defaultUnit,
                             suggestedDose = intent.suggestedDose,
                             scheduledTime = scheduledOrNull,
-                            occurrenceId = occurrenceIdOrNull
+                            occurrenceId = occurrenceIdOrNull,
+                            initialActualDate = initialDate,
+                            initialActualTime = initialTime
                         )
                     )
                 }
@@ -415,6 +427,7 @@ class TodayScreenViewModel @Inject constructor(
         val meals: List<Meal>,
         val importedMeals: List<AkImportedMealEntity>
     )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeTimeline() {
         Log.d("Meow", "TodayVM observeTimeline()")

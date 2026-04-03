@@ -20,13 +20,13 @@ fun TimelineItemUiModel.icon(): Int =
         is ImportedMealUiModel -> R.drawable.file_import
     }
 
-private fun SupplementUiModel.supplementIcon(): Int =
-    when (doseState) {
-        is MealAwareDoseState.PendingMeal -> R.drawable.ic_supplement_with_food_utensils
-        is MealAwareDoseState.Ready -> R.drawable.ic_supplement_ready_medicine
-        is MealAwareDoseState.PendingEmptyStomach -> R.drawable.ic_supplement_no_food
-        else -> R.drawable.ic_supplement_eye_alert
-    }
+private fun SupplementUiModel.supplementIcon(): Int = R.drawable.ic_supplement_ready_medicine
+//    when (doseState) {
+//        is MealAwareDoseState.PendingMeal -> R.drawable.ic_supplement_with_food_utensils
+//        is MealAwareDoseState.Ready -> R.drawable.ic_supplement_ready_medicine
+//        is MealAwareDoseState.PendingEmptyStomach -> R.drawable.ic_supplement_no_food
+//        else -> R.drawable.ic_supplement_eye_alert
+//    }
 
 private fun MealUiModel.mealIcon(): Int =
     when (mealType) {

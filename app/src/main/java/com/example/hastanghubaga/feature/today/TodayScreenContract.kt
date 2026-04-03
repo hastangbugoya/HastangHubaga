@@ -70,6 +70,10 @@ object TodayScreenContract {
          * - a scheduled supplement row may map to a concrete planned occurrence
          * - an extra / manual supplement log may not yet be linked to an occurrence
          *
+         * [actualDate] and [actualTime] represent the user-entered truth of when
+         * the intake happened. These are intentionally separate from planned
+         * schedule context.
+         *
          * This keeps the UI contract forward-compatible with occurrence-aware
          * reconciliation while still supporting current manual logging flows.
          */
@@ -78,6 +82,7 @@ object TodayScreenContract {
             val amount: Double,
             val unit: SupplementDoseUnit,
             val scheduledTime: LocalTime?,
+            val actualDate: LocalDate?,
             val actualTime: LocalTime?,
             val occurrenceId: String? = null
         ) : Intent
@@ -164,6 +169,10 @@ object TodayScreenContract {
          *
          * [occurrenceId] is optional and allows the dialog confirmation path to
          * preserve which concrete planned supplement occurrence is being logged.
+         *
+         * [initialActualDate] and [initialActualTime] are editable user-facing
+         * defaults for the actual intake timestamp. UI may present them via simple
+         * text buttons that open pickers.
          */
         data class ShowDoseInputDialog(
             val supplementId: Long,
@@ -171,7 +180,9 @@ object TodayScreenContract {
             val scheduledTime: LocalTime? = null,
             val defaultUnit: SupplementDoseUnit,
             val suggestedDose: Double? = null,
-            val occurrenceId: String? = null
+            val occurrenceId: String? = null,
+            val initialActualDate: LocalDate = DomainTimePolicy.todayLocal(),
+            val initialActualTime: LocalTime? = null
         ) : Effect
 
         /**

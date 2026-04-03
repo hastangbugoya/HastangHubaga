@@ -1,5 +1,7 @@
 package com.example.hastanghubaga.feature.today
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.util.Log
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -66,6 +70,7 @@ import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.icon
 import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.math.roundToInt
@@ -236,6 +241,17 @@ fun TodayScreen(
         ) {
             when (sheet) {
                 is Dose -> {
+                    var actualDate by remember(sheet.data) {
+                        mutableStateOf(sheet.data.initialActualDate)
+                    }
+                    var actualTime by remember(sheet.data) {
+                        mutableStateOf(
+                            sheet.data.initialActualTime
+                                ?: sheet.data.scheduledTime
+                                ?: DomainTimePolicy.nowLocalDateTime(Clock.System).time
+                        )
+                    }
+
                     sheet.title?.let { title ->
                         Text(
                             text = title,
@@ -243,6 +259,14 @@ fun TodayScreen(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
+
+                    DoseDateTimeSection(
+                        actualDate = actualDate,
+                        actualTime = actualTime,
+                        onDateChange = { actualDate = it },
+                        onTimeChange = { actualTime = it }
+                    )
+
                     DoseInputSheetContent(
                         defaultAmount = sheet.data.suggestedDose ?: 0.0,
                         defaultUnit = sheet.data.defaultUnit,
@@ -253,7 +277,8 @@ fun TodayScreen(
                                     amount = amount,
                                     unit = unit,
                                     scheduledTime = sheet.data.scheduledTime,
-                                    actualTime = null,
+                                    actualDate = actualDate,
+                                    actualTime = actualTime,
                                     occurrenceId = sheet.data.occurrenceId
                                 )
                             )
@@ -355,6 +380,79 @@ fun TodayScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DoseDateTimeSection(
+    actualDate: LocalDate,
+    actualTime: LocalTime,
+    onDateChange: (LocalDate) -> Unit,
+    onTimeChange: (LocalTime) -> Unit
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = "Actual intake",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            onDateChange(
+                                LocalDate(
+                                    year = year,
+                                    monthNumber = month + 1,
+                                    dayOfMonth = dayOfMonth
+                                )
+                            )
+                        },
+                        actualDate.year,
+                        actualDate.monthNumber - 1,
+                        actualDate.dayOfMonth
+                    ).show()
+                }
+            ) {
+                Text("Date: $actualDate")
+            }
+
+            TextButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onTimeChange(
+                                LocalTime(
+                                    hour = hourOfDay,
+                                    minute = minute
+                                )
+                            )
+                        },
+                        actualTime.hour,
+                        actualTime.minute,
+                        false
+                    ).show()
+                }
+            ) {
+                Text("Time: $actualTime")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
