@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -58,6 +59,10 @@ data class ActivityEditorUiState(
     val isWorkout: Boolean = false,
     val isActive: Boolean = true,
     val isNew: Boolean = true,
+    val startHour: Int = 8,
+    val startMinute: Int = 0,
+    val durationHoursInput: String = "1",
+    val durationMinutesInput: String = "0",
     val scheduleEditors: List<ScheduleEditorState> = listOf(
         ScheduleEditorReducer.initialState()
     ),
@@ -126,10 +131,16 @@ class ActivitiesViewModel @Inject constructor(
         )
 
     fun onAddClick() {
+        val now = LocalDateTime.now(zoneId)
+
         editorState.value = ActivityEditorUiState(
             isNew = true,
             isWorkout = false,
             isActive = true,
+            startHour = now.hour,
+            startMinute = now.minute,
+            durationHoursInput = "1",
+            durationMinutesInput = "0",
             scheduleEditors = listOf(ScheduleEditorReducer.initialState())
         )
     }
@@ -153,6 +164,16 @@ class ActivitiesViewModel @Inject constructor(
                 }
             }
 
+            val startDateTime = Instant
+                .ofEpochMilli(activity.startTimestamp)
+                .atZone(zoneId)
+                .toLocalDateTime()
+
+            val derivedDurationMinutes = buildDurationMinutes(
+                startTimestamp = activity.startTimestamp,
+                endTimestamp = activity.endTimestamp
+            )
+
             editorState.value = ActivityEditorUiState(
                 id = activity.id,
                 type = activity.type,
@@ -161,6 +182,10 @@ class ActivitiesViewModel @Inject constructor(
                 isWorkout = activity.isWorkout,
                 isActive = activity.isActive,
                 isNew = false,
+                startHour = startDateTime.hour,
+                startMinute = startDateTime.minute,
+                durationHoursInput = (derivedDurationMinutes / 60).toString(),
+                durationMinutesInput = (derivedDurationMinutes % 60).toString(),
                 scheduleEditors = mappedScheduleEditors,
                 scheduleSaveErrors = emptyList()
             )
@@ -185,6 +210,27 @@ class ActivitiesViewModel @Inject constructor(
 
     fun onIsActiveChanged(value: Boolean) {
         editorState.update { current -> current?.copy(isActive = value) }
+    }
+
+    fun onStartTimeChanged(hour: Int, minute: Int) {
+        editorState.update { current ->
+            current?.copy(
+                startHour = hour.coerceIn(0, 23),
+                startMinute = minute.coerceIn(0, 59)
+            )
+        }
+    }
+
+    fun onDurationHoursChanged(value: String) {
+        editorState.update { current ->
+            current?.copy(durationHoursInput = value.filter { it.isDigit() })
+        }
+    }
+
+    fun onDurationMinutesChanged(value: String) {
+        editorState.update { current ->
+            current?.copy(durationMinutesInput = value.filter { it.isDigit() })
+        }
     }
 
     fun onAddScheduleClick() {
@@ -253,12 +299,24 @@ class ActivitiesViewModel @Inject constructor(
         viewModelScope.launch {
             val parsedIntensity = editor.intensity.trim().toIntOrNull()
 
+            val durationMinutes = parseDurationMinutes(
+                hoursInput = editor.durationHoursInput,
+                minutesInput = editor.durationMinutesInput
+            )
+
+            val startTimestamp = buildEditorStartTimestamp(
+                hour = editor.startHour,
+                minute = editor.startMinute
+            )
+
+            val endTimestamp = startTimestamp + (durationMinutes * 60_000L)
+
             val activityId = if (editor.isNew) {
                 activityEntityDao.insertActivity(
                     ActivityEntity(
                         type = editor.type,
-                        startTimestamp = System.currentTimeMillis(),
-                        endTimestamp = null,
+                        startTimestamp = startTimestamp,
+                        endTimestamp = endTimestamp,
                         notes = editor.notes.trim().ifBlank { null },
                         intensity = parsedIntensity,
                         isWorkout = editor.isWorkout,
@@ -272,6 +330,8 @@ class ActivitiesViewModel @Inject constructor(
                 activityEntityDao.updateActivity(
                     existing.copy(
                         type = editor.type,
+                        startTimestamp = startTimestamp,
+                        endTimestamp = endTimestamp,
                         notes = editor.notes.trim().ifBlank { null },
                         intensity = parsedIntensity,
                         isWorkout = editor.isWorkout,
@@ -603,6 +663,44 @@ class ActivitiesViewModel @Inject constructor(
             is ScheduleValidationError.InvalidOffset -> "One or more anchor offsets are invalid."
             ScheduleValidationError.EndDateBeforeStartDate -> "End date cannot be before start date."
         }
+    }
+
+    private fun buildEditorStartTimestamp(
+        hour: Int,
+        minute: Int
+    ): Long {
+        val today = DomainTimePolicy.todayLocal()
+        val localDateTime = LocalDateTime.of(
+            today.year,
+            today.monthNumber,
+            today.dayOfMonth,
+            hour.coerceIn(0, 23),
+            minute.coerceIn(0, 59)
+        )
+
+        return localDateTime
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+    }
+
+    private fun parseDurationMinutes(
+        hoursInput: String,
+        minutesInput: String
+    ): Int {
+        val hours = hoursInput.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        val minutes = minutesInput.toIntOrNull()?.coerceAtLeast(0) ?: 0
+        return (hours * 60) + minutes
+    }
+
+    private fun buildDurationMinutes(
+        startTimestamp: Long,
+        endTimestamp: Long?
+    ): Int {
+        val safeEnd = endTimestamp ?: return 60
+        val diffMs = safeEnd - startTimestamp
+        if (diffMs <= 0L) return 60
+        return (diffMs / 60_000L).toInt()
     }
 }
 

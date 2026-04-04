@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.feature.activities.ui
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.feature.schedule.ui.ScheduleEditorSection
@@ -47,6 +49,75 @@ private enum class ScheduleDatePickerTarget {
     END
 }
 
+@Composable
+private fun StartTimeDurationSection(
+    startHour: Int,
+    startMinute: Int,
+    durationHoursInput: String,
+    durationMinutesInput: String,
+    onStartTimeChanged: (hour: Int, minute: Int) -> Unit,
+    onDurationHoursChanged: (String) -> Unit,
+    onDurationMinutesChanged: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Time",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        OutlinedTextField(
+            value = formatTime(startHour, startMinute),
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Start time") }
+        )
+
+        TextButton(
+            onClick = {
+                TimePickerDialog(
+                    context,
+                    { _, hourOfDay, minute ->
+                        onStartTimeChanged(hourOfDay, minute)
+                    },
+                    startHour,
+                    startMinute,
+                    false
+                ).show()
+            }
+        ) {
+            Text("Change start time")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = durationHoursInput,
+                onValueChange = onDurationHoursChanged,
+                modifier = Modifier.weight(1f),
+                label = { Text("Duration hours") },
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = durationMinutesInput,
+                onValueChange = onDurationMinutesChanged,
+                modifier = Modifier.weight(1f),
+                label = { Text("Duration minutes") },
+                singleLine = true
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityEditorSheet(
@@ -56,6 +127,9 @@ fun ActivityEditorSheet(
     onIntensityChanged: (String) -> Unit,
     onIsWorkoutChanged: (Boolean) -> Unit,
     onIsActiveChanged: (Boolean) -> Unit,
+    onStartTimeChanged: (hour: Int, minute: Int) -> Unit,
+    onDurationHoursChanged: (String) -> Unit,
+    onDurationMinutesChanged: (String) -> Unit,
     onAddScheduleClick: () -> Unit,
     onRemoveScheduleClick: (Int) -> Unit,
     onScheduleAction: (Int, ScheduleEditorAction) -> Unit,
@@ -191,6 +265,16 @@ fun ActivityEditorSheet(
                 }
             }
         }
+
+        StartTimeDurationSection(
+            startHour = state.startHour,
+            startMinute = state.startMinute,
+            durationHoursInput = state.durationHoursInput,
+            durationMinutesInput = state.durationMinutesInput,
+            onStartTimeChanged = onStartTimeChanged,
+            onDurationHoursChanged = onDurationHoursChanged,
+            onDurationMinutesChanged = onDurationMinutesChanged
+        )
 
         OutlinedTextField(
             value = state.intensity,
@@ -450,4 +534,15 @@ private fun Long.toKtxLocalDateUtc(): LocalDate {
         .fromEpochMilliseconds(this)
         .toLocalDateTime(TimeZone.UTC)
         .date
+}
+
+private fun formatTime(hour: Int, minute: Int): String {
+    val displayHour = when {
+        hour == 0 -> 12
+        hour > 12 -> hour - 12
+        else -> hour
+    }
+    val displayMinute = minute.toString().padStart(2, '0')
+    val amPm = if (hour < 12) "AM" else "PM"
+    return "$displayHour:$displayMinute $amPm"
 }
