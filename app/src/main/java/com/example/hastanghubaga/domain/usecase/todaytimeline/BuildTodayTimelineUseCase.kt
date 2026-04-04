@@ -7,6 +7,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurren
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityLog
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.Supplement
@@ -32,31 +33,23 @@ import kotlinx.datetime.toLocalDateTime
  * - actual rows come from supplement dose logs
  * - reconciliation happens by occurrenceId
  *
- * Planned supplement row rule:
+ * Canonical activity model:
+ * - planned rows come from persisted activity occurrences
+ * - actual rows come from activity logs
+ * - reconciliation happens by occurrenceId
+ *
+ * Planned activity row rule:
  * - show the planned occurrence if it has not yet been satisfied by a linked log
  *
- * Actual supplement row rule:
+ * Actual activity row rule:
  * - always show the actual user-declared log event
  * - if the log links to a planned occurrence, the matching planned row is suppressed
  * - if the log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
  *
- * Canonical activity model (first-pass transitional rule):
- * - planned rows come from persisted activity occurrences
- * - actual/manual rows still come from current Activity rows
- * - until ActivityLogEntity + occurrenceId linkage exists, reconciliation uses
- *   a deterministic heuristic match:
- *   same activityId + same timeline time-of-day
- *
- * Planned activity row rule:
- * - show the planned occurrence if it is not matched by an actual/manual activity
- *
- * Actual/manual activity row rule:
- * - always show the actual/manual activity row
- * - if it heuristically matches a planned occurrence, the matching planned row is suppressed
- *
- * Important transitional guardrail:
- * - inactive activities must not appear in the timeline from either path
- * - if an activity is inactive, it should produce no planned row and no actual/manual row
+ * Important guardrail:
+ * - inactive activity templates must not produce planned rows
+ * - actual logs are historical truth and may still appear even if the template
+ *   later becomes inactive
  *
  * Other timeline content:
  * - native HH meals
@@ -81,7 +74,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
         activityOccurrences: List<ActivityOccurrenceEntity> = emptyList(),
-        activities: List<Activity> = emptyList()
+        activities: List<Activity> = emptyList(),
+        activityLogs: List<ActivityLog> = emptyList()
     ): List<TimelineItem> {
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
@@ -190,7 +184,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                         .fromEpochMilliseconds(importedMeal.timestamp)
                         .toLocalDateTime(DomainTimePolicy.localTimeZone)
                         .time,
-                    meal = importedMeal,
+                    meal = importedMeal
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> importedMealItems: ${importedMealItems.size}")
@@ -202,6 +196,10 @@ class BuildTodayTimelineUseCase @Inject constructor(
                         "groupingKey=${importedMealItem.meal.groupingKey} " +
                         "type=${importedMealItem.meal.type}"
             )
+        }
+
+        activityOccurrences.forEachIndexed { index, occurrence ->
+            Log.d("ACTIVITY_RECON", "activityOccurrences#$index > ${occurrence}")
         }
 
         val plannedActivityItems =
@@ -216,48 +214,49 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     title = activity.type.toDisplayLabel(),
                     subtitle = activity.notes,
                     isWorkout = occurrence.isWorkout,
-                    scheduledTime = plannedTime
+                    scheduledTime = plannedTime,
+                    isCompleted = false
                 )
             }
+
         Log.d("Meow", "BuildTodayTimelineUseCase> plannedActivityItems: ${plannedActivityItems.size}")
 
+        activityLogs.forEachIndexed { index, log ->
+            Log.d("ACTIVITY_RECON", "activityLogs#$index > ${log}")
+        }
+
         val actualActivityItems =
-            activeActivities.map { activity ->
-                val actualTime = activity.start.time
+            activityLogs.map { log ->
+                val actualTime = log.start.time
 
                 TimelineItem.ActivityTimelineItem(
                     time = actualTime,
-                    occurrenceId = buildActualActivityTimelineId(
-                        activityId = activity.id,
+                    occurrenceId = log.occurrenceId ?: buildActualActivityTimelineId(
+                        activityId = log.activityId,
                         time = actualTime
                     ),
-                    activityId = activity.id,
-                    title = activity.type.toDisplayLabel(),
-                    subtitle = activity.notes,
-                    isWorkout = activity.isWorkout,
-                    scheduledTime = actualTime
+                    activityId = log.activityId ?: -1L,
+                    title = log.activityType.toDisplayLabel(),
+                    subtitle = log.notes,
+                    isWorkout = false,
+                    scheduledTime = actualTime,
+                    isCompleted = true
                 )
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> actualActivityItems: ${actualActivityItems.size}")
 
-        val satisfiedPlannedActivityKeys =
-            actualActivityItems.map {
-                ActivityTimelineMatchKey(
-                    activityId = it.activityId,
-                    secondOfDay = it.time.toSecondOfDay()
-                )
-            }.toSet()
+        val satisfiedPlannedActivityOccurrenceIds =
+            activityLogs
+                .mapNotNull { it.occurrenceId }
+                .toSet()
         Log.d(
             "Meow",
-            "BuildTodayTimelineUseCase> satisfiedPlannedActivityKeys: ${satisfiedPlannedActivityKeys.size}"
+            "BuildTodayTimelineUseCase> satisfiedPlannedActivityOccurrenceIds: ${satisfiedPlannedActivityOccurrenceIds.size}"
         )
 
         val filteredPlannedActivityItems =
             plannedActivityItems.filterNot { item ->
-                ActivityTimelineMatchKey(
-                    activityId = item.activityId,
-                    secondOfDay = item.time.toSecondOfDay()
-                ) in satisfiedPlannedActivityKeys
+                item.occurrenceId in satisfiedPlannedActivityOccurrenceIds
             }
         Log.d(
             "Meow",
@@ -382,6 +381,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     append(item.time.toSecondOfDay())
                     append("|")
                     append(if (item.isWorkout) "W" else "N")
+                    append("|")
+                    append(if (item.isCompleted) "C" else "P")
                 }
 
             is TimelineItem.SupplementDoseLogTimelineItem ->
@@ -395,22 +396,17 @@ class BuildTodayTimelineUseCase @Inject constructor(
         }
 
     private fun buildActualActivityTimelineId(
-        activityId: Long,
+        activityId: Long?,
         time: LocalTime
     ): String {
         return buildString {
             append("actual")
             append("|")
-            append(activityId)
+            append(activityId ?: "none")
             append("|")
             append(time.toSecondOfDay())
         }
     }
-
-    private data class ActivityTimelineMatchKey(
-        val activityId: Long,
-        val secondOfDay: Int
-    )
 }
 
 private fun ActivityType.toDisplayLabel(): String =

@@ -3,6 +3,7 @@ package com.example.hastanghubaga.feature.today
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -652,7 +655,10 @@ fun TimelineList(
         Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
     }
     LazyColumn(modifier = modifier.fillMaxWidth()) {
-        items(items = items, key = { it.key }) { item ->
+        itemsIndexed(
+            items = items,
+            key = { index, item -> "${item.key}-$index" }
+        ) { _, item ->
             TimelineRow(item = item, onClick = onItemClick)
         }
     }
@@ -675,6 +681,7 @@ fun TimelineRow(
                 enabled = true,
                 onClick = { onClick(item) }
             )
+            .background(color = if(item.isCompleted) Color.Green else Color.Red)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(

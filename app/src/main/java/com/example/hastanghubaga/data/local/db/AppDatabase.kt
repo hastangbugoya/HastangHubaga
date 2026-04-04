@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.hastanghubaga.data.local.converters.Converters
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
+import com.example.hastanghubaga.data.local.dao.activity.ActivityLogDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityScheduleDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
@@ -27,6 +28,7 @@ import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
+import com.example.hastanghubaga.data.local.entity.activity.ActivityLogEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleEntity
@@ -74,6 +76,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         ActivityScheduleFixedTimeEntity::class,
         ActivityScheduleAnchoredTimeEntity::class,
         ActivityOccurrenceEntity::class,
+        ActivityLogEntity::class,
         MealEntity::class,
         MealNutritionEntity::class,
         AkImportedLogEntity::class,
@@ -84,7 +87,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -102,6 +105,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityEntityDao(): ActivityEntityDao
     abstract fun activityScheduleDao(): ActivityScheduleDao
     abstract fun activityOccurrenceDao(): ActivityOccurrenceDao
+    abstract fun activityLogDao(): ActivityLogDao
 
     abstract fun mealEntityDao(): MealEntityDao
     abstract fun mealNutritionDao(): MealNutritionDao

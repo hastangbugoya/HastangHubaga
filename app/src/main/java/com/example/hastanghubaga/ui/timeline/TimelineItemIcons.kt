@@ -15,7 +15,6 @@ fun TimelineItemUiModel.icon(): Int =
         is SupplementUiModel -> supplementIcon()
         is MealUiModel -> mealIcon()
         is ActivityUiModel -> activityIcon()
-//        is TimelineItem.SupplementDoseLog -> doseLogIcon()
         is SupplementDoseLogUiModel -> R.drawable.badge_check
         is ImportedMealUiModel -> R.drawable.file_import
     }

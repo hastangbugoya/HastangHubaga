@@ -147,6 +147,21 @@ data class SupplementUiModel(
         "SUPPLEMENT-$supplementId-$scheduledTime-${occurrenceId ?: "NO_OCCURRENCE"}"
 }
 
+/**
+ * UI-facing activity timeline row.
+ *
+ * Canonical activity model:
+ * - template = ActivityEntity
+ * - planned row source = ActivityOccurrenceEntity
+ * - actual row source = ActivityLogEntity
+ *
+ * [occurrenceId] is nullable because:
+ * - planned activity rows should carry the concrete occurrence identity
+ * - extra/unplanned logged rows may have no occurrence linkage
+ *
+ * This allows tap → log flows to preserve occurrence-aware reconciliation so a
+ * planned row can later be replaced by the linked actual log row.
+ */
 data class ActivityUiModel(
     override val id: Long,
     override val time: LocalTime,
@@ -160,7 +175,8 @@ data class ActivityUiModel(
     val activityType: ActivityType,
     val startTime: LocalTime,
     val endTime: LocalTime?,
-    val intensity: Int?
+    val intensity: Int?,
+    val occurrenceId: String? = null
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
@@ -182,6 +198,8 @@ data class ActivityUiModel(
                 append("-I")
                 append(it)
             }
+            append("-")
+            append(occurrenceId ?: "NO_OCCURRENCE")
             if (!subtitle.isNullOrBlank()) {
                 append("-")
                 append(subtitle)

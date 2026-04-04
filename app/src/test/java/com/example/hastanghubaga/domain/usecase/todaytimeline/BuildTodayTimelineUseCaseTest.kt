@@ -6,6 +6,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceSourceType
 import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityLog
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
@@ -141,6 +143,24 @@ class BuildTodayTimelineUseCaseTest {
             at = at
         )
 
+    private fun activityLog(
+        id: Long,
+        activityId: Long?,
+        activityType: ActivityType,
+        at: LocalDateTime,
+        occurrenceId: String? = null
+    ): ActivityLog =
+        ActivityLog(
+            id = id,
+            activityId = activityId,
+            occurrenceId = occurrenceId,
+            activityType = activityType,
+            start = at,
+            end = null,
+            notes = null,
+            intensity = null
+        )
+
     @Test
     fun `empty inputs returns empty list`() = runTest {
         val result = useCase(
@@ -150,7 +170,8 @@ class BuildTodayTimelineUseCaseTest {
             supplementDoseLogs = emptyList(),
             meals = emptyList(),
             importedMeals = emptyList(),
-            activities = emptyList()
+            activities = emptyList(),
+            activityLogs = emptyList()
         )
 
         assertTrue(result.isEmpty())
@@ -267,9 +288,11 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `activities are mapped correctly`() = runTest {
-        val activity = activity(
-            name = "Workout",
+    fun `activity logs are mapped correctly`() = runTest {
+        val log = activityLog(
+            id = 10L,
+            activityId = 1L,
+            activityType = ActivityType.STRENGTH_TRAINING,
             at = LocalDateTime(2025, 1, 1, 6, 0)
         )
 
@@ -277,12 +300,13 @@ class BuildTodayTimelineUseCaseTest {
             date = testDate,
             supplementOccurrences = emptyList(),
             supplements = emptyList(),
-            activities = listOf(activity)
+            activityLogs = listOf(log)
         )
 
         val item = result.single() as com.example.hastanghubaga.ui.timeline.TimelineItem.ActivityTimelineItem
         assertEquals(LocalTime(6, 0), item.time)
-        assertEquals(activity, item.activity)
+        assertEquals(1L, item.activityId)
+        assertEquals("Workout", item.title)
     }
 
     @Test
@@ -297,9 +321,11 @@ class BuildTodayTimelineUseCaseTest {
             LocalDateTime(2025, 1, 1, 8, 0)
         )
 
-        val activity = activity(
-            "Run",
-            LocalDateTime(2025, 1, 1, 6, 30)
+        val log = activityLog(
+            id = 10L,
+            activityId = 2L,
+            activityType = ActivityType.RUNNING,
+            at = LocalDateTime(2025, 1, 1, 6, 30)
         )
 
         val result = useCase(
@@ -313,7 +339,7 @@ class BuildTodayTimelineUseCaseTest {
             ),
             supplements = listOf(supplement),
             meals = listOf(meal),
-            activities = listOf(activity)
+            activityLogs = listOf(log)
         )
 
         assertEquals(

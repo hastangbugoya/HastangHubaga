@@ -115,7 +115,8 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 activityType = title.toActivityTypeOrOther(),
                 startTime = scheduledTime,
                 endTime = null,
-                intensity = null
+                intensity = null,
+                occurrenceId = occurrenceId
             )
 
         is TimelineItem.SupplementDoseLogTimelineItem ->

@@ -220,11 +220,16 @@ object TodayScreenContract {
      * UI draft for logging an activity session.
      *
      * This represents user-editable logging data, not a live in-progress timer.
-     * When opened from a planned timeline card, [occurrenceId] preserves the
-     * linkage to the planned activity occurrence so the timeline can later treat
-     * that occurrence as fulfilled and show only the logged card.
+     *
+     * [activityId] preserves the template identity when the log came from a known
+     * activity definition.
+     *
+     * [occurrenceId] preserves the linkage to the planned activity occurrence so
+     * the timeline can later treat that occurrence as fulfilled and show only
+     * the logged card.
      */
     data class ExerciseDraft(
+        val activityId: Long? = null,
         val activityType: ActivityType,
         val logDate: LocalDate,
         val startTime: LocalTime,

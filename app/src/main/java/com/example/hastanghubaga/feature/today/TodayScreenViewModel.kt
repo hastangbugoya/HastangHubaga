@@ -8,6 +8,7 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEn
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
+import com.example.hastanghubaga.domain.model.activity.ActivityLog
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.model.meal.Meal
@@ -15,6 +16,7 @@ import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
+import com.example.hastanghubaga.domain.repository.activity.ActivityLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
@@ -75,6 +77,7 @@ class TodayScreenViewModel @Inject constructor(
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
     private val getActivityOccurrencesForDate: GetActivityOccurrencesForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
+    private val activityLogRepository: ActivityLogRepository,
     private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
     private val materializeActivityOccurrencesForDate: MaterializeActivityOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
@@ -94,6 +97,7 @@ class TodayScreenViewModel @Inject constructor(
     private val selectedDate = MutableStateFlow(DomainTimePolicy.todayLocal())
 
     private object ExerciseSavedStateKeys {
+        const val ACTIVITY_ID = "exercise.activityId"
         const val TYPE = "exercise.type"
         const val LOG_DATE = "exercise.logDate"
         const val START_MIN = "exercise.startMin"
@@ -197,27 +201,45 @@ class TodayScreenViewModel @Inject constructor(
                 val start = activityUi.time
                 val end = addDefaultDuration(start)
 
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "exercise tapped ui id=${activityUi.id} activityId=${activityUi.activityId} occurrenceId=${activityUi.occurrenceId} title=${activityUi.title} time=${activityUi.time}"
+                )
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "draft create activityId=${activityUi.id} occurrenceId=${activityUi.occurrenceId}"
+                )
+
                 setExerciseDraft(
                     ExerciseDraft(
+                        activityId = activityUi.id,
                         activityType = activityUi.activityType,
                         logDate = logDate,
                         startTime = start,
                         endTime = end,
                         notes = "",
                         intensity = null,
-                        occurrenceId = null
+                        occurrenceId = activityUi.occurrenceId
                     )
                 )
             }
 
             is TodayScreenContract.Intent.ExerciseDateChanged -> {
                 val existing = state.value.exerciseDraft ?: return
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "date change existing occurrenceId=${existing.occurrenceId} newDate=${intent.value}"
+                )
                 setExerciseDraft(existing.copy(logDate = intent.value))
             }
 
             is TodayScreenContract.Intent.ExerciseStartTimeChanged -> {
                 val existing = state.value.exerciseDraft ?: return
                 val adjustedEnd = clampEndTimeNotBeforeStart(intent.value, existing.endTime)
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "start change existing occurrenceId=${existing.occurrenceId} newStart=${intent.value} adjustedEnd=$adjustedEnd"
+                )
                 setExerciseDraft(
                     existing.copy(
                         startTime = intent.value,
@@ -229,16 +251,28 @@ class TodayScreenViewModel @Inject constructor(
             is TodayScreenContract.Intent.ExerciseEndTimeChanged -> {
                 val existing = state.value.exerciseDraft ?: return
                 val clamped = clampEndTimeNotBeforeStart(existing.startTime, intent.value)
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "end change existing occurrenceId=${existing.occurrenceId} newEnd=${intent.value} clampedEnd=$clamped"
+                )
                 setExerciseDraft(existing.copy(endTime = clamped))
             }
 
             is TodayScreenContract.Intent.ExerciseNotesChanged -> {
                 val existing = state.value.exerciseDraft ?: return
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "notes change existing occurrenceId=${existing.occurrenceId} notesLength=${intent.value.length}"
+                )
                 setExerciseDraft(existing.copy(notes = intent.value))
             }
 
             is TodayScreenContract.Intent.ExerciseIntensityChanged -> {
                 val existing = state.value.exerciseDraft ?: return
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "intensity change existing occurrenceId=${existing.occurrenceId} intensity=${intent.value}"
+                )
                 setExerciseDraft(existing.copy(intensity = intent.value))
             }
 
@@ -248,8 +282,13 @@ class TodayScreenViewModel @Inject constructor(
                 viewModelScope.launch {
                     val startMillis = localTimeToEpochMillis(draft.logDate, draft.startTime)
                     val endMillis = localTimeToEpochMillis(draft.logDate, draft.endTime)
-
+                    Log.d(
+                        "ACTIVITY_RECON",
+                        "saving log activityId=${draft.activityId} occurrenceId=${draft.occurrenceId} type=${draft.activityType} intensity=${draft.intensity}"
+                    )
                     saveExerciseActivityUseCase(
+                        activityId = draft.activityId,
+                        occurrenceId = draft.occurrenceId,
                         type = draft.activityType,
                         startTimestamp = startMillis,
                         endTimestamp = endMillis,
@@ -353,7 +392,8 @@ class TodayScreenViewModel @Inject constructor(
         val meals: List<Meal>,
         val importedMeals: List<AkImportedMealEntity>,
         val activityOccurrences: List<ActivityOccurrenceEntity>,
-        val activities: List<Activity>
+        val activities: List<Activity>,
+        val activityLogs: List<ActivityLog>
     )
 
     private fun observeTimeline() {
@@ -378,12 +418,14 @@ class TodayScreenViewModel @Inject constructor(
                         combine(
                             getImportedMealsForDate(date),
                             getActivityOccurrencesForDate(date),
-                            getActivitiesForDate(date)
-                        ) { importedMeals, activityOccurrences, activities ->
-                            TripleB(
+                            getActivitiesForDate(date),
+                            activityLogRepository.observeActivityLogsForDate(date)
+                        ) { importedMeals, activityOccurrences, activities, activityLogs ->
+                            QuadB(
                                 importedMeals = importedMeals,
                                 activityOccurrences = activityOccurrences,
-                                activities = activities
+                                activities = activities,
+                                activityLogs = activityLogs
                             )
                         }
                     ) { a, b ->
@@ -394,7 +436,8 @@ class TodayScreenViewModel @Inject constructor(
                             meals = a.meals,
                             importedMeals = b.importedMeals,
                             activityOccurrences = b.activityOccurrences,
-                            activities = b.activities
+                            activities = b.activities,
+                            activityLogs = b.activityLogs
                         )
                     }.map { inputs ->
                         buildTodayTimeline(
@@ -405,7 +448,8 @@ class TodayScreenViewModel @Inject constructor(
                             meals = inputs.meals,
                             importedMeals = inputs.importedMeals,
                             activityOccurrences = inputs.activityOccurrences,
-                            activities = inputs.activities
+                            activities = inputs.activities,
+                            activityLogs = inputs.activityLogs
                         )
                     }.flowOn(Dispatchers.Default)
                 }
@@ -430,10 +474,11 @@ class TodayScreenViewModel @Inject constructor(
         val meals: List<Meal>
     )
 
-    private data class TripleB(
+    private data class QuadB(
         val importedMeals: List<AkImportedMealEntity>,
         val activityOccurrences: List<ActivityOccurrenceEntity>,
-        val activities: List<Activity>
+        val activities: List<Activity>,
+        val activityLogs: List<ActivityLog>
     )
 
     private fun materializeSelectedDate(date: LocalDate) {
@@ -571,6 +616,10 @@ class TodayScreenViewModel @Inject constructor(
     }
 
     private fun setExerciseDraft(draft: ExerciseDraft) {
+        Log.d(
+            "ACTIVITY_RECON",
+            "setExerciseDraft activityId=${draft.activityId} occurrenceId=${draft.occurrenceId} start=${draft.startTime} end=${draft.endTime}"
+        )
         _state.update { it.copy(exerciseDraft = draft) }
         persistExerciseDraft(draft)
     }
@@ -581,6 +630,7 @@ class TodayScreenViewModel @Inject constructor(
     }
 
     private fun restoreExerciseDraftIfPresent() {
+        val activityId = savedStateHandle.get<Long?>(ExerciseSavedStateKeys.ACTIVITY_ID)
         val type = savedStateHandle.get<String>(ExerciseSavedStateKeys.TYPE) ?: return
         val logDateIso = savedStateHandle.get<String>(ExerciseSavedStateKeys.LOG_DATE) ?: return
         val startMin = savedStateHandle.get<Int>(ExerciseSavedStateKeys.START_MIN) ?: return
@@ -589,8 +639,12 @@ class TodayScreenViewModel @Inject constructor(
         val notes = savedStateHandle.get<String>(ExerciseSavedStateKeys.NOTES) ?: ""
         val intensity = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.INTENSITY)
         val occurrenceId = savedStateHandle.get<String?>(ExerciseSavedStateKeys.OCCURRENCE_ID)
-
+        Log.d(
+            "ACTIVITY_RECON",
+            "restoreExerciseDraft activityId=$activityId occurrenceId=$occurrenceId"
+        )
         val draft = ExerciseDraft(
+            activityId = activityId,
             activityType = ActivityType.valueOf(type),
             logDate = LocalDate.parse(logDateIso),
             startTime = minutesToLocalTime(startMin),
@@ -604,6 +658,11 @@ class TodayScreenViewModel @Inject constructor(
     }
 
     private fun persistExerciseDraft(draft: ExerciseDraft) {
+        Log.d(
+            "ACTIVITY_RECON",
+            "persistExerciseDraft activityId=${draft.activityId} occurrenceId=${draft.occurrenceId}"
+        )
+        savedStateHandle[ExerciseSavedStateKeys.ACTIVITY_ID] = draft.activityId
         savedStateHandle[ExerciseSavedStateKeys.TYPE] = draft.activityType.name
         savedStateHandle[ExerciseSavedStateKeys.LOG_DATE] = draft.logDate.toString()
         savedStateHandle[ExerciseSavedStateKeys.START_MIN] = draft.startTime.toMinutesOfDay()
@@ -614,6 +673,7 @@ class TodayScreenViewModel @Inject constructor(
     }
 
     private fun clearPersistedExerciseDraft() {
+        savedStateHandle.remove<Long?>(ExerciseSavedStateKeys.ACTIVITY_ID)
         savedStateHandle.remove<String>(ExerciseSavedStateKeys.TYPE)
         savedStateHandle.remove<String>(ExerciseSavedStateKeys.LOG_DATE)
         savedStateHandle.remove<Int>(ExerciseSavedStateKeys.START_MIN)

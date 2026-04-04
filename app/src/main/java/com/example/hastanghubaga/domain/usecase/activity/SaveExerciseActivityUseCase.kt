@@ -1,21 +1,36 @@
 package com.example.hastanghubaga.domain.usecase.activity
 
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
+import com.example.hastanghubaga.domain.repository.activity.ActivityLogRepository
 import javax.inject.Inject
 
+/**
+ * Saves one actual logged activity session.
+ *
+ * Canonical activity model:
+ * - ActivityEntity = template
+ * - ActivityOccurrenceEntity = planned occurrence
+ * - ActivityLogEntity = actual performed session
+ *
+ * This use case writes only to the activity log layer.
+ * It must NOT create or mutate template rows.
+ */
 class SaveExerciseActivityUseCase @Inject constructor(
-    private val repo: ActivityRepository
+    private val repo: ActivityLogRepository
 ) {
     suspend operator fun invoke(
+        activityId: Long?,
+        occurrenceId: String?,
         type: ActivityType,
         startTimestamp: Long,
         endTimestamp: Long,
         notes: String?,
         intensity: Int?
     ): Long {
-        return repo.insertActivity(
-            type = type,
+        return repo.insertActivityLog(
+            activityId = activityId,
+            occurrenceId = occurrenceId,
+            activityType = type,
             startTimestamp = startTimestamp,
             endTimestamp = endTimestamp,
             notes = notes,

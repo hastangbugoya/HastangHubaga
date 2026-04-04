@@ -63,24 +63,26 @@ sealed interface TimelineItem {
     ) : TimelineItem
 
     /**
-     * Planned activity timeline row.
+     * Activity timeline row.
      *
-     * This row represents the PLANNED side of activity behavior:
-     * one concrete activity occurrence for the selected day.
+     * This row may represent either:
+     * - a PLANNED activity occurrence for the selected day
+     * - an ACTUAL logged activity session
      *
      * Canonical identity:
-     * - [occurrenceId] is the stable planner occurrence ID
-     * - one planned occurrence = one planned timeline row
+     * - [occurrenceId] is the planner occurrence identity when available
+     * - planned rows always have a concrete occurrence ID
+     * - actual rows may preserve that same occurrence ID when the log fulfilled
+     *   a planned occurrence, or use a synthetic fallback identity for extra logs
      *
-     * Architectural intent:
-     * - planned rows come from the planned activity occurrence ledger
-     * - future actual activity logs remain separate rows
-     * - reconciliation should later happen by occurrence ID, mirroring supplements
+     * Completion semantics:
+     * - [isCompleted] = false for planned rows
+     * - [isCompleted] = true for actual logged rows
      *
      * Important:
      * - [time] is the canonical resolved timeline placement time
-     * - [scheduledTime] preserves the original planned time context
-     * - [isWorkout] is the occurrence-level planner snapshot, not the template default
+     * - [scheduledTime] preserves the original planned or actual source time
+     * - [isWorkout] is the occurrence/log snapshot used for display only
      */
     data class ActivityTimelineItem(
         override val time: LocalTime,
@@ -89,7 +91,8 @@ sealed interface TimelineItem {
         val title: String,
         val subtitle: String? = null,
         val isWorkout: Boolean = false,
-        val scheduledTime: LocalTime = time
+        val scheduledTime: LocalTime = time,
+        val isCompleted: Boolean = false
     ) : TimelineItem
 
     /**
