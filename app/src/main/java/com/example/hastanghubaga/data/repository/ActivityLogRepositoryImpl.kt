@@ -20,6 +20,13 @@ import kotlinx.datetime.LocalDate
  * - ActivityEntity = template
  * - ActivityOccurrenceEntity = planned occurrence
  * - ActivityLogEntity = actual performed session
+ *
+ * Planned logging contract:
+ * - a non-null occurrenceId identifies one specific planned occurrence
+ * - saving a log for the same non-null occurrenceId must update/replace the
+ *   existing log row rather than create a duplicate
+ * - a null occurrenceId represents an ad-hoc / force-logged activity and is
+ *   inserted as an independent row
  */
 class ActivityLogRepositoryImpl @Inject constructor(
     private val dao: ActivityLogDao
@@ -47,18 +54,23 @@ class ActivityLogRepositoryImpl @Inject constructor(
     ): Long {
         Log.d(
             "ACTIVITY_RECON",
-            "repo insert activityId=$activityId occurrenceId=$occurrenceId activityType=$activityType"
+            "repo save activityId=$activityId occurrenceId=$occurrenceId activityType=$activityType"
         )
-        return dao.insertActivityLog(
-            ActivityLogEntity(
-                activityId = activityId,
-                occurrenceId = occurrenceId,
-                activityType = activityType,
-                startTimestamp = startTimestamp,
-                endTimestamp = endTimestamp,
-                notes = notes,
-                intensity = intensity
-            )
+
+        val entity = ActivityLogEntity(
+            activityId = activityId,
+            occurrenceId = occurrenceId,
+            activityType = activityType,
+            startTimestamp = startTimestamp,
+            endTimestamp = endTimestamp,
+            notes = notes,
+            intensity = intensity
         )
+
+        return if (occurrenceId.isNullOrBlank()) {
+            dao.insertActivityLog(entity)
+        } else {
+            dao.upsertActivityLogByOccurrenceId(entity)
+        }
     }
 }

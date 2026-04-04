@@ -14,6 +14,13 @@ import javax.inject.Inject
  *
  * This use case writes only to the activity log layer.
  * It must NOT create or mutate template rows.
+ *
+ * Planned logging contract:
+ * - if [occurrenceId] is non-null, it identifies one specific planned occurrence
+ * - repeated logging for the same non-null [occurrenceId] must update/replace the
+ *   existing persisted log row rather than create a duplicate
+ * - if [occurrenceId] is null, this is treated as an ad-hoc / force-logged activity
+ *   and may insert as a new independent row
  */
 class SaveExerciseActivityUseCase @Inject constructor(
     private val repo: ActivityLogRepository

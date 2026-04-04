@@ -1,6 +1,7 @@
 package com.example.hastanghubaga.domain.repository.activity
 
 import com.example.hastanghubaga.domain.model.activity.ActivityLog
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDate
 
@@ -17,6 +18,13 @@ import kotlinx.datetime.LocalDate
  * - actual timeline rows come from logs
  * - if a log has a non-null occurrenceId, that occurrence is considered fulfilled
  *   and the matching planned card may be suppressed
+ *
+ * Single-log-per-occurrence rule:
+ * - a non-null occurrenceId identifies one specific planned occurrence
+ * - at most one persisted log row may exist for that occurrence
+ * - saving the same non-null occurrenceId again must update/replace the existing
+ *   log row rather than create a duplicate row
+ * - null occurrenceId remains valid for ad-hoc / force-logged activity logs
  */
 interface ActivityLogRepository {
 
@@ -27,14 +35,20 @@ interface ActivityLogRepository {
     fun observeActivityLogsForDate(date: LocalDate): Flow<List<ActivityLog>>
 
     /**
-     * Inserts one actual logged activity session.
+     * Persists one actual logged activity session.
      *
-     * Returns the new log row id.
+     * Persistence semantics:
+     * - if [occurrenceId] is non-null, this must behave as upsert-by-occurrenceId
+     * - if [occurrenceId] is null, this behaves as a normal insert for an ad-hoc log
+     *
+     * Returns:
+     * - inserted row id for a new row
+     * - existing row id when an existing planned occurrence log is updated
      */
     suspend fun insertActivityLog(
         activityId: Long?,
         occurrenceId: String?,
-        activityType: com.example.hastanghubaga.domain.model.activity.ActivityType,
+        activityType: ActivityType,
         startTimestamp: Long,
         endTimestamp: Long?,
         notes: String?,

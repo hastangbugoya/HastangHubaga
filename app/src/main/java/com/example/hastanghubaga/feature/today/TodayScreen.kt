@@ -467,6 +467,12 @@ private fun ExerciseBottomSheetContent(
 ) {
     val context = LocalContext.current
 
+    LaunchedEffect(draft.occurrenceId, draft.intensity) {
+        if (draft.intensity == null) {
+            onIntensityChange(0)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -579,19 +585,19 @@ private fun ExerciseBottomSheetContent(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            val intensityValue = draft.intensity?.toFloat() ?: 5f
+            val intensityValue = draft.intensity?.toFloat() ?: 0f
 
             Slider(
                 value = intensityValue,
                 onValueChange = { newValue ->
                     onIntensityChange(newValue.roundToInt())
                 },
-                valueRange = 1f..10f,
-                steps = 8
+                valueRange = 0f..10f,
+                steps = 9
             )
 
             Text(
-                text = "Level: ${draft.intensity ?: "—"}",
+                text = "Level: ${draft.intensity ?: 0}",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -655,13 +661,24 @@ fun TimelineList(
         Log.d("TimelineList", "Rendering item: ${it.title} key:${it.key}")
     }
     LazyColumn(modifier = modifier.fillMaxWidth()) {
-        itemsIndexed(
+        items(
             items = items,
-            key = { index, item -> "${item.key}-$index" }
-        ) { _, item ->
-            TimelineRow(item = item, onClick = onItemClick)
+            key = { it.key }
+        ) { item ->
+            TimelineRow(
+                item = item,
+                onClick = onItemClick
+            )
         }
     }
+//    LazyColumn(modifier = modifier.fillMaxWidth()) {
+//        itemsIndexed(
+//            items = items,
+//            key = { index, item -> "${item.key}-$index" }
+//        ) { _, item ->
+//            TimelineRow(item = item, onClick = onItemClick)
+//        }
+//    }
 }
 
 @Composable
@@ -681,7 +698,7 @@ fun TimelineRow(
                 enabled = true,
                 onClick = { onClick(item) }
             )
-            .background(color = if(item.isCompleted) Color.Green else Color.Red)
+            .background(color = if (item.isCompleted) Color.Green else Color.Red)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(

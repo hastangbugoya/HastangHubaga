@@ -23,6 +23,11 @@ import com.example.hastanghubaga.domain.model.activity.ActivityType
  * - [activityType] is copied into the log so history remains stable even if the
  *   template later changes
  *
+ * Single-log-per-occurrence rule:
+ * - [occurrenceId] is the stable key for a planned activity occurrence
+ * - at most one persisted log row may exist for a given non-null [occurrenceId]
+ * - null [occurrenceId] values remain allowed for ad-hoc / force-logged activities
+ *
  * Minimal v1 scope:
  * - actual start/end timestamps
  * - optional notes
@@ -42,7 +47,7 @@ import com.example.hastanghubaga.domain.model.activity.ActivityType
     ],
     indices = [
         Index("activityId"),
-        Index("occurrenceId"),
+        Index(value = ["occurrenceId"], unique = true),
         Index("startTimestamp")
     ]
 )
@@ -64,6 +69,9 @@ data class ActivityLogEntity(
      *
      * - non-null = planned activity log
      * - null = extra / unplanned activity log
+     *
+     * This value is the canonical reconciliation key for planned logging.
+     * Only one persisted log row may exist for a given non-null occurrenceId.
      */
     val occurrenceId: String? = null,
 

@@ -218,7 +218,7 @@ class TodayScreenViewModel @Inject constructor(
                         startTime = start,
                         endTime = end,
                         notes = "",
-                        intensity = null,
+                        intensity = 0,
                         occurrenceId = activityUi.occurrenceId
                     )
                 )
@@ -273,7 +273,7 @@ class TodayScreenViewModel @Inject constructor(
                     "ACTIVITY_RECON",
                     "intensity change existing occurrenceId=${existing.occurrenceId} intensity=${intent.value}"
                 )
-                setExerciseDraft(existing.copy(intensity = intent.value))
+                setExerciseDraft(existing.copy(intensity = intent.value ?: 0))
             }
 
             TodayScreenContract.Intent.ExerciseConfirmPressed -> {
@@ -293,7 +293,7 @@ class TodayScreenViewModel @Inject constructor(
                         startTimestamp = startMillis,
                         endTimestamp = endMillis,
                         notes = draft.notes.ifBlank { null },
-                        intensity = draft.intensity
+                        intensity = draft.intensity ?: 0
                     )
 
                     materializeSelectedDate(selectedDate.value)
@@ -637,7 +637,7 @@ class TodayScreenViewModel @Inject constructor(
         val endMin = savedStateHandle.get<Int>(ExerciseSavedStateKeys.END_MIN) ?: return
 
         val notes = savedStateHandle.get<String>(ExerciseSavedStateKeys.NOTES) ?: ""
-        val intensity = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.INTENSITY)
+        val intensity = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.INTENSITY) ?: 0
         val occurrenceId = savedStateHandle.get<String?>(ExerciseSavedStateKeys.OCCURRENCE_ID)
         Log.d(
             "ACTIVITY_RECON",

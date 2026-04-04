@@ -87,7 +87,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
