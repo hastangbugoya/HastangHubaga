@@ -12,12 +12,35 @@ import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.models.MealJoinedRoom
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * DAO for reusable meal templates.
+ *
+ * Important architectural shift:
+ * meals are no longer stored as point-in-time timestamped events.
+ * They now behave like activity templates:
+ *
+ * - MealEntity = reusable template
+ * - MealScheduleEntity + child timing rows = scheduling rules
+ * - future occurrence/log layers determine date-specific appearance
+ *
+ * That means this DAO should NOT perform day-range filtering against meals.
+ * Date-specific evaluation belongs to scheduling / occurrence logic, not the
+ * meal template table itself.
+ */
 @Dao
 interface MealEntityDao {
 
+    // ------------------------------------------------------------------------
+    // Reads
+    // ------------------------------------------------------------------------
+
     @Transaction
-    @Query("SELECT * FROM meals ORDER BY timestamp DESC")
+    @Query("SELECT * FROM meals ORDER BY name ASC, id ASC")
     fun observeAllMeals(): Flow<List<MealJoinedRoom>>
+
+    @Transaction
+    @Query("SELECT * FROM meals WHERE isActive = 1 ORDER BY name ASC, id ASC")
+    fun observeActiveMeals(): Flow<List<MealJoinedRoom>>
 
     @Transaction
     @Query("SELECT * FROM meals WHERE id = :id")
@@ -27,32 +50,22 @@ interface MealEntityDao {
     suspend fun getMealByIdOnce(id: Long): MealEntity?
 
     @Transaction
-    @Query(
-        """
-        SELECT * FROM meals
-        WHERE timestamp >= :start
-          AND timestamp < :end
-        ORDER BY timestamp ASC
-        """
-    )
-    suspend fun getMealsForDayOnce(
-        start: Long,
-        end: Long
-    ): List<MealJoinedRoom>
+    @Query("SELECT * FROM meals ORDER BY name ASC, id ASC")
+    suspend fun getAllMealsOnce(): List<MealJoinedRoom>
 
     @Transaction
-    @Query(
-        """
-        SELECT * FROM meals
-        WHERE timestamp >= :start
-          AND timestamp < :end
-        ORDER BY timestamp ASC
-        """
-    )
-    fun observeMealsForDay(
-        start: Long,
-        end: Long
-    ): Flow<List<MealJoinedRoom>>
+    @Query("SELECT * FROM meals WHERE isActive = 1 ORDER BY name ASC, id ASC")
+    suspend fun getActiveMealsOnce(): List<MealJoinedRoom>
+
+    @Query("SELECT * FROM meals WHERE type = :type ORDER BY name ASC, id ASC")
+    suspend fun getMealsByType(type: MealType): List<MealEntity>
+
+    @Query("SELECT * FROM meals WHERE isActive = 1 AND type = :type ORDER BY name ASC, id ASC")
+    suspend fun getActiveMealsByType(type: MealType): List<MealEntity>
+
+    // ------------------------------------------------------------------------
+    // Writes
+    // ------------------------------------------------------------------------
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMeal(meal: MealEntity): Long
@@ -71,16 +84,4 @@ interface MealEntityDao {
 
     @Query("DELETE FROM meal_nutrition WHERE mealId = :mealId")
     suspend fun deleteNutrition(mealId: Long)
-
-    @Query("SELECT * FROM meals WHERE type = :type")
-    suspend fun getMealsByType(type: MealType): List<MealEntity>
-
-    @Query(
-        """
-        SELECT * FROM meals
-        WHERE timestamp >= :startMillis AND timestamp < :endMillis
-        ORDER BY timestamp ASC
-        """
-    )
-    fun observeMealsInRange(startMillis: Long, endMillis: Long): Flow<List<MealEntity>>
 }

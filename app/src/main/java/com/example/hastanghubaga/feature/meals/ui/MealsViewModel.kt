@@ -2,19 +2,16 @@ package com.example.hastanghubaga.feature.meals.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealType
+import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -29,7 +26,8 @@ data class MealListItemUi(
     val name: String,
     val typeLabel: String,
     val treatAsLabel: String?,
-    val timeLabel: String,
+    val isActive: Boolean,
+    val hasSchedule: Boolean,
     val notes: String?
 )
 
@@ -38,43 +36,35 @@ data class MealEditorUiState(
     val name: String = "",
     val type: MealType = MealType.BREAKFAST,
     val treatAsAnchor: MealType? = null,
-    val timestampMillis: Long = System.currentTimeMillis(),
+    val isActive: Boolean = true,
     val notes: String = "",
     val isNew: Boolean = true
 )
 
 @HiltViewModel
 class MealsViewModel @Inject constructor(
-    private val mealEntityDao: MealEntityDao
+    private val mealRepository: MealRepository
 ) : ViewModel() {
 
     private val editorState = MutableStateFlow<MealEditorUiState?>(null)
 
-    private val zoneId = ZoneId.systemDefault()
-    private val listTimeFormatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
-
-    private val itemsFlow =
-        mealEntityDao
-            .observeAllMeals()
-            .map { joinedMeals ->
-                joinedMeals.map { joined ->
-                    val meal = joined.meal
-                    MealListItemUi(
-                        id = meal.id,
-                        name = meal.name,
-                        typeLabel = meal.type.toDisplayLabel(),
-                        treatAsLabel = meal.treatAsAnchor?.let { "Treat as ${it.toDisplayLabel()}" },
-                        timeLabel = formatListTimestamp(meal.timestamp),
-                        notes = meal.notes
-                    )
-                }
-            }
-
     val state: StateFlow<MealsUiState> =
         combine(
-            itemsFlow,
+            mealRepository.observeAll(),
             editorState
-        ) { items, editor ->
+        ) { meals, editor ->
+            val items = meals.map { meal ->
+                MealListItemUi(
+                    id = meal.id,
+                    name = meal.name,
+                    typeLabel = meal.type.toDisplayLabel(),
+                    treatAsLabel = meal.treatAsAnchor?.let { "Treat as ${it.toDisplayLabel()}" },
+                    isActive = meal.isActive,
+                    hasSchedule = false, // will be populated by the screen/UI layer once schedule editing wiring is added
+                    notes = meal.notes
+                )
+            }
+
             MealsUiState(
                 items = items,
                 editor = editor
@@ -93,14 +83,14 @@ class MealsViewModel @Inject constructor(
 
     fun onEditClick(id: Long) {
         viewModelScope.launch {
-            val meal = mealEntityDao.getMealByIdOnce(id) ?: return@launch
+            val meal = mealRepository.getMealById(id) ?: return@launch
 
             editorState.value = MealEditorUiState(
                 id = meal.id,
                 name = meal.name,
                 type = meal.type,
                 treatAsAnchor = meal.treatAsAnchor,
-                timestampMillis = meal.timestamp,
+                isActive = meal.isActive,
                 notes = meal.notes.orEmpty(),
                 isNew = false
             )
@@ -119,12 +109,12 @@ class MealsViewModel @Inject constructor(
         editorState.update { current -> current?.copy(treatAsAnchor = value) }
     }
 
-    fun onNotesChanged(value: String) {
-        editorState.update { current -> current?.copy(notes = value) }
+    fun onIsActiveChanged(value: Boolean) {
+        editorState.update { current -> current?.copy(isActive = value) }
     }
 
-    fun onTimestampChanged(value: Long) {
-        editorState.update { current -> current?.copy(timestampMillis = value) }
+    fun onNotesChanged(value: String) {
+        editorState.update { current -> current?.copy(notes = value) }
     }
 
     fun onDismissEditor() {
@@ -138,16 +128,25 @@ class MealsViewModel @Inject constructor(
             val trimmedName = editor.name.trim()
             if (trimmedName.isBlank()) return@launch
 
-            val entity = MealEntity(
-                id = editor.id ?: 0L,
-                name = trimmedName,
-                type = editor.type,
-                treatAsAnchor = editor.treatAsAnchor,
-                timestamp = editor.timestampMillis,
-                notes = editor.notes.trim().ifBlank { null }
+            val mealId = editor.id ?: 0L
+
+            mealRepository.upsertMeal(
+                meal = MealEntity(
+                    id = mealId,
+                    name = trimmedName,
+                    type = editor.type,
+                    treatAsAnchor = editor.treatAsAnchor,
+                    isActive = editor.isActive
+                ),
+                nutrition = MealNutritionEntity(
+                    mealId = mealId,
+                    calories = 0,
+                    protein = 0.0,
+                    carbs = 0.0,
+                    fat = 0.0
+                )
             )
 
-            mealEntityDao.upsertMeal(entity)
             editorState.value = null
         }
     }
@@ -157,16 +156,10 @@ class MealsViewModel @Inject constructor(
         val id = editor.id ?: return
 
         viewModelScope.launch {
-            mealEntityDao.deleteNutrition(id)
-            mealEntityDao.deleteMealById(id)
+            mealRepository.deleteMealById(id)
             editorState.value = null
         }
     }
-
-    private fun formatListTimestamp(timestampMillis: Long): String =
-        Instant.ofEpochMilli(timestampMillis)
-            .atZone(zoneId)
-            .format(listTimeFormatter)
 }
 
 private fun MealType.toDisplayLabel(): String =

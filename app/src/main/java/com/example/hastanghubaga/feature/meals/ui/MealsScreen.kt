@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -94,7 +96,7 @@ private fun EmptyMealsState(
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "Create your first meal entry to start managing planned meals in Hastang.",
+            text = "Create your first meal template to start managing scheduled meals in Hastang.",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp)
         )
@@ -121,7 +123,7 @@ private fun MealRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -131,8 +133,9 @@ private fun MealRow(
                     text = item.name,
                     style = MaterialTheme.typography.titleMedium
                 )
+
                 Text(
-                    text = item.timeLabel,
+                    text = if (item.isActive) "Active" else "Inactive",
                     style = MaterialTheme.typography.labelMedium
                 )
             }
@@ -147,6 +150,33 @@ private fun MealRow(
                 Text(
                     text = treatAsLabel,
                     style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = {
+                        Text(
+                            text = if (item.isActive) "Enabled" else "Disabled"
+                        )
+                    }
+                )
+
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = {
+                        Text(
+                            text = if (item.hasSchedule) "Has schedule" else "No schedule"
+                        )
+                    }
                 )
             }
 

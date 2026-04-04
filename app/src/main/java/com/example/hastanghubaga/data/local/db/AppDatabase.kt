@@ -12,6 +12,7 @@ import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.dao.meal.MealScheduleDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
@@ -37,6 +38,9 @@ import com.example.hastanghubaga.data.local.entity.meal.AkImportedLogEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealScheduleAnchoredTimeEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealScheduleEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealScheduleFixedTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
 import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
@@ -78,6 +82,9 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         ActivityOccurrenceEntity::class,
         ActivityLogEntity::class,
         MealEntity::class,
+        MealScheduleEntity::class,
+        MealScheduleFixedTimeEntity::class,
+        MealScheduleAnchoredTimeEntity::class,
         MealNutritionEntity::class,
         AkImportedLogEntity::class,
         AkImportedMealEntity::class,
@@ -87,7 +94,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -108,6 +115,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun activityLogDao(): ActivityLogDao
 
     abstract fun mealEntityDao(): MealEntityDao
+    abstract fun mealScheduleDao(): MealScheduleDao
     abstract fun mealNutritionDao(): MealNutritionDao
     abstract fun akImportedLogDao(): AkImportedLogDao
     abstract fun akImportedMealDao(): AkImportedMealDao
