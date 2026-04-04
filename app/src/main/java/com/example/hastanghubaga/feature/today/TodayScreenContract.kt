@@ -9,6 +9,7 @@ import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toLocalDateTime
@@ -24,7 +25,8 @@ object TodayScreenContract {
         val uiTimelineItems: List<TimelineItemUiModel> = emptyList(),
         val domainTimelineItems: List<TimelineItem> = emptyList(),
         val errorMessage: String? = null,
-        val exerciseDraft: ExerciseDraft? = null
+        val exerciseDraft: ExerciseDraft? = null,
+        val mealDraft: MealLogInput? = null
     )
 
     /**
@@ -111,6 +113,26 @@ object TodayScreenContract {
         data object DismissExerciseSheet : Intent
 
         /**
+         * User tapped a meal row on the timeline and wants to log the
+         * planned meal occurrence.
+         */
+        data class LogMealTapped(
+            val mealType: MealType,
+        ) : Intent
+
+        /**
+         * Saves the current meal log draft as an actual logged meal.
+         */
+        data class LogMealConfirmed(
+            val input: MealLogInput
+        ) : Intent
+
+        /**
+         * Dismisses the meal sheet and clears any in-progress meal draft state.
+         */
+        data object DismissMealSheet : Intent
+
+        /**
          * Result from the small supplement choice sheet shown when the user taps
          * a supplement row.
          *
@@ -127,14 +149,6 @@ object TodayScreenContract {
             val scheduledTime: LocalTime?,
             val occurrenceId: String? = null,
             val option: SupplementLogOption
-        ) : Intent
-
-        data class LogMealConfirmed(
-            val input: MealLogInput
-        ) : Intent
-
-        data class LogMealTapped(
-            val mealType: MealType,
         ) : Intent
     }
 
@@ -245,22 +259,38 @@ object TodayScreenContract {
     }
 
     /**
-     * UI-level input for logging a meal.
-     * Represents user-entered data, not DB entities.
+     * UI-level draft for logging a meal.
+     *
+     * This represents user-editable meal logging state on the Today screen.
+     * It intentionally mirrors the role that [ExerciseDraft] plays for activities.
+     *
+     * [occurrenceId] is nullable for now because the minimum meal logging flow may
+     * be created from a simple planned meal tap before full occurrence-aware meal
+     * reconciliation exists.
+     *
+     * [endTime] is optional because the current minimum requirement is primarily
+     * "I ate this meal at this time", while still leaving room for a meal window.
      */
     data class MealLogInput(
         val mealType: MealType,
+        val logDate: LocalDate,
+        val startTime: LocalTime,
+        val endTime: LocalTime? = null,
         val notes: String? = null,
         val nutrition: NutritionInput? = null,
-        val timeUseIntent: TimeUseIntent = TimeUseIntent.ActualNow
+        val occurrenceId: String? = null
     )
 
-    fun MealLogInput.toDomain() = com.example.hastanghubaga.domain.model.meal.LogMealInput(
-        mealType = mealType,
-        timeUseIntent = timeUseIntent,
-        notes = notes,
-        nutrition = nutrition?.toDomain()
-    )
+    fun MealLogInput.toDomain(): com.example.hastanghubaga.domain.model.meal.LogMealInput =
+        com.example.hastanghubaga.domain.model.meal.LogMealInput(
+            mealType = mealType,
+            timeUseIntent = TimeUseIntent.Explicit(
+                date = logDate,
+                time = startTime
+            ),
+            notes = notes,
+            nutrition = nutrition?.toDomain()
+        )
 
     /**
      * Optional nutrition input from UI.
@@ -275,20 +305,21 @@ object TodayScreenContract {
         val fiberGrams: Double?
     )
 
-    fun NutritionInput.toDomain() = com.example.hastanghubaga.domain.model.meal.NutritionInput(
-        calories = calories?.toInt() ?: 0,
-        proteinGrams = proteinGrams,
-        carbsGrams = carbsGrams,
-        fatGrams = fatGrams,
-        sodiumMg = sodiumMg,
-        cholesterolMg = cholesterolMg,
-        fiberGrams = fiberGrams
-    )
+    fun NutritionInput.toDomain(): com.example.hastanghubaga.domain.model.meal.NutritionInput =
+        com.example.hastanghubaga.domain.model.meal.NutritionInput(
+            calories = calories?.toInt() ?: 0,
+            proteinGrams = proteinGrams,
+            carbsGrams = carbsGrams,
+            fatGrams = fatGrams,
+            sodiumMg = sodiumMg,
+            cholesterolMg = cholesterolMg,
+            fiberGrams = fiberGrams
+        )
 
     fun epochMillisToLocalDateTime(
         utcMillis: Long
     ): kotlinx.datetime.LocalDateTime =
-        kotlinx.datetime.Instant
+        Instant
             .fromEpochMilliseconds(utcMillis)
             .toLocalDateTime(DomainTimePolicy.localTimeZone)
 }

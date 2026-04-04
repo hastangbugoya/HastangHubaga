@@ -82,7 +82,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                     .takeIf { it.isNotBlank() }
                     ?: meal.type.name,
                 subtitle = meal.notes,
-                isCompleted = true,
+                isCompleted = false,
                 mealId = meal.id,
                 mealType = meal.type
             )

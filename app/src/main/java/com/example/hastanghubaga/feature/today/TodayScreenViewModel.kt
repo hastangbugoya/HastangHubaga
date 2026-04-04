@@ -6,11 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityLog
 import com.example.hastanghubaga.domain.model.activity.ActivityType
-import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import com.example.hastanghubaga.domain.model.supplement.Supplement
@@ -39,6 +39,7 @@ import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowDo
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
+import com.example.hastanghubaga.feature.today.TodayScreenContract.MealLogInput
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
 import com.example.hastanghubaga.ui.timeline.SupplementUiModel
@@ -342,21 +343,44 @@ class TodayScreenViewModel @Inject constructor(
             }
 
             is TodayScreenContract.Intent.LogMealConfirmed -> {
+                val draft = state.value.mealDraft ?: intent.input
+
                 viewModelScope.launch {
                     logMealUseCase(
-                        input = LogMealInput(
-                            mealType = intent.input.mealType,
-                            notes = intent.input.notes,
-                            nutrition = intent.input.nutrition?.toDomain(),
-                            timeUseIntent = TimeUseIntent.ActualNow
-                        ),
+                        input = TodayScreenContract.run { draft.toDomain() },
                         clock = Clock.System
                     )
+
                     materializeSelectedDate(selectedDate.value)
+                    if (draft.logDate != selectedDate.value) {
+                        materializeSelectedDate(draft.logDate)
+                    }
+
+                    clearMealDraft()
                 }
             }
 
-            is TodayScreenContract.Intent.LogMealTapped -> TODO()
+            is TodayScreenContract.Intent.LogMealTapped -> {
+                val logDate = selectedDate.value
+                val start = findPlannedMealTime(intent.mealType) ?: nowLocalTime(clock)
+                val end = addDefaultDuration(start)
+
+                setMealDraft(
+                    MealLogInput(
+                        mealType = intent.mealType,
+                        logDate = logDate,
+                        startTime = start,
+                        endTime = end,
+                        notes = null,
+                        nutrition = null,
+                        occurrenceId = null
+                    )
+                )
+            }
+
+            TodayScreenContract.Intent.DismissMealSheet -> {
+                clearMealDraft()
+            }
         }
     }
 
@@ -628,6 +652,26 @@ class TodayScreenViewModel @Inject constructor(
         _state.update { it.copy(exerciseDraft = null) }
         clearPersistedExerciseDraft()
     }
+
+    private fun setMealDraft(draft: MealLogInput) {
+        Log.d(
+            "MEAL_RECON",
+            "setMealDraft mealType=${draft.mealType} occurrenceId=${draft.occurrenceId} start=${draft.startTime} end=${draft.endTime}"
+        )
+        _state.update { it.copy(mealDraft = draft) }
+    }
+
+    private fun clearMealDraft() {
+        _state.update { it.copy(mealDraft = null) }
+    }
+
+    private fun findPlannedMealTime(
+        mealType: MealType
+    ): LocalTime? =
+        state.value.domainTimelineItems
+            .filterIsInstance<TimelineItem.MealTimelineItem>()
+            .firstOrNull { it.meal.type == mealType }
+            ?.time
 
     private fun restoreExerciseDraftIfPresent() {
         val activityId = savedStateHandle.get<Long?>(ExerciseSavedStateKeys.ACTIVITY_ID)

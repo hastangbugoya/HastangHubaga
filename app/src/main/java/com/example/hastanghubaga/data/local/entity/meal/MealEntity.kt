@@ -6,52 +6,48 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 /**
- * Represents a concrete meal occurrence recorded by the system.
+ * Represents a reusable meal template.
  *
- * A meal is modeled as a point-in-time event (not a schedule rule), meaning it
- * always has a fully resolved timestamp rather than a recurrence rule.
+ * This is NOT a point-in-time event.
+ * This defines WHAT a meal is — not WHEN it happens.
  *
- * ## Time semantics (IMPORTANT)
- * - [timestamp] is stored as **UTC epoch milliseconds**
- * - UTC is used to ensure:
- *   - Stable ordering across days
- *   - Correct behavior across time zones and DST changes
- *   - Safe comparison with supplements, activities, and logs
+ * Time is determined later by:
+ * - Meal scheduling (fixed times or anchored times)
+ * - Future meal occurrence materialization
  *
- * Conversion to local time MUST happen at the UI or presentation layer:
+ * This aligns meals with the same architecture as activities:
  *
- * ```
- * Instant.ofEpochMilli(timestamp)
- *     .atZone(ZoneId.systemDefault())
- * ```
+ * template -> schedule -> occurrence -> (future) log -> timeline merge
  *
- * The database MUST NOT store local time values.
+ * ## Key Rules
+ *
+ * - This entity MUST NOT store timestamps
+ * - This entity MUST NOT represent a specific day occurrence
+ * - This entity is reusable across days
  *
  * ## Field rationale
+ *
  * - [id]
- *   Auto-generated primary key. Used only for local identity and relations.
+ *   Local DB identity.
  *
  * - [name]
- *   User-defined meal label shown in manager screens and timeline UI.
+ *   User-defined label (e.g., "Breakfast", "Post Workout Shake")
  *
  * - [type]
- *   The actual semantic meal category (e.g., BREAKFAST, LUNCH, DINNER,
- *   SNACK, PRE_WORKOUT).
+ *   Semantic category (BREAKFAST, LUNCH, DINNER, SNACK, etc.)
  *
  * - [treatAsAnchor]
- *   Optional anchor override used later when meals act as anchor providers.
- *   This does not change the meal's actual type.
+ *   Optional override for scheduling anchors.
+ *   Does NOT change the actual type.
  *
- * - [timestamp]
- *   The moment the meal occurs, stored as UTC epoch milliseconds.
- *   This is the authoritative time reference for all meal-related logic.
- *
- * - [notes]
- *   Optional user-provided text. Does not affect scheduling math.
+ * - [isActive]
+ *   Whether this meal participates in scheduling.
+ *   Inactive meals do not generate planned timeline rows.
  */
 @Serializable
 @Entity(tableName = "meals")
 data class MealEntity(
+
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
 
@@ -62,12 +58,6 @@ data class MealEntity(
 
     val treatAsAnchor: MealType? = null,
 
-    val timestamp: Long,
-
-    val notes: String? = null,
-
-    @ColumnInfo(defaultValue = "0")
-    val sendAlert: Boolean = false,
-
-    val alertOffsetMinutes: Int? = null
+    @ColumnInfo(defaultValue = "1")
+    val isActive: Boolean = true
 )

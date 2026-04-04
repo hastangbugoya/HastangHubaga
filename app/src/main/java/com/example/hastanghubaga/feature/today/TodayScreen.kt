@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,14 +44,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.isExercise
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
-import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Dose
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Exercise
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogSupplementPicker
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ImportedMeal
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Meal
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.SupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ConfirmDose
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.DismissExerciseSheet
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.DismissMealSheet
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseConfirmPressed
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseDateChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseEndTimeChanged
@@ -101,6 +101,10 @@ sealed interface ActiveLocalSheet {
 
     data class Meal(
         val input: TodayScreenContract.MealLogInput
+    ) : ActiveLocalSheet
+
+    data class ImportedMeal(
+        val item: ImportedMealUiModel
     ) : ActiveLocalSheet
 }
 
@@ -184,17 +188,16 @@ fun TodayScreen(
 
             when (item) {
                 is MealUiModel -> {
-                    activeSheet = Meal(
-                        TodayScreenContract.MealLogInput(
-                            mealType = item.mealType,
-                            timeUseIntent = TimeUseIntent.Scheduled(item.time),
-                            notes = null,
-                            nutrition = null
+                    viewModel.onIntent(
+                        TodayScreenContract.Intent.LogMealTapped(
+                            mealType = item.mealType
                         )
                     )
                 }
 
-                is ImportedMealUiModel -> Unit
+                is ImportedMealUiModel -> {
+                    activeSheet = ImportedMeal(item)
+                }
 
                 is ActivityUiModel -> {
                     if (item.activityType.isExercise) {
@@ -220,8 +223,17 @@ fun TodayScreen(
                 draft = draft,
                 title = draft.activityType.name.replace('_', ' ')
             )
-        } else {
-            if (activeSheet is Exercise) activeSheet = null
+        } else if (activeSheet is Exercise) {
+            activeSheet = null
+        }
+    }
+
+    LaunchedEffect(state.mealDraft) {
+        val draft = state.mealDraft
+        if (draft != null) {
+            activeSheet = Meal(input = draft)
+        } else if (activeSheet is Meal) {
+            activeSheet = null
         }
     }
 
@@ -237,7 +249,13 @@ fun TodayScreen(
                     }
                     is SupplementLogChoice -> activeSheet = null
                     is ForceLogSupplementPicker -> activeSheet = null
-                    is Meal -> activeSheet = null
+                    is Meal -> {
+                        viewModel.onIntent(DismissMealSheet)
+                        activeSheet = null
+                    }
+                    is ImportedMeal -> {
+                        activeSheet = null
+                    }
                 }
             }
         ) {
@@ -358,23 +376,18 @@ fun TodayScreen(
 
                 is Meal -> {
                     MealLogBottomSheetContent(
-                        title = sheet.input.mealType.name,
-                        initialNotes = null,
-                        initialNutrition = null,
-                        onConfirm = { notes, nutrition ->
+                        input = sheet.input,
+                        onConfirm = { updatedInput ->
                             viewModel.onIntent(
-                                TodayScreenContract.Intent.LogMealConfirmed(
-                                    TodayScreenContract.MealLogInput(
-                                        mealType = sheet.input.mealType,
-                                        timeUseIntent = TimeUseIntent.ActualNow,
-                                        notes = notes,
-                                        nutrition = nutrition
-                                    )
-                                )
+                                TodayScreenContract.Intent.LogMealConfirmed(updatedInput)
                             )
                             activeSheet = null
                         }
                     )
+                }
+
+                is ImportedMeal -> {
+                    ImportedMealBottomSheetContent(item = sheet.item)
                 }
             }
         }
@@ -671,14 +684,6 @@ fun TimelineList(
             )
         }
     }
-//    LazyColumn(modifier = modifier.fillMaxWidth()) {
-//        itemsIndexed(
-//            items = items,
-//            key = { index, item -> "${item.key}-$index" }
-//        ) { _, item ->
-//            TimelineRow(item = item, onClick = onItemClick)
-//        }
-//    }
 }
 
 @Composable
@@ -832,20 +837,23 @@ private fun ForceLogSupplementPickerSheetContent(
 
 @Composable
 fun MealLogBottomSheetContent(
-    title: String,
-    initialNotes: String? = null,
-    initialNutrition: TodayScreenContract.NutritionInput? = null,
-    onConfirm: (notes: String?, nutrition: TodayScreenContract.NutritionInput?) -> Unit
+    input: TodayScreenContract.MealLogInput,
+    onConfirm: (TodayScreenContract.MealLogInput) -> Unit
 ) {
-    var notesText by remember { mutableStateOf(initialNotes.orEmpty()) }
+    val context = LocalContext.current
 
-    var calories by remember { mutableStateOf(initialNutrition?.calories?.toString().orEmpty()) }
-    var protein by remember { mutableStateOf(initialNutrition?.proteinGrams?.toString().orEmpty()) }
-    var carbs by remember { mutableStateOf(initialNutrition?.carbsGrams?.toString().orEmpty()) }
-    var fat by remember { mutableStateOf(initialNutrition?.fatGrams?.toString().orEmpty()) }
-    var sodium by remember { mutableStateOf(initialNutrition?.sodiumMg?.toString().orEmpty()) }
-    var cholesterol by remember { mutableStateOf(initialNutrition?.cholesterolMg?.toString().orEmpty()) }
-    var fiber by remember { mutableStateOf(initialNutrition?.fiberGrams?.toString().orEmpty()) }
+    var logDate by remember(input) { mutableStateOf(input.logDate) }
+    var startTime by remember(input) { mutableStateOf(input.startTime) }
+    var endTime by remember(input) { mutableStateOf(input.endTime) }
+    var notesText by remember(input) { mutableStateOf(input.notes.orEmpty()) }
+
+    var calories by remember(input) { mutableStateOf(input.nutrition?.calories?.toString().orEmpty()) }
+    var protein by remember(input) { mutableStateOf(input.nutrition?.proteinGrams?.toString().orEmpty()) }
+    var carbs by remember(input) { mutableStateOf(input.nutrition?.carbsGrams?.toString().orEmpty()) }
+    var fat by remember(input) { mutableStateOf(input.nutrition?.fatGrams?.toString().orEmpty()) }
+    var sodium by remember(input) { mutableStateOf(input.nutrition?.sodiumMg?.toString().orEmpty()) }
+    var cholesterol by remember(input) { mutableStateOf(input.nutrition?.cholesterolMg?.toString().orEmpty()) }
+    var fiber by remember(input) { mutableStateOf(input.nutrition?.fiberGrams?.toString().orEmpty()) }
 
     Column(
         modifier = Modifier
@@ -853,7 +861,92 @@ fun MealLogBottomSheetContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = input.mealType.name.replace('_', ' '),
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Actual meal",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            logDate = LocalDate(
+                                year = year,
+                                monthNumber = month + 1,
+                                dayOfMonth = dayOfMonth
+                            )
+                        },
+                        logDate.year,
+                        logDate.monthNumber - 1,
+                        logDate.dayOfMonth
+                    ).show()
+                }
+            ) {
+                Text("Date: $logDate")
+            }
+
+            TextButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            startTime = LocalTime(hour = hourOfDay, minute = minute)
+                            if (endTime != null && endTime!! < startTime) {
+                                endTime = startTime
+                            }
+                        },
+                        startTime.hour,
+                        startTime.minute,
+                        false
+                    ).show()
+                }
+            ) {
+                Text("Start: ${startTime.toDisplayText()}")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                onClick = {
+                    val currentEnd = endTime ?: startTime
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            val picked = LocalTime(hour = hourOfDay, minute = minute)
+                            endTime = if (picked < startTime) startTime else picked
+                        },
+                        currentEnd.hour,
+                        currentEnd.minute,
+                        false
+                    ).show()
+                }
+            ) {
+                Text(
+                    text = "End: ${endTime?.toDisplayText() ?: "--:--"}"
+                )
+            }
+
+            TextButton(
+                onClick = {
+                    endTime = null
+                }
+            ) {
+                Text("Clear end")
+            }
+        }
 
         OutlinedTextField(
             value = notesText,
@@ -890,11 +983,60 @@ fun MealLogBottomSheetContent(
 
                 val notesOrNull = notesText.trim().ifEmpty { null }
 
-                onConfirm(notesOrNull, nutritionOrNull)
+                onConfirm(
+                    input.copy(
+                        logDate = logDate,
+                        startTime = startTime,
+                        endTime = endTime,
+                        notes = notesOrNull,
+                        nutrition = nutritionOrNull
+                    )
+                )
             }
         ) {
-            Text("Confirm")
+            Text("Save")
         }
+    }
+}
+
+@Composable
+private fun ImportedMealBottomSheetContent(
+    item: ImportedMealUiModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Imported from AdobongKangkong",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Text(
+            text = "Time: ${item.time.toDisplayText()}",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        item.subtitle?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "This meal is read-only in HastangHubaga.",
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
