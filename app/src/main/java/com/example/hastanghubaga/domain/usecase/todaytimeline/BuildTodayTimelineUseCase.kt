@@ -42,9 +42,10 @@ import kotlinx.datetime.toLocalDateTime
  * - show the planned occurrence if it has not yet been satisfied by a linked log
  *
  * Actual activity row rule:
- * - always show the actual user-declared log event
- * - if the log links to a planned occurrence, the matching planned row is suppressed
- * - if the log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
+ * - if a log links to a planned occurrence, that linked log should overwrite
+ *   the planned row for display purposes so the occurrence appears only once
+ * - if a log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
+ *   and is appended as its own standalone row
  *
  * Important guardrail:
  * - inactive activity templates must not produce planned rows
@@ -199,9 +200,85 @@ class BuildTodayTimelineUseCase @Inject constructor(
         }
 
         activityOccurrences.forEachIndexed { index, occurrence ->
-            Log.d("ACTIVITY_RECON", "activityOccurrences#$index > ${occurrence}")
+            Log.d("ACTIVITY_RECON", "activityOccurrences#$index > $occurrence")
         }
 
+        activityLogs.forEachIndexed { index, log ->
+            Log.d("ACTIVITY_RECON", "activityLogs#$index > $log")
+        }
+
+        val mergedActivityItems =
+            buildMergedActivityTimelineItems(
+                activityOccurrences = activityOccurrences,
+                activityLookup = activityLookup,
+                activityLogs = activityLogs
+            )
+        Log.d("Meow", "BuildTodayTimelineUseCase> mergedActivityItems: ${mergedActivityItems.size}")
+
+        val merged = (
+                filteredPlannedSupplementItems +
+                        supplementDoseLogItems +
+                        mealItems +
+                        importedMealItems +
+                        mergedActivityItems
+                ).sortedWith(
+                compareBy<TimelineItem> { it.time }
+                    .thenBy { itemTypeSortOrder(it) }
+                    .thenBy { itemStablePrimaryKey(it) }
+                    .thenBy { itemStableSecondaryKey(it) }
+            )
+
+        val upcomingItems =
+            merged.mapNotNull<TimelineItem, UpcomingSchedule> { item ->
+                item.toUpcomingSchedule(date = date)
+            }
+        Log.d("Meow", "BuildTodayTimelineUseCase> upcomingItems: ${upcomingItems.size}")
+
+        buildWidgetDailySnapshotUseCase(date)
+        upcomingScheduleRepository.replaceAll(upcomingItems)
+
+        return merged
+    }
+
+    /**
+     * Activity timeline reconciliation.
+     *
+     * NOTE TO FUTURE DEVS / AI ASSISTANTS:
+     *
+     * Activities intentionally use an identity-keyed merge instead of the older
+     * "filter planned + append actual" approach.
+     *
+     * Why:
+     * - A planned activity occurrence and its linked activity log represent the
+     *   same logical timeline slot.
+     * - Showing both rows causes duplicate cards and breaks the intended
+     *   completed-vs-planned behavior.
+     *
+     * Canonical rule:
+     * - occurrenceId is the identity of a planned activity slot
+     * - planned item is inserted first
+     * - linked logged item with the same occurrenceId overwrites that planned item
+     * - unlinked logs (occurrenceId == null) are appended separately as ad-hoc rows
+     *
+     * Data-structure invariant:
+     * - at most one rendered activity row per linked occurrenceId
+     *
+     * Important:
+     * - this is intentionally implemented as a LinkedHashMap keyed by occurrenceId
+     *   so the data structure itself enforces the no-duplicate-occurrence rule
+     * - do not revert this back to filterNot + append for activities unless the
+     *   canonical ownership model changes
+     *
+     * Forward-looking note:
+     * - once this pattern is proven solid for activities, the same
+     *   identity-keyed overwrite/merge approach can be applied to supplements
+     *   and later to meals if/when they gain planned-vs-actual reconciliation
+     */
+    private fun buildMergedActivityTimelineItems(
+        activityOccurrences: List<ActivityOccurrenceEntity>,
+        activityLookup: Map<Long, Activity>,
+        activityLogs: List<ActivityLog>
+    ): List<TimelineItem.ActivityTimelineItem> {
         val plannedActivityItems =
             activityOccurrences.mapNotNull { occurrence ->
                 val activity = activityLookup[occurrence.activityId] ?: return@mapNotNull null
@@ -221,72 +298,76 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         Log.d("Meow", "BuildTodayTimelineUseCase> plannedActivityItems: ${plannedActivityItems.size}")
 
-        activityLogs.forEachIndexed { index, log ->
-            Log.d("ACTIVITY_RECON", "activityLogs#$index > ${log}")
-        }
+        val plannedByOccurrenceId =
+            plannedActivityItems.associateBy { it.occurrenceId }
 
-        val actualActivityItems =
-            activityLogs.map { log ->
-                val actualTime = log.start.time
+        val linkedLoggedActivityItems =
+            activityLogs.mapNotNull { log ->
+                val occurrenceId = log.occurrenceId ?: return@mapNotNull null
+                val planned = plannedByOccurrenceId[occurrenceId]
 
                 TimelineItem.ActivityTimelineItem(
-                    time = actualTime,
-                    occurrenceId = log.occurrenceId ?: buildActualActivityTimelineId(
-                        activityId = log.activityId,
-                        time = actualTime
-                    ),
-                    activityId = log.activityId ?: -1L,
+                    time = log.start.time,
+                    occurrenceId = occurrenceId,
+                    activityId = log.activityId ?: planned?.activityId ?: -1L,
                     title = log.activityType.toDisplayLabel(),
-                    subtitle = log.notes,
-                    isWorkout = false,
-                    scheduledTime = actualTime,
+                    subtitle = log.notes ?: planned?.subtitle,
+                    isWorkout = planned?.isWorkout ?: false,
+                    scheduledTime = planned?.scheduledTime ?: log.start.time,
                     isCompleted = true
                 )
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> actualActivityItems: ${actualActivityItems.size}")
 
-        val satisfiedPlannedActivityOccurrenceIds =
+        Log.d(
+            "Meow",
+            "BuildTodayTimelineUseCase> linkedLoggedActivityItems: ${linkedLoggedActivityItems.size}"
+        )
+
+        val standaloneActualActivityItems =
             activityLogs
-                .mapNotNull { it.occurrenceId }
-                .toSet()
+                .filter { it.occurrenceId == null }
+                .map { log ->
+                    val actualTime = log.start.time
+
+                    TimelineItem.ActivityTimelineItem(
+                        time = actualTime,
+                        occurrenceId = buildActualActivityTimelineId(
+                            activityId = log.activityId,
+                            time = actualTime
+                        ),
+                        activityId = log.activityId ?: -1L,
+                        title = log.activityType.toDisplayLabel(),
+                        subtitle = log.notes,
+                        isWorkout = false,
+                        scheduledTime = actualTime,
+                        isCompleted = true
+                    )
+                }
+
         Log.d(
             "Meow",
-            "BuildTodayTimelineUseCase> satisfiedPlannedActivityOccurrenceIds: ${satisfiedPlannedActivityOccurrenceIds.size}"
+            "BuildTodayTimelineUseCase> standaloneActualActivityItems: ${standaloneActualActivityItems.size}"
         )
 
-        val filteredPlannedActivityItems =
-            plannedActivityItems.filterNot { item ->
-                item.occurrenceId in satisfiedPlannedActivityOccurrenceIds
-            }
+        val mergedByOccurrenceId = linkedMapOf<String, TimelineItem.ActivityTimelineItem>()
+
+        plannedActivityItems.forEach { planned ->
+            mergedByOccurrenceId[planned.occurrenceId] = planned
+        }
+
+        linkedLoggedActivityItems.forEach { logged ->
+            mergedByOccurrenceId[logged.occurrenceId] = logged
+        }
+
+        val mergedActivityItems =
+            mergedByOccurrenceId.values.toList() + standaloneActualActivityItems
+
         Log.d(
             "Meow",
-            "BuildTodayTimelineUseCase> filteredPlannedActivityItems: ${filteredPlannedActivityItems.size}"
+            "BuildTodayTimelineUseCase> mergedActivityItems(after overwrite + standalone append): ${mergedActivityItems.size}"
         )
 
-        val merged = (
-                filteredPlannedSupplementItems +
-                        supplementDoseLogItems +
-                        mealItems +
-                        importedMealItems +
-                        filteredPlannedActivityItems +
-                        actualActivityItems
-                ).sortedWith(
-                compareBy<TimelineItem> { it.time }
-                    .thenBy { itemTypeSortOrder(it) }
-                    .thenBy { itemStablePrimaryKey(it) }
-                    .thenBy { itemStableSecondaryKey(it) }
-            )
-
-        val upcomingItems =
-            merged.mapNotNull<TimelineItem, UpcomingSchedule> { item ->
-                item.toUpcomingSchedule(date = date)
-            }
-        Log.d("Meow", "BuildTodayTimelineUseCase> upcomingItems: ${upcomingItems.size}")
-
-        buildWidgetDailySnapshotUseCase(date)
-        upcomingScheduleRepository.replaceAll(upcomingItems)
-
-        return merged
+        return mergedActivityItems
     }
 
     /**

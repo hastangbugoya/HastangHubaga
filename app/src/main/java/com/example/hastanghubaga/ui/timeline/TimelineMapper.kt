@@ -106,14 +106,14 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 id = activityId,
                 time = time,
                 title = title,
-                subtitle = buildActivitySubtitle(
+                subtitle = subtitle ?: buildActivitySubtitle(
                     scheduledTime = scheduledTime,
                     isWorkout = isWorkout
                 ),
-                isCompleted = false,
+                isCompleted = isCompleted,
                 activityId = activityId,
                 activityType = title.toActivityTypeOrOther(),
-                startTime = scheduledTime,
+                startTime = time,
                 endTime = null,
                 intensity = null,
                 occurrenceId = occurrenceId
