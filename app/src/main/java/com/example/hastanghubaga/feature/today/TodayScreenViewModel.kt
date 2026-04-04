@@ -47,7 +47,6 @@ import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,7 +81,7 @@ class TodayScreenViewModel @Inject constructor(
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
     private val savedStateHandle: SavedStateHandle,
-    private val savedExerciseActivityUseCase: SaveExerciseActivityUseCase,
+    private val saveExerciseActivityUseCase: SaveExerciseActivityUseCase,
     private val logMealUseCase: LogMealUseCase
 ) : ViewModel() {
 
@@ -96,11 +95,12 @@ class TodayScreenViewModel @Inject constructor(
 
     private object ExerciseSavedStateKeys {
         const val TYPE = "exercise.type"
+        const val LOG_DATE = "exercise.logDate"
         const val START_MIN = "exercise.startMin"
         const val END_MIN = "exercise.endMin"
         const val NOTES = "exercise.notes"
         const val INTENSITY = "exercise.intensity"
-        const val PHASE = "exercise.phase"
+        const val OCCURRENCE_ID = "exercise.occurrenceId"
     }
 
     init {
@@ -121,6 +121,7 @@ class TodayScreenViewModel @Inject constructor(
 
         when (intent) {
             is TodayScreenContract.Intent.LoadDate -> loadToday(intent.date)
+
             is TodayScreenContract.Intent.Refresh -> {
                 materializeSelectedDate(selectedDate.value)
                 loadToday(selectedDate.value)
@@ -169,8 +170,10 @@ class TodayScreenViewModel @Inject constructor(
                         when {
                             intent.actualTime != null ->
                                 TimeUseIntent.Explicit(explicitDate, intent.actualTime)
+
                             intent.scheduledTime != null ->
                                 TimeUseIntent.Scheduled(intent.scheduledTime)
+
                             else ->
                                 TimeUseIntent.ActualNow
                         }
@@ -190,30 +193,43 @@ class TodayScreenViewModel @Inject constructor(
 
             is TodayScreenContract.Intent.ExerciseTapped -> {
                 val activityUi = intent.item as? ActivityUiModel ?: return
-                val start = nowLocalTime(clock)
+                val logDate = selectedDate.value
+                val start = activityUi.time
+                val end = addDefaultDuration(start)
 
                 setExerciseDraft(
                     ExerciseDraft(
                         activityType = activityUi.activityType,
+                        logDate = logDate,
                         startTime = start,
-                        endTime = null,
+                        endTime = end,
                         notes = "",
                         intensity = null,
-                        phase = ExerciseDraft.Phase.Draft
+                        occurrenceId = null
                     )
                 )
             }
 
-            TodayScreenContract.Intent.ExerciseStartPressed -> {
+            is TodayScreenContract.Intent.ExerciseDateChanged -> {
                 val existing = state.value.exerciseDraft ?: return
-                if (existing.phase == ExerciseDraft.Phase.Running) return
+                setExerciseDraft(existing.copy(logDate = intent.value))
+            }
 
+            is TodayScreenContract.Intent.ExerciseStartTimeChanged -> {
+                val existing = state.value.exerciseDraft ?: return
+                val adjustedEnd = clampEndTimeNotBeforeStart(intent.value, existing.endTime)
                 setExerciseDraft(
                     existing.copy(
-                        endTime = null,
-                        phase = ExerciseDraft.Phase.Running
+                        startTime = intent.value,
+                        endTime = adjustedEnd
                     )
                 )
+            }
+
+            is TodayScreenContract.Intent.ExerciseEndTimeChanged -> {
+                val existing = state.value.exerciseDraft ?: return
+                val clamped = clampEndTimeNotBeforeStart(existing.startTime, intent.value)
+                setExerciseDraft(existing.copy(endTime = clamped))
             }
 
             is TodayScreenContract.Intent.ExerciseNotesChanged -> {
@@ -226,26 +242,14 @@ class TodayScreenViewModel @Inject constructor(
                 setExerciseDraft(existing.copy(intensity = intent.value))
             }
 
-            is TodayScreenContract.Intent.ExerciseEndTimeChanged -> {
-                val existing = state.value.exerciseDraft ?: return
-                val clamped =
-                    intent.value?.let { clampEndTimeNotBeforeStart(existing.startTime, it) }
-                setExerciseDraft(existing.copy(endTime = clamped))
-            }
-
             TodayScreenContract.Intent.ExerciseConfirmPressed -> {
                 val draft = state.value.exerciseDraft ?: return
-                if (draft.phase != ExerciseDraft.Phase.Running) return
 
                 viewModelScope.launch {
-                    val now = nowLocalTime(clock)
-                    val endTime = clampEndTimeNotBeforeStart(draft.startTime, now)
+                    val startMillis = localTimeToEpochMillis(draft.logDate, draft.startTime)
+                    val endMillis = localTimeToEpochMillis(draft.logDate, draft.endTime)
 
-                    val activeDate = selectedDate.value
-                    val startMillis = localTimeToEpochMillis(activeDate, draft.startTime)
-                    val endMillis = localTimeToEpochMillis(activeDate, endTime)
-
-                    savedExerciseActivityUseCase(
+                    saveExerciseActivityUseCase(
                         type = draft.activityType,
                         startTimestamp = startMillis,
                         endTimestamp = endMillis,
@@ -254,11 +258,17 @@ class TodayScreenViewModel @Inject constructor(
                     )
 
                     materializeSelectedDate(selectedDate.value)
+                    if (draft.logDate != selectedDate.value) {
+                        materializeSelectedDate(draft.logDate)
+                    }
+
                     clearExerciseDraft()
                 }
             }
 
-            TodayScreenContract.Intent.DismissExerciseSheet -> clearExerciseDraft()
+            TodayScreenContract.Intent.DismissExerciseSheet -> {
+                clearExerciseDraft()
+            }
 
             is TodayScreenContract.Intent.SupplementLogOptionSelected -> {
                 val initialDate = selectedDate.value
@@ -299,7 +309,7 @@ class TodayScreenViewModel @Inject constructor(
                             mealType = intent.input.mealType,
                             notes = intent.input.notes,
                             nutrition = intent.input.nutrition?.toDomain(),
-                            timeUseIntent = TimeUseIntent.ActualNow,
+                            timeUseIntent = TimeUseIntent.ActualNow
                         ),
                         clock = Clock.System
                     )
@@ -572,20 +582,22 @@ class TodayScreenViewModel @Inject constructor(
 
     private fun restoreExerciseDraftIfPresent() {
         val type = savedStateHandle.get<String>(ExerciseSavedStateKeys.TYPE) ?: return
+        val logDateIso = savedStateHandle.get<String>(ExerciseSavedStateKeys.LOG_DATE) ?: return
         val startMin = savedStateHandle.get<Int>(ExerciseSavedStateKeys.START_MIN) ?: return
-        val phaseRaw = savedStateHandle.get<String>(ExerciseSavedStateKeys.PHASE) ?: "Draft"
+        val endMin = savedStateHandle.get<Int>(ExerciseSavedStateKeys.END_MIN) ?: return
 
-        val endMin = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.END_MIN)
         val notes = savedStateHandle.get<String>(ExerciseSavedStateKeys.NOTES) ?: ""
         val intensity = savedStateHandle.get<Int?>(ExerciseSavedStateKeys.INTENSITY)
+        val occurrenceId = savedStateHandle.get<String?>(ExerciseSavedStateKeys.OCCURRENCE_ID)
 
         val draft = ExerciseDraft(
             activityType = ActivityType.valueOf(type),
+            logDate = LocalDate.parse(logDateIso),
             startTime = minutesToLocalTime(startMin),
-            endTime = endMin?.let(::minutesToLocalTime),
+            endTime = minutesToLocalTime(endMin),
             notes = notes,
             intensity = intensity,
-            phase = ExerciseDraft.Phase.valueOf(phaseRaw)
+            occurrenceId = occurrenceId
         )
 
         _state.update { it.copy(exerciseDraft = draft) }
@@ -593,24 +605,28 @@ class TodayScreenViewModel @Inject constructor(
 
     private fun persistExerciseDraft(draft: ExerciseDraft) {
         savedStateHandle[ExerciseSavedStateKeys.TYPE] = draft.activityType.name
+        savedStateHandle[ExerciseSavedStateKeys.LOG_DATE] = draft.logDate.toString()
         savedStateHandle[ExerciseSavedStateKeys.START_MIN] = draft.startTime.toMinutesOfDay()
-        savedStateHandle[ExerciseSavedStateKeys.END_MIN] = draft.endTime?.toMinutesOfDay()
+        savedStateHandle[ExerciseSavedStateKeys.END_MIN] = draft.endTime.toMinutesOfDay()
         savedStateHandle[ExerciseSavedStateKeys.NOTES] = draft.notes
         savedStateHandle[ExerciseSavedStateKeys.INTENSITY] = draft.intensity
-        savedStateHandle[ExerciseSavedStateKeys.PHASE] = draft.phase.name
+        savedStateHandle[ExerciseSavedStateKeys.OCCURRENCE_ID] = draft.occurrenceId
     }
 
     private fun clearPersistedExerciseDraft() {
         savedStateHandle.remove<String>(ExerciseSavedStateKeys.TYPE)
+        savedStateHandle.remove<String>(ExerciseSavedStateKeys.LOG_DATE)
         savedStateHandle.remove<Int>(ExerciseSavedStateKeys.START_MIN)
-        savedStateHandle.remove<Int?>(ExerciseSavedStateKeys.END_MIN)
+        savedStateHandle.remove<Int>(ExerciseSavedStateKeys.END_MIN)
         savedStateHandle.remove<String>(ExerciseSavedStateKeys.NOTES)
         savedStateHandle.remove<Int?>(ExerciseSavedStateKeys.INTENSITY)
-        savedStateHandle.remove<String>(ExerciseSavedStateKeys.PHASE)
+        savedStateHandle.remove<String?>(ExerciseSavedStateKeys.OCCURRENCE_ID)
     }
 
     private fun LocalTime.toMinutesOfDay(): Int = (hour * 60) + minute
-    private fun minutesToLocalTime(m: Int): LocalTime = LocalTime(m / 60, m % 60)
+
+    private fun minutesToLocalTime(totalMinutes: Int): LocalTime =
+        LocalTime(totalMinutes / 60, totalMinutes % 60)
 
     private fun nowLocalTime(clock: Clock): LocalTime =
         DomainTimePolicy.nowLocalDateTime(clock).time
@@ -622,4 +638,10 @@ class TodayScreenViewModel @Inject constructor(
 
     private fun clampEndTimeNotBeforeStart(start: LocalTime, endCandidate: LocalTime): LocalTime =
         if (endCandidate < start) start else endCandidate
+
+    private fun addDefaultDuration(start: LocalTime): LocalTime {
+        val startMinutes = start.toMinutesOfDay()
+        val cappedEndMinutes = (startMinutes + 60).coerceAtMost((23 * 60) + 59)
+        return minutesToLocalTime(cappedEndMinutes)
+    }
 }

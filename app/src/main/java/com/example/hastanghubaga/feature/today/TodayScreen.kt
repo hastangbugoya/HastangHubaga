@@ -51,10 +51,11 @@ import com.example.hastanghubaga.feature.today.ActiveLocalSheet.SupplementLogCho
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ConfirmDose
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.DismissExerciseSheet
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseConfirmPressed
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseDateChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseEndTimeChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseIntensityChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseNotesChanged
-import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseStartPressed
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseStartTimeChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementSelected
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementTapped
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.SupplementLogOptionSelected
@@ -190,9 +191,7 @@ fun TodayScreen(
                     )
                 }
 
-                is ImportedMealUiModel -> {
-                    Unit
-                }
+                is ImportedMealUiModel -> Unit
 
                 is ActivityUiModel -> {
                     if (item.activityType.isExercise) {
@@ -291,17 +290,13 @@ fun TodayScreen(
                     ExerciseBottomSheetContent(
                         title = sheet.title,
                         draft = sheet.draft,
+                        onDateChange = { viewModel.onIntent(ExerciseDateChanged(it)) },
+                        onStartTimeChange = { viewModel.onIntent(ExerciseStartTimeChanged(it)) },
+                        onEndTimeChange = { viewModel.onIntent(ExerciseEndTimeChanged(it)) },
                         onNotesChange = { viewModel.onIntent(ExerciseNotesChanged(it)) },
                         onIntensityChange = { viewModel.onIntent(ExerciseIntensityChanged(it)) },
-                        onEndTimeChange = { viewModel.onIntent(ExerciseEndTimeChanged(it)) },
                         onPrimaryAction = {
-                            when (sheet.draft.phase) {
-                                TodayScreenContract.ExerciseDraft.Phase.Draft ->
-                                    viewModel.onIntent(ExerciseStartPressed)
-
-                                TodayScreenContract.ExerciseDraft.Phase.Running ->
-                                    viewModel.onIntent(ExerciseConfirmPressed)
-                            }
+                            viewModel.onIntent(ExerciseConfirmPressed)
                         }
                     )
                 }
@@ -460,29 +455,107 @@ private fun DoseDateTimeSection(
 private fun ExerciseBottomSheetContent(
     title: String,
     draft: TodayScreenContract.ExerciseDraft,
+    onDateChange: (LocalDate) -> Unit,
+    onStartTimeChange: (LocalTime) -> Unit,
+    onEndTimeChange: (LocalTime) -> Unit,
     onNotesChange: (String) -> Unit,
     onIntensityChange: (Int?) -> Unit,
-    onEndTimeChange: (LocalTime?) -> Unit,
     onPrimaryAction: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge
+        )
 
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "Start: ${draft.startTime.toDisplayText()}",
+            text = "Actual activity",
             style = MaterialTheme.typography.titleMedium
         )
 
-        Text(
-            text = "End: ${draft.endTime?.toDisplayText() ?: "—"}",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                onClick = {
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            onDateChange(
+                                LocalDate(
+                                    year = year,
+                                    monthNumber = month + 1,
+                                    dayOfMonth = dayOfMonth
+                                )
+                            )
+                        },
+                        draft.logDate.year,
+                        draft.logDate.monthNumber - 1,
+                        draft.logDate.dayOfMonth
+                    ).show()
+                }
+            ) {
+                Text("Date: ${draft.logDate}")
+            }
+
+            TextButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onStartTimeChange(
+                                LocalTime(
+                                    hour = hourOfDay,
+                                    minute = minute
+                                )
+                            )
+                        },
+                        draft.startTime.hour,
+                        draft.startTime.minute,
+                        false
+                    ).show()
+                }
+            ) {
+                Text("Start: ${draft.startTime.toDisplayText()}")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            TextButton(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hourOfDay, minute ->
+                            onEndTimeChange(
+                                LocalTime(
+                                    hour = hourOfDay,
+                                    minute = minute
+                                )
+                            )
+                        },
+                        draft.endTime.hour,
+                        draft.endTime.minute,
+                        false
+                    ).show()
+                }
+            ) {
+                Text("End: ${draft.endTime.toDisplayText()}")
+            }
+        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -522,17 +595,11 @@ private fun ExerciseBottomSheetContent(
 
         Spacer(Modifier.height(16.dp))
 
-        val buttonText =
-            when (draft.phase) {
-                TodayScreenContract.ExerciseDraft.Phase.Draft -> "Start"
-                TodayScreenContract.ExerciseDraft.Phase.Running -> "Save"
-            }
-
         Button(
             onClick = onPrimaryAction,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(buttonText)
+            Text("Save")
         }
     }
 }

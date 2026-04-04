@@ -87,17 +87,26 @@ object TodayScreenContract {
             val occurrenceId: String? = null
         ) : Intent
 
+        /**
+         * User tapped an activity card on the timeline and wants to log the
+         * planned activity occurrence.
+         */
         data class ExerciseTapped(val item: TimelineItemUiModel) : Intent
 
-        data object ExerciseStartPressed : Intent
-
+        /**
+         * Saves the current activity log draft as an actual logged activity session.
+         */
         data object ExerciseConfirmPressed : Intent
+
+        data class ExerciseDateChanged(val value: LocalDate) : Intent
+
+        data class ExerciseStartTimeChanged(val value: LocalTime) : Intent
+
+        data class ExerciseEndTimeChanged(val value: LocalTime) : Intent
 
         data class ExerciseNotesChanged(val value: String) : Intent
 
         data class ExerciseIntensityChanged(val value: Int?) : Intent
-
-        data class ExerciseEndTimeChanged(val value: LocalTime?) : Intent
 
         data object DismissExerciseSheet : Intent
 
@@ -207,16 +216,23 @@ object TodayScreenContract {
         data class Activity(val id: Long) : Destination
     }
 
+    /**
+     * UI draft for logging an activity session.
+     *
+     * This represents user-editable logging data, not a live in-progress timer.
+     * When opened from a planned timeline card, [occurrenceId] preserves the
+     * linkage to the planned activity occurrence so the timeline can later treat
+     * that occurrence as fulfilled and show only the logged card.
+     */
     data class ExerciseDraft(
         val activityType: ActivityType,
+        val logDate: LocalDate,
         val startTime: LocalTime,
-        val endTime: LocalTime?,
+        val endTime: LocalTime,
         val notes: String,
         val intensity: Int?,
-        val phase: Phase
-    ) {
-        enum class Phase { Draft, Running }
-    }
+        val occurrenceId: String? = null
+    )
 
     enum class SupplementLogOption {
         Scheduled,
