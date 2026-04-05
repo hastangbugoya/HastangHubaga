@@ -4,6 +4,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 
 data class LogMealInput(
+    val occurrenceId: String? = null,
     val mealType: MealType,
     val timeUseIntent: TimeUseIntent,
     val notes: String? = null,

@@ -13,6 +13,8 @@ import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
 import com.example.hastanghubaga.data.local.dao.meal.MealScheduleDao
+import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
+import com.example.hastanghubaga.data.local.dao.meal.MealLogDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
@@ -28,39 +30,11 @@ import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
 import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
-import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
-import com.example.hastanghubaga.data.local.entity.activity.ActivityLogEntity
-import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
-import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleAnchoredTimeEntity
-import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleEntity
-import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleFixedTimeEntity
-import com.example.hastanghubaga.data.local.entity.meal.AkImportedLogEntity
-import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealScheduleAnchoredTimeEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealScheduleEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealScheduleFixedTimeEntity
-import com.example.hastanghubaga.data.local.entity.supplement.DailyStartTimeEntity
-import com.example.hastanghubaga.data.local.entity.supplement.EventDailyOverrideEntity
-import com.example.hastanghubaga.data.local.entity.supplement.EventDayOfWeekTimeEntity
-import com.example.hastanghubaga.data.local.entity.supplement.EventDefaultTimeEntity
-import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementDailyLogEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
-import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
-import com.example.hastanghubaga.data.local.entity.user.NutrientGoalEntity
-import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
-import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
-import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
-import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanEntity
+import com.example.hastanghubaga.data.local.entity.activity.*
+import com.example.hastanghubaga.data.local.entity.meal.*
+import com.example.hastanghubaga.data.local.entity.supplement.*
+import com.example.hastanghubaga.data.local.entity.user.*
 import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEntity
-import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
-import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
 
 @Database(
     entities = [
@@ -77,31 +51,37 @@ import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
         SupplementScheduleEntity::class,
         SupplementScheduleFixedTimeEntity::class,
         SupplementScheduleAnchoredTimeEntity::class,
+
         ActivityEntity::class,
         ActivityScheduleEntity::class,
         ActivityScheduleFixedTimeEntity::class,
         ActivityScheduleAnchoredTimeEntity::class,
         ActivityOccurrenceEntity::class,
         ActivityLogEntity::class,
+
         MealEntity::class,
         MealScheduleEntity::class,
         MealScheduleFixedTimeEntity::class,
         MealScheduleAnchoredTimeEntity::class,
         MealOccurrenceEntity::class,
         MealNutritionEntity::class,
+        MealLogEntity::class, // ✅ ADD
+
         AkImportedLogEntity::class,
         AkImportedMealEntity::class,
+
         UserNutritionGoalsEntity::class,
         UpcomingScheduleEntity::class,
         UserNutritionPlanEntity::class,
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 13,
+    version = 14, // ⚠️ bump version
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
+
     abstract fun ingredientEntityDao(): IngredientEntityDao
     abstract fun supplementEntityDao(): SupplementEntityDao
     abstract fun supplementDailyLogDao(): SupplementDailyLogDao
@@ -121,6 +101,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealScheduleDao(): MealScheduleDao
     abstract fun mealNutritionDao(): MealNutritionDao
     abstract fun mealOccurrenceDao(): MealOccurrenceDao
+    abstract fun mealLogDao(): MealLogDao // ✅ ADD
+
     abstract fun akImportedLogDao(): AkImportedLogDao
     abstract fun akImportedMealDao(): AkImportedMealDao
     abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao

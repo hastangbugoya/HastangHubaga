@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
@@ -264,9 +265,8 @@ object TodayScreenContract {
      * This represents user-editable meal logging state on the Today screen.
      * It intentionally mirrors the role that [ExerciseDraft] plays for activities.
      *
-     * [occurrenceId] is nullable for now because the minimum meal logging flow may
-     * be created from a simple planned meal tap before full occurrence-aware meal
-     * reconciliation exists.
+     * [occurrenceId] preserves linkage to the planned meal occurrence so the
+     * actual meal log can later fulfill/suppress the matching planned row.
      *
      * [endTime] is optional because the current minimum requirement is primarily
      * "I ate this meal at this time", while still leaving room for a meal window.
@@ -281,13 +281,11 @@ object TodayScreenContract {
         val occurrenceId: String? = null
     )
 
-    fun MealLogInput.toDomain(): com.example.hastanghubaga.domain.model.meal.LogMealInput =
-        com.example.hastanghubaga.domain.model.meal.LogMealInput(
+    fun MealLogInput.toDomain(): LogMealInput =
+        LogMealInput(
             mealType = mealType,
-            timeUseIntent = TimeUseIntent.Explicit(
-                date = logDate,
-                time = startTime
-            ),
+            timeUseIntent = TimeUseIntent.Explicit(logDate, startTime),
+            occurrenceId = occurrenceId, // ADD THIS
             notes = notes,
             nutrition = nutrition?.toDomain()
         )
@@ -307,7 +305,7 @@ object TodayScreenContract {
 
     fun NutritionInput.toDomain(): com.example.hastanghubaga.domain.model.meal.NutritionInput =
         com.example.hastanghubaga.domain.model.meal.NutritionInput(
-            calories = calories?.toInt() ?: 0,
+            calories = calories?.toInt(),
             proteinGrams = proteinGrams,
             carbsGrams = carbsGrams,
             fatGrams = fatGrams,

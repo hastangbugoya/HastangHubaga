@@ -1,6 +1,5 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
-import android.util.Log
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
@@ -9,11 +8,10 @@ import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityLog
-import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.meal.MealLog
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
-import com.example.hastanghubaga.domain.model.timeline.UpcomingSchedule
 import com.example.hastanghubaga.domain.repository.time.UpcomingScheduleRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.usecase.meal.ResolveMealAnchorUseCase
@@ -26,30 +24,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toLocalDateTime
 
-/**
- * Builds a single, chronologically ordered timeline for the selected day.
- *
- * Canonical supplement model:
- * - planned rows come from persisted supplement occurrences
- * - actual rows come from supplement dose logs
- * - reconciliation happens by occurrenceId
- *
- * Canonical activity model:
- * - planned rows come from persisted activity occurrences
- * - actual rows come from activity logs
- * - reconciliation happens by occurrenceId
- *
- * Current native HH meal model:
- * - planned rows come from persisted meal occurrences
- * - imported AK meals are still concrete historical rows with timestamps
- * - native HH actual meal log reconciliation is not wired yet
- *
- * This use case trusts upstream time resolution and only performs:
- * - mapping to timeline rows
- * - planned-vs-actual reconciliation where available
- * - deterministic merge/sort
- * - simplified upcoming schedule snapshot persistence
- */
 class BuildTodayTimelineUseCase @Inject constructor(
     private val upcomingScheduleRepository: UpcomingScheduleRepository,
     private val buildWidgetDailySnapshotUseCase: BuildWidgetDailySnapshot,
@@ -62,11 +36,13 @@ class BuildTodayTimelineUseCase @Inject constructor(
         supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
         mealOccurrences: List<MealOccurrenceEntity> = emptyList(),
         meals: List<Meal> = emptyList(),
+        mealLogs: List<MealLog> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
         activityOccurrences: List<ActivityOccurrenceEntity> = emptyList(),
         activities: List<Activity> = emptyList(),
         activityLogs: List<ActivityLog> = emptyList()
     ): List<TimelineItem> {
+
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
 
@@ -77,8 +53,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
         val activityLookup = activeActivities.associateBy { it.id }
 
         val supplementOccurrenceTimeLookup =
-            supplementOccurrences.associate { occurrence ->
-                occurrence.id to LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
+            supplementOccurrences.associate {
+                it.id to LocalTime.fromSecondOfDay(it.plannedTimeSeconds)
             }
 
         val plannedSupplementItems =
@@ -100,163 +76,59 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     subtitle = subtitle,
                     defaultUnit = supplement.recommendedDoseUnit,
                     suggestedDose = supplement.recommendedServingSize,
-                    doseState = null,
-                    scheduledTime = plannedTime,
-                    isTaken = false
+                    scheduledTime = plannedTime
                 )
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> plannedSupplementItems: ${plannedSupplementItems.size}")
 
         val satisfiedSupplementOccurrenceIds =
-            supplementDoseLogs
-                .mapNotNull { it.occurrenceId }
-                .toSet()
-        Log.d(
-            "Meow",
-            "BuildTodayTimelineUseCase> satisfiedSupplementOccurrenceIds: ${satisfiedSupplementOccurrenceIds.size}"
-        )
+            supplementDoseLogs.mapNotNull { it.occurrenceId }.toSet()
 
         val filteredPlannedSupplementItems =
-            plannedSupplementItems.filterNot { item ->
-                item.occurrenceId in satisfiedSupplementOccurrenceIds
+            plannedSupplementItems.filterNot {
+                it.occurrenceId in satisfiedSupplementOccurrenceIds
             }
-        Log.d(
-            "Meow",
-            "BuildTodayTimelineUseCase> filteredPlannedSupplementItems: ${filteredPlannedSupplementItems.size}"
-        )
 
         val supplementDoseLogItems =
-            supplementDoseLogs.map { doseLog ->
+            supplementDoseLogs.map { log ->
                 TimelineItem.SupplementDoseLogTimelineItem(
-                    doseLogId = doseLog.id,
-                    supplementId = doseLog.supplementId,
-                    title = supplementTitleLookup[doseLog.supplementId] ?: "Supplement",
-                    time = doseLog.timestamp.time,
-                    amount = doseLog.actualServingTaken,
-                    unit = doseLog.doseUnit.name,
-                    scheduledTime = doseLog.occurrenceId?.let(supplementOccurrenceTimeLookup::get)
+                    doseLogId = log.id,
+                    supplementId = log.supplementId,
+                    title = supplementTitleLookup[log.supplementId] ?: "Supplement",
+                    time = log.timestamp.time,
+                    amount = log.actualServingTaken,
+                    unit = log.doseUnit.name,
+                    scheduledTime = log.occurrenceId?.let(supplementOccurrenceTimeLookup::get)
                 )
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
 
-        Log.d("MEAL_RECON", "meals input size=${meals.size}")
-        meals.forEachIndexed { index, meal ->
-            Log.d(
-                "MEAL_RECON",
-                "meals#$index > id=${meal.id} name=${meal.name} type=${meal.type} treatAsAnchor=${meal.treatAsAnchor} isActive=${meal.isActive}"
+        val mergedMealItems =
+            buildMergedMealTimelineItems(
+                mealOccurrences,
+                mealLookup,
+                mealLogs
             )
-        }
-        meals.groupingBy { it.type }.eachCount()
-            .toSortedMap(compareBy { it.name })
-            .forEach { (type, count) ->
-                Log.d("MEAL_RECON", "mealTemplatesByType[$type]=$count")
-            }
-
-        activeMeals.forEach { meal ->
-            val resolvedAnchor = resolveMealAnchorUseCase(meal)
-            if (resolvedAnchor != null) {
-                Log.d(
-                    "MealAnchor",
-                    "Meal template '${meal.name}' resolved anchor=$resolvedAnchor type=${meal.type} override=${meal.treatAsAnchor}"
-                )
-            }
-        }
-
-        Log.d("MEAL_RECON", "mealOccurrences input size=${mealOccurrences.size}")
-        mealOccurrences.forEachIndexed { index, occurrence ->
-            val matchedMeal = mealLookup[occurrence.mealId]
-            Log.d(
-                "MEAL_RECON",
-                "mealOccurrences#$index > id=${occurrence.id} mealId=${occurrence.mealId} scheduleId=${occurrence.scheduleId} date=${occurrence.date} plannedTimeSeconds=${occurrence.plannedTimeSeconds} sourceType=${occurrence.sourceType} isDeleted=${occurrence.isDeleted} matchedMealType=${matchedMeal?.type} matchedMealName=${matchedMeal?.name}"
-            )
-        }
-        mealOccurrences.groupingBy { occurrence ->
-            mealLookup[occurrence.mealId]?.type?.name ?: "UNMATCHED"
-        }.eachCount()
-            .toSortedMap()
-            .forEach { (typeName, count) ->
-                Log.d("MEAL_RECON", "mealOccurrencesByType[$typeName]=$count")
-            }
-
-        val mealItems =
-            mealOccurrences.mapNotNull { occurrence ->
-                val meal = mealLookup[occurrence.mealId] ?: return@mapNotNull null
-                val plannedTime = LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
-
-                TimelineItem.MealTimelineItem(
-                    time = plannedTime,
-                    meal = meal
-                )
-            }
-        Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
-        mealItems.forEachIndexed { index, item ->
-            Log.d(
-                "MEAL_RECON",
-                "mealItems#$index > mealId=${item.meal.id} name=${item.meal.name} type=${item.meal.type} time=${item.time}"
-            )
-        }
-        mealItems.groupingBy { it.meal.type }.eachCount()
-            .toSortedMap(compareBy { it.name })
-            .forEach { (type, count) ->
-                Log.d("MEAL_RECON", "mealTimelineItemsByType[$type]=$count")
-            }
-
-        Log.d("ImportDebug", "importedMeals input size=${importedMeals.size}")
-        importedMeals.forEachIndexed { index, importedMeal ->
-            Log.d(
-                "ImportDebug",
-                "importedMeals#$index > groupingKey=${importedMeal.groupingKey} " +
-                        "logDateIso=${importedMeal.logDateIso} " +
-                        "type=${importedMeal.type} " +
-                        "timestamp=${importedMeal.timestamp} " +
-                        "notes=${importedMeal.notes}"
-            )
-        }
-        importedMeals.groupingBy { it.type }.eachCount()
-            .toSortedMap(compareBy { it.name })
-            .forEach { (type, count) ->
-                Log.d("MEAL_RECON", "importedMealsByType[$type]=$count")
-            }
 
         val importedMealItems =
-            importedMeals.map { importedMeal ->
+            importedMeals.map {
                 TimelineItem.ImportedMealTimelineItem(
-                    time = Instant
-                        .fromEpochMilliseconds(importedMeal.timestamp)
+                    time = Instant.fromEpochMilliseconds(it.timestamp)
                         .toLocalDateTime(DomainTimePolicy.localTimeZone)
                         .time,
-                    meal = importedMeal
+                    meal = it
                 )
             }
-        Log.d("Meow", "BuildTodayTimelineUseCase> importedMealItems: ${importedMealItems.size}")
-
-        importedMealItems.forEachIndexed { index, importedMealItem ->
-            Log.d(
-                "MEAL_RECON",
-                "importedMealItems#$index > time=${importedMealItem.time} groupingKey=${importedMealItem.meal.groupingKey} type=${importedMealItem.meal.type}"
-            )
-        }
-
-        activityOccurrences.forEachIndexed { index, occurrence ->
-            Log.d("ACTIVITY_RECON", "activityOccurrences#$index > $occurrence")
-        }
-
-        activityLogs.forEachIndexed { index, log ->
-            Log.d("ACTIVITY_RECON", "activityLogs#$index > $log")
-        }
 
         val mergedActivityItems =
             buildMergedActivityTimelineItems(
-                activityOccurrences = activityOccurrences,
-                activityLookup = activityLookup,
-                activityLogs = activityLogs
+                activityOccurrences,
+                activityLookup,
+                activityLogs
             )
-        Log.d("Meow", "BuildTodayTimelineUseCase> mergedActivityItems: ${mergedActivityItems.size}")
 
         val merged = (
                 filteredPlannedSupplementItems +
                         supplementDoseLogItems +
-                        mealItems +
+                        mergedMealItems +
                         importedMealItems +
                         mergedActivityItems
                 ).sortedWith(
@@ -266,27 +138,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     .thenBy { itemStableSecondaryKey(it) }
             )
 
-        val mergedNativeMealItems = merged.filterIsInstance<TimelineItem.MealTimelineItem>()
-        Log.d("MEAL_RECON", "merged native meal items size=${mergedNativeMealItems.size}")
-        mergedNativeMealItems.groupingBy { it.meal.type }.eachCount()
-            .toSortedMap(compareBy { it.name })
-            .forEach { (type, count) ->
-                Log.d("MEAL_RECON", "mergedNativeMealItemsByType[$type]=$count")
-            }
-
-        val mergedImportedMealItems = merged.filterIsInstance<TimelineItem.ImportedMealTimelineItem>()
-        Log.d("MEAL_RECON", "merged imported meal items size=${mergedImportedMealItems.size}")
-        mergedImportedMealItems.groupingBy { it.meal.type }.eachCount()
-            .toSortedMap(compareBy { it.name })
-            .forEach { (type, count) ->
-                Log.d("MEAL_RECON", "mergedImportedMealItemsByType[$type]=$count")
-            }
-
         val upcomingItems =
-            merged.mapNotNull<TimelineItem, UpcomingSchedule> { item ->
-                item.toUpcomingSchedule(date = date)
-            }
-        Log.d("Meow", "BuildTodayTimelineUseCase> upcomingItems: ${upcomingItems.size}")
+            merged.mapNotNull { it.toUpcomingSchedule(date) }
 
         buildWidgetDailySnapshotUseCase(date)
         upcomingScheduleRepository.replaceAll(upcomingItems)
@@ -294,100 +147,152 @@ class BuildTodayTimelineUseCase @Inject constructor(
         return merged
     }
 
+    private fun buildMergedMealTimelineItems(
+        occurrences: List<MealOccurrenceEntity>,
+        lookup: Map<Long, Meal>,
+        logs: List<MealLog>
+    ): List<TimelineItem.MealTimelineItem> {
+
+        val planned =
+            occurrences.mapNotNull { o ->
+                val meal = lookup[o.mealId] ?: return@mapNotNull null
+                val t = LocalTime.fromSecondOfDay(o.plannedTimeSeconds)
+
+                TimelineItem.MealTimelineItem(
+                    time = t,
+                    occurrenceId = o.id,
+                    meal = meal,
+                    scheduledTime = t,
+                    isCompleted = false,
+                    resolvedAnchor = resolveMealAnchorUseCase(meal)
+                )
+            }
+
+        val logsByOccurrenceId =
+            logs.mapNotNull { log ->
+                val occurrenceId = log.occurrenceId ?: return@mapNotNull null
+                occurrenceId to log
+            }.toMap()
+
+        val mergedPlanned =
+            planned.map { plannedItem ->
+                val log = logsByOccurrenceId[plannedItem.occurrenceId]
+
+                if (log == null) {
+                    plannedItem
+                } else {
+                    val meal =
+                        log.mealId?.let(lookup::get) ?: plannedItem.meal
+
+                    val actualTime = log.start.time
+
+                    TimelineItem.MealTimelineItem(
+                        time = actualTime,
+                        occurrenceId = plannedItem.occurrenceId,
+                        meal = meal,
+                        scheduledTime = plannedItem.scheduledTime,
+                        isCompleted = true,
+                        resolvedAnchor = resolveMealAnchorUseCase(meal)
+                    )
+                }
+            }
+
+        val adHocLogs =
+            logs.filter { it.occurrenceId == null }
+                .mapNotNull { log ->
+                    val meal = log.mealId?.let(lookup::get) ?: return@mapNotNull null
+                    val actualTime = log.start.time
+
+                    TimelineItem.MealTimelineItem(
+                        time = actualTime,
+                        occurrenceId = "adhoc_${log.id}",
+                        meal = meal,
+                        scheduledTime = actualTime,
+                        isCompleted = true,
+                        resolvedAnchor = resolveMealAnchorUseCase(meal)
+                    )
+                }
+
+        return mergedPlanned + adHocLogs
+    }
+
+    /**
+     * Activities follow the same merge contract as meals:
+     *
+     * 1. Planned occurrences always materialize as timeline candidates.
+     * 2. A log with a matching occurrenceId replaces the planned card's display time and marks it completed.
+     * 3. A log without occurrenceId becomes an ad-hoc completed timeline item.
+     *
+     * This keeps the timeline faithful to actual execution while preserving the planned-vs-actual
+     * scheduling model used elsewhere in the app.
+     */
     private fun buildMergedActivityTimelineItems(
-        activityOccurrences: List<ActivityOccurrenceEntity>,
-        activityLookup: Map<Long, Activity>,
-        activityLogs: List<ActivityLog>
+        occurrences: List<ActivityOccurrenceEntity>,
+        lookup: Map<Long, Activity>,
+        logs: List<ActivityLog>
     ): List<TimelineItem.ActivityTimelineItem> {
-        val plannedActivityItems =
-            activityOccurrences.mapNotNull { occurrence ->
-                val activity = activityLookup[occurrence.activityId] ?: return@mapNotNull null
+
+        val planned =
+            occurrences.mapNotNull { occurrence ->
+                val activity = lookup[occurrence.activityId] ?: return@mapNotNull null
                 val plannedTime = LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
 
                 TimelineItem.ActivityTimelineItem(
                     time = plannedTime,
                     occurrenceId = occurrence.id,
                     activityId = activity.id,
-                    title = activity.type.toDisplayLabel(),
-                    subtitle = activity.notes,
-                    isWorkout = occurrence.isWorkout,
+                    title = activity.type.name,
                     scheduledTime = plannedTime,
                     isCompleted = false
                 )
             }
 
-        Log.d("Meow", "BuildTodayTimelineUseCase> plannedActivityItems: ${plannedActivityItems.size}")
-
-        val plannedByOccurrenceId =
-            plannedActivityItems.associateBy { it.occurrenceId }
-
-        val linkedLoggedActivityItems =
-            activityLogs.mapNotNull { log ->
+        val logsByOccurrenceId =
+            logs.mapNotNull { log ->
                 val occurrenceId = log.occurrenceId ?: return@mapNotNull null
-                val planned = plannedByOccurrenceId[occurrenceId]
+                occurrenceId to log
+            }.toMap()
 
-                TimelineItem.ActivityTimelineItem(
-                    time = log.start.time,
-                    occurrenceId = occurrenceId,
-                    activityId = log.activityId ?: planned?.activityId ?: -1L,
-                    title = log.activityType.toDisplayLabel(),
-                    subtitle = log.notes ?: planned?.subtitle,
-                    isWorkout = planned?.isWorkout ?: false,
-                    scheduledTime = planned?.scheduledTime ?: log.start.time,
-                    isCompleted = true
-                )
-            }
+        val mergedPlanned =
+            planned.map { plannedItem ->
+                val log = logsByOccurrenceId[plannedItem.occurrenceId]
 
-        Log.d(
-            "Meow",
-            "BuildTodayTimelineUseCase> linkedLoggedActivityItems: ${linkedLoggedActivityItems.size}"
-        )
+                if (log == null) {
+                    plannedItem
+                } else {
+                    val activity =
+                        log.activityId?.let(lookup::get)
 
-        val standaloneActualActivityItems =
-            activityLogs
-                .filter { it.occurrenceId == null }
-                .map { log ->
                     val actualTime = log.start.time
 
                     TimelineItem.ActivityTimelineItem(
                         time = actualTime,
-                        occurrenceId = buildActualActivityTimelineId(
-                            activityId = log.activityId,
-                            time = actualTime
-                        ),
-                        activityId = log.activityId ?: -1L,
-                        title = log.activityType.toDisplayLabel(),
-                        subtitle = log.notes,
-                        isWorkout = false,
+                        occurrenceId = plannedItem.occurrenceId,
+                        activityId = activity?.id ?: plannedItem.activityId,
+                        title = activity?.type?.name ?: plannedItem.title,
+                        scheduledTime = plannedItem.scheduledTime,
+                        isCompleted = true
+                    )
+                }
+            }
+
+        val adHocLogs =
+            logs.filter { it.occurrenceId == null }
+                .mapNotNull { log ->
+                    val activity = log.activityId?.let(lookup::get) ?: return@mapNotNull null
+                    val actualTime = log.start.time
+
+                    TimelineItem.ActivityTimelineItem(
+                        time = actualTime,
+                        occurrenceId = "adhoc_${log.id}",
+                        activityId = activity.id,
+                        title = activity.type.name,
                         scheduledTime = actualTime,
                         isCompleted = true
                     )
                 }
 
-        Log.d(
-            "Meow",
-            "BuildTodayTimelineUseCase> standaloneActualActivityItems: ${standaloneActualActivityItems.size}"
-        )
-
-        val mergedByOccurrenceId = linkedMapOf<String, TimelineItem.ActivityTimelineItem>()
-
-        plannedActivityItems.forEach { planned ->
-            mergedByOccurrenceId[planned.occurrenceId] = planned
-        }
-
-        linkedLoggedActivityItems.forEach { logged ->
-            mergedByOccurrenceId[logged.occurrenceId] = logged
-        }
-
-        val mergedActivityItems =
-            mergedByOccurrenceId.values.toList() + standaloneActualActivityItems
-
-        Log.d(
-            "Meow",
-            "BuildTodayTimelineUseCase> mergedActivityItems(after overwrite + standalone append): ${mergedActivityItems.size}"
-        )
-
-        return mergedActivityItems
+        return mergedPlanned + adHocLogs
     }
 
     private fun itemTypeSortOrder(item: TimelineItem): Int =
@@ -401,33 +306,17 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
     private fun itemStablePrimaryKey(item: TimelineItem): String =
         when (item) {
-            is TimelineItem.SupplementTimelineItem ->
-                buildString {
-                    append(item.supplementId)
-                    append("|")
-                    append(item.occurrenceId)
-                    append("|")
-                    append(item.scheduledTime.toSecondOfDay())
-                }
-
             is TimelineItem.MealTimelineItem ->
-                buildString {
-                    append(item.meal.id)
-                    append("|")
-                    append(item.time.toSecondOfDay())
-                }
+                "${item.meal.id}|${item.occurrenceId}|${item.scheduledTime.toSecondOfDay()}"
+
+            is TimelineItem.SupplementTimelineItem ->
+                "${item.supplementId}|${item.occurrenceId}|${item.scheduledTime.toSecondOfDay()}"
+
+            is TimelineItem.ActivityTimelineItem ->
+                "${item.activityId}|${item.occurrenceId}|${item.scheduledTime.toSecondOfDay()}"
 
             is TimelineItem.ImportedMealTimelineItem ->
                 item.meal.groupingKey
-
-            is TimelineItem.ActivityTimelineItem ->
-                buildString {
-                    append(item.activityId)
-                    append("|")
-                    append(item.occurrenceId)
-                    append("|")
-                    append(item.scheduledTime.toSecondOfDay())
-                }
 
             is TimelineItem.SupplementDoseLogTimelineItem ->
                 item.doseLogId.toString()
@@ -435,70 +324,19 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
     private fun itemStableSecondaryKey(item: TimelineItem): String =
         when (item) {
-            is TimelineItem.SupplementTimelineItem ->
-                buildString {
-                    append(item.title)
-                    append("|")
-                    append(item.time.toSecondOfDay())
-                    append("|")
-                    append(item.defaultUnit.name)
-                    append("|")
-                    append(item.suggestedDose)
-                }
-
             is TimelineItem.MealTimelineItem ->
-                buildString {
-                    append(item.meal.type.name)
-                    append("|")
-                    append(item.meal.name)
-                    append("|")
-                    append(item.time.toSecondOfDay())
-                }
+                "${item.meal.type.name}|${item.meal.name}|${item.time.toSecondOfDay()}|${if (item.isCompleted) "C" else "P"}"
 
-            is TimelineItem.ImportedMealTimelineItem ->
-                buildString {
-                    append(item.meal.type.name)
-                    append("|")
-                    append(item.meal.timestamp)
-                }
+            is TimelineItem.SupplementTimelineItem ->
+                "${item.title}|${item.time.toSecondOfDay()}|${item.defaultUnit}|${item.suggestedDose}"
 
             is TimelineItem.ActivityTimelineItem ->
-                buildString {
-                    append(item.title)
-                    append("|")
-                    append(item.time.toSecondOfDay())
-                    append("|")
-                    append(if (item.isWorkout) "W" else "N")
-                    append("|")
-                    append(if (item.isCompleted) "C" else "P")
-                }
+                "${item.title}|${item.time.toSecondOfDay()}|${if (item.isCompleted) "C" else "P"}"
+
+            is TimelineItem.ImportedMealTimelineItem ->
+                "${item.meal.type}|${item.meal.timestamp}"
 
             is TimelineItem.SupplementDoseLogTimelineItem ->
-                buildString {
-                    append(item.supplementId)
-                    append("|")
-                    append(item.time.toSecondOfDay())
-                    append("|")
-                    append(item.scheduledTime?.toSecondOfDay() ?: Int.MAX_VALUE)
-                }
+                "${item.supplementId}|${item.time.toSecondOfDay()}"
         }
-
-    private fun buildActualActivityTimelineId(
-        activityId: Long?,
-        time: LocalTime
-    ): String {
-        return buildString {
-            append("actual")
-            append("|")
-            append(activityId ?: "none")
-            append("|")
-            append(time.toSecondOfDay())
-        }
-    }
 }
-
-private fun ActivityType.toDisplayLabel(): String =
-    name
-        .lowercase()
-        .split("_")
-        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }

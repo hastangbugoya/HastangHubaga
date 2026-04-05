@@ -3,8 +3,8 @@ package com.example.hastanghubaga.ui.timeline
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
+import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
 import kotlinx.datetime.LocalTime
 
 sealed interface TimelineItem {
@@ -98,15 +98,33 @@ sealed interface TimelineItem {
     /**
      * Native HH meal timeline row.
      *
+     * This row may represent either:
+     * - a PLANNED meal occurrence for the selected day
+     * - an ACTUAL logged HH meal
+     *
+     * Canonical identity:
+     * - [occurrenceId] is the planner occurrence identity when available
+     * - planned rows always preserve the concrete occurrence ID
+     * - actual rows may preserve that same occurrence ID when the log fulfilled
+     *   a planned occurrence, or use a synthetic fallback identity for extra logs
+     *
+     * Completion semantics:
+     * - [isCompleted] = false for planned rows
+     * - [isCompleted] = true for actual logged rows
+     *
      * Important:
      * - [resolvedAnchor] is derived anchor behavior only
      * - It does NOT change the meal's actual type
      * - It does NOT affect current timeline rendering or ordering
      * - It prepares meals to act as anchor providers later
+     * - [scheduledTime] preserves the original planned or actual source time
      */
     data class MealTimelineItem(
         override val time: LocalTime,
+        val occurrenceId: String,
         val meal: Meal,
+        val scheduledTime: LocalTime = time,
+        val isCompleted: Boolean = false,
         val resolvedAnchor: TimeAnchor? = null
     ) : TimelineItem
 
