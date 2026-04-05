@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import androidx.room.withTransaction
+import kotlinx.coroutines.flow.first
 
 /**
  * Repository implementation for HH native meal templates.
@@ -48,14 +49,7 @@ class MealRepositoryImpl @Inject constructor(
     override suspend fun getMealById(id: Long): Meal? =
         mealEntityDao.observeMeal(id)
             .map { it?.toDomain() }
-            .let { flow ->
-                var result: Meal? = null
-                flow.collect { value ->
-                    result = value
-                    return@collect
-                }
-                result
-            }
+            .first()
 
     override suspend fun getAllOnce(): List<Meal> =
         mealEntityDao.getAllMealsOnce().map { it.toDomain() }
