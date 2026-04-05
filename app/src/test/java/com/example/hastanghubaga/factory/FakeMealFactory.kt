@@ -2,8 +2,6 @@ package com.example.hastanghubaga.factory
 
 import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
-import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
 import kotlinx.datetime.LocalDateTime
 
 object FakeMealFactory {
@@ -13,11 +11,12 @@ object FakeMealFactory {
     ): Meal {
         return Meal(
             id = 1L,
+            name = name,
             type = MealType.BREAKFAST,
-            timestamp = at,
+            treatAsAnchor = null,
+            isActive = true,
             nutrition = null,
-            notes = name,
-            name = name
+            notes = name
         )
     }
 }

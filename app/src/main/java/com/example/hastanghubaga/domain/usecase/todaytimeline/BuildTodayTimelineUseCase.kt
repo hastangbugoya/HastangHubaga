@@ -38,23 +38,10 @@ import kotlinx.datetime.toLocalDateTime
  * - actual rows come from activity logs
  * - reconciliation happens by occurrenceId
  *
- * Planned activity row rule:
- * - show the planned occurrence if it has not yet been satisfied by a linked log
- *
- * Actual activity row rule:
- * - if a log links to a planned occurrence, that linked log should overwrite
- *   the planned row for display purposes so the occurrence appears only once
- * - if a log has no occurrenceId, it is treated as an extra/manual/ad-hoc event
- *   and is appended as its own standalone row
- *
- * Important guardrail:
- * - inactive activity templates must not produce planned rows
- * - actual logs are historical truth and may still appear even if the template
- *   later becomes inactive
- *
- * Other timeline content:
- * - native HH meals
- * - imported meals
+ * Transitional meal model:
+ * - native HH meals are now reusable templates, not timestamped day-events
+ * - imported AK meals are still concrete historical rows with timestamps
+ * - therefore native HH meals are NOT rendered directly into the day timeline here
  *
  * This use case trusts upstream time resolution and only performs:
  * - mapping to timeline rows
@@ -147,23 +134,17 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
 
-        val mealItems =
-            meals.map { meal ->
-                val resolvedAnchor = resolveMealAnchorUseCase(meal)
-
-                if (resolvedAnchor != null) {
-                    Log.d(
-                        "MealAnchor",
-                        "Meal '${meal.name}' resolved anchor=$resolvedAnchor type=${meal.type} override=${meal.treatAsAnchor}"
-                    )
-                }
-
-                TimelineItem.MealTimelineItem(
-                    time = meal.timestamp.time,
-                    meal = meal,
-                    resolvedAnchor = resolvedAnchor
+        meals.forEach { meal ->
+            val resolvedAnchor = resolveMealAnchorUseCase(meal)
+            if (resolvedAnchor != null) {
+                Log.d(
+                    "MealAnchor",
+                    "Meal template '${meal.name}' resolved anchor=$resolvedAnchor type=${meal.type} override=${meal.treatAsAnchor}"
                 )
             }
+        }
+
+        val mealItems = emptyList<TimelineItem.MealTimelineItem>()
         Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
 
         Log.d("ImportDebug", "importedMeals input size=${importedMeals.size}")
@@ -240,40 +221,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
         return merged
     }
 
-    /**
-     * Activity timeline reconciliation.
-     *
-     * NOTE TO FUTURE DEVS / AI ASSISTANTS:
-     *
-     * Activities intentionally use an identity-keyed merge instead of the older
-     * "filter planned + append actual" approach.
-     *
-     * Why:
-     * - A planned activity occurrence and its linked activity log represent the
-     *   same logical timeline slot.
-     * - Showing both rows causes duplicate cards and breaks the intended
-     *   completed-vs-planned behavior.
-     *
-     * Canonical rule:
-     * - occurrenceId is the identity of a planned activity slot
-     * - planned item is inserted first
-     * - linked logged item with the same occurrenceId overwrites that planned item
-     * - unlinked logs (occurrenceId == null) are appended separately as ad-hoc rows
-     *
-     * Data-structure invariant:
-     * - at most one rendered activity row per linked occurrenceId
-     *
-     * Important:
-     * - this is intentionally implemented as a LinkedHashMap keyed by occurrenceId
-     *   so the data structure itself enforces the no-duplicate-occurrence rule
-     * - do not revert this back to filterNot + append for activities unless the
-     *   canonical ownership model changes
-     *
-     * Forward-looking note:
-     * - once this pattern is proven solid for activities, the same
-     *   identity-keyed overwrite/merge approach can be applied to supplements
-     *   and later to meals if/when they gain planned-vs-actual reconciliation
-     */
     private fun buildMergedActivityTimelineItems(
         activityOccurrences: List<ActivityOccurrenceEntity>,
         activityLookup: Map<Long, Activity>,
@@ -370,11 +317,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
         return mergedActivityItems
     }
 
-    /**
-     * Cross-type ordering policy for rows that land on the same resolved time.
-     *
-     * This is intentionally a UI/user-sense rule, not a scheduling rule.
-     */
     private fun itemTypeSortOrder(item: TimelineItem): Int =
         when (item) {
             is TimelineItem.SupplementTimelineItem -> 0
@@ -384,12 +326,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
             is TimelineItem.SupplementDoseLogTimelineItem -> 4
         }
 
-    /**
-     * Stable identity-first tie-breaker.
-     *
-     * For items with identical resolved timeline time and identical cross-type
-     * precedence, use the most stable business identity available.
-     */
     private fun itemStablePrimaryKey(item: TimelineItem): String =
         when (item) {
             is TimelineItem.SupplementTimelineItem ->
@@ -420,12 +356,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 item.doseLogId.toString()
         }
 
-    /**
-     * Secondary deterministic tie-breaker for edge cases where the primary key is
-     * still equal or partially absent.
-     *
-     * This remains identity/meaning based and avoids hash-driven ordering.
-     */
     private fun itemStableSecondaryKey(item: TimelineItem): String =
         when (item) {
             is TimelineItem.SupplementTimelineItem ->
@@ -443,9 +373,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 buildString {
                     append(item.meal.type.name)
                     append("|")
-                    append(item.meal.name ?: "")
+                    append(item.meal.name)
                     append("|")
-                    append(item.meal.timestamp.time.toSecondOfDay())
+                    append(item.time.toSecondOfDay())
                 }
 
             is TimelineItem.ImportedMealTimelineItem ->

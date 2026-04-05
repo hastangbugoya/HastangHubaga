@@ -31,11 +31,6 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
                 today.atTime(LocalTime(hour, minute))
             )
 
-        fun mealMillis(h: Int, m: Int): Long =
-            JavaTimeAdapter.domainLocalDateTimeToUtcMillis(
-                today.atTime(LocalTime(h, m))
-            )
-
         fun runSection(
             name: String,
             block: () -> Unit
@@ -299,17 +294,41 @@ VALUES
         runSection("meals") {
             db.execSQL(
                 """
-INSERT INTO meals (type, timestamp, sendAlert, alertOffsetMinutes)
+INSERT INTO meals (id, name, type, treatAsAnchor, isActive)
 VALUES
-    ('BREAKFAST', ${mealMillis(8, 0)}, 0, 0),
-    ('LUNCH',     ${mealMillis(12, 0)}, 0, 0),
-    ('DINNER',    ${mealMillis(18, 0)}, 0, 0);
+    (1, 'Breakfast', 'BREAKFAST', NULL, 1),
+    (2, 'Lunch',     'LUNCH',     NULL, 1),
+    (3, 'Dinner',    'DINNER',    NULL, 1);
                 """.trimIndent()
             )
-            Log.d("SeedDebug", "Inserted meals for date=$today")
-            Log.d("SeedDebug", "Breakfast ts=${mealMillis(8, 0)}")
-            Log.d("SeedDebug", "Lunch ts=${mealMillis(12, 0)}")
-            Log.d("SeedDebug", "Dinner ts=${mealMillis(18, 0)}")
+            Log.d("SeedDebug", "Inserted meal templates for date=$today")
+        }
+
+        runSection("meal_schedules") {
+            db.execSQL(
+                """
+INSERT INTO meal_schedules
+(id, mealId, recurrenceType, interval, weeklyDays, startDate, endDate, timingType, isEnabled)
+VALUES
+    (1, 1, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED_TIMES', 1),
+    (2, 2, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED_TIMES', 1),
+    (3, 3, 'DAILY', 1, NULL, '${today}', NULL, 'FIXED_TIMES', 1);
+                """.trimIndent()
+            )
+        }
+
+        runSection("meal_schedule_fixed_times") {
+            db.execSQL(
+                """
+INSERT INTO meal_schedule_fixed_times
+(id, scheduleId, time)
+VALUES
+    (1, 1, '08:00'),
+    (2, 2, '12:00'),
+    (3, 3, '18:00');
+                """.trimIndent()
+            )
+            Log.d("SeedDebug", "Inserted meal schedules for date=$today")
         }
 
         runSection("activities") {

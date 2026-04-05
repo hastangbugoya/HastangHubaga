@@ -1,6 +1,5 @@
 package com.example.hastanghubaga.domain.usecase.meal
 
-import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
@@ -26,7 +25,7 @@ class LogMealUseCase @Inject constructor(
         val timestampMillis = localDateTimeToEpochMillis(date, time)
 
         repo.logMeal(
-            type = input.mealType,
+            mealId = null,
             timestampMillis = timestampMillis,
             notes = input.notes,
             nutrition = input.nutrition

@@ -45,7 +45,9 @@ import kotlinx.datetime.toLocalDateTime
  *   date + activityId + scheduleId + sourceRowId + resolved time + sortOrder
  *
  * Anchor resolution rules:
- * - Meal anchors use concrete same-day meal timestamps when available
+ * - Concrete meal anchors currently come from imported AK meals only
+ * - Native HH Meal domain objects are now reusable templates and do NOT carry
+ *   concrete timestamps, so they cannot act as same-day anchor providers here
  * - Workout anchors currently use same-day actual activities observable for the date
  * - If a concrete meal/workout time is unavailable, resolution falls back to:
  *   date override -> day-of-week override -> default anchor time
@@ -59,7 +61,9 @@ import kotlinx.datetime.toLocalDateTime
  * Important current limitation:
  * - This first-pass planner does not yet use planned activity occurrences as
  *   anchor providers during the same build pass.
- * - That keeps behavior aligned with the current supplement planner shape.
+ * - Native HH meals are templates, not timestamped anchor providers.
+ * - That keeps behavior aligned with the current transition to template ->
+ *   schedule -> occurrence architecture.
  */
 class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
     private val activityEntityDao: ActivityEntityDao,
@@ -253,12 +257,16 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
         meals: List<Meal>,
         importedMeals: List<AkImportedMealEntity>
     ): Map<TimeAnchor, LocalTime> {
+        /**
+         * Native HH meals are now reusable templates without concrete timestamps.
+         * Keep this evaluation path explicit so future occurrence/log-backed meals
+         * can be added here later without reintroducing fake template timestamps.
+         */
         val nativePairs = meals
             .asSequence()
-            .filter { it.timestamp.date == date }
             .mapNotNull { meal ->
-                val anchor = resolveMealAnchorUseCase(meal) ?: return@mapNotNull null
-                anchor to meal.timestamp.time
+                resolveMealAnchorUseCase(meal)
+                null
             }
 
         val importedPairs = importedMeals
