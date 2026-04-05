@@ -331,6 +331,20 @@ VALUES
             Log.d("SeedDebug", "Inserted meal schedules for date=$today")
         }
 
+        runSection("meal_occurrences") {
+            db.execSQL(
+                """
+INSERT INTO meal_occurrences
+(id, mealId, scheduleId, date, plannedTimeSeconds, sourceType, isDeleted)
+VALUES
+    ('meal_occ_breakfast_${today}', 1, 1, '${today}', ${LocalTime(8, 0).toSecondOfDay()}, 'SCHEDULED', 0),
+    ('meal_occ_lunch_${today}',     2, 2, '${today}', ${LocalTime(12, 0).toSecondOfDay()}, 'SCHEDULED', 0),
+    ('meal_occ_dinner_${today}',    3, 3, '${today}', ${LocalTime(18, 0).toSecondOfDay()}, 'SCHEDULED', 0);
+                """.trimIndent()
+            )
+            Log.d("SeedDebug", "Inserted meal occurrences for date=$today")
+        }
+
         runSection("activities") {
             db.execSQL(
                 """

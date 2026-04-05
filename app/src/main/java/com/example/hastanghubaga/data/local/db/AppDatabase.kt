@@ -59,6 +59,8 @@ import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanEntity
 import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEntity
+import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
+import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
 
 @Database(
     entities = [
@@ -85,6 +87,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         MealScheduleEntity::class,
         MealScheduleFixedTimeEntity::class,
         MealScheduleAnchoredTimeEntity::class,
+        MealOccurrenceEntity::class,
         MealNutritionEntity::class,
         AkImportedLogEntity::class,
         AkImportedMealEntity::class,
@@ -94,7 +97,7 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -117,6 +120,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mealEntityDao(): MealEntityDao
     abstract fun mealScheduleDao(): MealScheduleDao
     abstract fun mealNutritionDao(): MealNutritionDao
+    abstract fun mealOccurrenceDao(): MealOccurrenceDao
     abstract fun akImportedLogDao(): AkImportedLogDao
     abstract fun akImportedMealDao(): AkImportedMealDao
     abstract fun userNutritionGoalsEntityDao(): UserNutritionGoalsEntityDao

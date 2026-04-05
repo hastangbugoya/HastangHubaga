@@ -165,4 +165,21 @@ interface MealScheduleDao {
         }
         deleteScheduleForMeal(mealId)
     }
+
+    @Query("SELECT * FROM meal_schedules WHERE mealId = :mealId")
+    suspend fun getSchedulesForMeal(mealId: Long): List<MealScheduleEntity>
+
+    @Query("""
+        SELECT * FROM meal_schedule_fixed_times
+        WHERE scheduleId = :scheduleId
+        ORDER BY time ASC, id ASC
+    """)
+    suspend fun getFixedTimesForSchedule(scheduleId: Long): List<MealScheduleFixedTimeEntity>
+
+    @Query("""
+        SELECT * FROM meal_schedule_anchored_times
+        WHERE scheduleId = :scheduleId
+        ORDER BY id ASC
+    """)
+    suspend fun getAnchoredTimesForSchedule(scheduleId: Long): List<MealScheduleAnchoredTimeEntity>
 }

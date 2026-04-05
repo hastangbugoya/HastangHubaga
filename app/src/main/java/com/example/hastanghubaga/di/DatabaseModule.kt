@@ -11,6 +11,7 @@ import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
 import com.example.hastanghubaga.data.local.dao.meal.MealNutritionDao
+import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.meal.MealScheduleDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
@@ -148,4 +149,8 @@ object DatabaseModule {
     @Provides
     fun provideSupplementOccurrenceDao(db: AppDatabase): SupplementOccurrenceDao =
         db.supplementOccurrenceDao()
+
+    @Provides
+    fun provideMealOccurrenceDao(db: AppDatabase): MealOccurrenceDao =
+        db.mealOccurrenceDao()
 }

@@ -3,6 +3,7 @@ package com.example.hastanghubaga.domain.usecase.todaytimeline
 import android.util.Log
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
@@ -38,14 +39,14 @@ import kotlinx.datetime.toLocalDateTime
  * - actual rows come from activity logs
  * - reconciliation happens by occurrenceId
  *
- * Transitional meal model:
- * - native HH meals are now reusable templates, not timestamped day-events
+ * Current native HH meal model:
+ * - planned rows come from persisted meal occurrences
  * - imported AK meals are still concrete historical rows with timestamps
- * - therefore native HH meals are NOT rendered directly into the day timeline here
+ * - native HH actual meal log reconciliation is not wired yet
  *
  * This use case trusts upstream time resolution and only performs:
  * - mapping to timeline rows
- * - planned-vs-actual reconciliation
+ * - planned-vs-actual reconciliation where available
  * - deterministic merge/sort
  * - simplified upcoming schedule snapshot persistence
  */
@@ -59,6 +60,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
         supplementOccurrences: List<SupplementOccurrenceEntity>,
         supplements: List<Supplement>,
         supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
+        mealOccurrences: List<MealOccurrenceEntity> = emptyList(),
         meals: List<Meal> = emptyList(),
         importedMeals: List<AkImportedMealEntity> = emptyList(),
         activityOccurrences: List<ActivityOccurrenceEntity> = emptyList(),
@@ -67,6 +69,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
     ): List<TimelineItem> {
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
+
+        val activeMeals = meals.filter { it.isActive }
+        val mealLookup = activeMeals.associateBy { it.id }
 
         val activeActivities = activities.filter { it.isActive }
         val activityLookup = activeActivities.associateBy { it.id }
@@ -134,7 +139,20 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> supplementDoseLogItems: ${supplementDoseLogItems.size}")
 
-        meals.forEach { meal ->
+        Log.d("MEAL_RECON", "meals input size=${meals.size}")
+        meals.forEachIndexed { index, meal ->
+            Log.d(
+                "MEAL_RECON",
+                "meals#$index > id=${meal.id} name=${meal.name} type=${meal.type} treatAsAnchor=${meal.treatAsAnchor} isActive=${meal.isActive}"
+            )
+        }
+        meals.groupingBy { it.type }.eachCount()
+            .toSortedMap(compareBy { it.name })
+            .forEach { (type, count) ->
+                Log.d("MEAL_RECON", "mealTemplatesByType[$type]=$count")
+            }
+
+        activeMeals.forEach { meal ->
             val resolvedAnchor = resolveMealAnchorUseCase(meal)
             if (resolvedAnchor != null) {
                 Log.d(
@@ -144,20 +162,61 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         }
 
-        val mealItems = emptyList<TimelineItem.MealTimelineItem>()
+        Log.d("MEAL_RECON", "mealOccurrences input size=${mealOccurrences.size}")
+        mealOccurrences.forEachIndexed { index, occurrence ->
+            val matchedMeal = mealLookup[occurrence.mealId]
+            Log.d(
+                "MEAL_RECON",
+                "mealOccurrences#$index > id=${occurrence.id} mealId=${occurrence.mealId} scheduleId=${occurrence.scheduleId} date=${occurrence.date} plannedTimeSeconds=${occurrence.plannedTimeSeconds} sourceType=${occurrence.sourceType} isDeleted=${occurrence.isDeleted} matchedMealType=${matchedMeal?.type} matchedMealName=${matchedMeal?.name}"
+            )
+        }
+        mealOccurrences.groupingBy { occurrence ->
+            mealLookup[occurrence.mealId]?.type?.name ?: "UNMATCHED"
+        }.eachCount()
+            .toSortedMap()
+            .forEach { (typeName, count) ->
+                Log.d("MEAL_RECON", "mealOccurrencesByType[$typeName]=$count")
+            }
+
+        val mealItems =
+            mealOccurrences.mapNotNull { occurrence ->
+                val meal = mealLookup[occurrence.mealId] ?: return@mapNotNull null
+                val plannedTime = LocalTime.fromSecondOfDay(occurrence.plannedTimeSeconds)
+
+                TimelineItem.MealTimelineItem(
+                    time = plannedTime,
+                    meal = meal
+                )
+            }
         Log.d("Meow", "BuildTodayTimelineUseCase> mealItems: ${mealItems.size}")
+        mealItems.forEachIndexed { index, item ->
+            Log.d(
+                "MEAL_RECON",
+                "mealItems#$index > mealId=${item.meal.id} name=${item.meal.name} type=${item.meal.type} time=${item.time}"
+            )
+        }
+        mealItems.groupingBy { it.meal.type }.eachCount()
+            .toSortedMap(compareBy { it.name })
+            .forEach { (type, count) ->
+                Log.d("MEAL_RECON", "mealTimelineItemsByType[$type]=$count")
+            }
 
         Log.d("ImportDebug", "importedMeals input size=${importedMeals.size}")
-        importedMeals.forEach { importedMeal ->
+        importedMeals.forEachIndexed { index, importedMeal ->
             Log.d(
                 "ImportDebug",
-                "imported meal groupingKey=${importedMeal.groupingKey} " +
+                "importedMeals#$index > groupingKey=${importedMeal.groupingKey} " +
                         "logDateIso=${importedMeal.logDateIso} " +
                         "type=${importedMeal.type} " +
                         "timestamp=${importedMeal.timestamp} " +
                         "notes=${importedMeal.notes}"
             )
         }
+        importedMeals.groupingBy { it.type }.eachCount()
+            .toSortedMap(compareBy { it.name })
+            .forEach { (type, count) ->
+                Log.d("MEAL_RECON", "importedMealsByType[$type]=$count")
+            }
 
         val importedMealItems =
             importedMeals.map { importedMeal ->
@@ -171,12 +230,10 @@ class BuildTodayTimelineUseCase @Inject constructor(
             }
         Log.d("Meow", "BuildTodayTimelineUseCase> importedMealItems: ${importedMealItems.size}")
 
-        importedMealItems.forEach { importedMealItem ->
+        importedMealItems.forEachIndexed { index, importedMealItem ->
             Log.d(
-                "ImportDebug",
-                "timeline imported meal time=${importedMealItem.time} " +
-                        "groupingKey=${importedMealItem.meal.groupingKey} " +
-                        "type=${importedMealItem.meal.type}"
+                "MEAL_RECON",
+                "importedMealItems#$index > time=${importedMealItem.time} groupingKey=${importedMealItem.meal.groupingKey} type=${importedMealItem.meal.type}"
             )
         }
 
@@ -208,6 +265,22 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     .thenBy { itemStablePrimaryKey(it) }
                     .thenBy { itemStableSecondaryKey(it) }
             )
+
+        val mergedNativeMealItems = merged.filterIsInstance<TimelineItem.MealTimelineItem>()
+        Log.d("MEAL_RECON", "merged native meal items size=${mergedNativeMealItems.size}")
+        mergedNativeMealItems.groupingBy { it.meal.type }.eachCount()
+            .toSortedMap(compareBy { it.name })
+            .forEach { (type, count) ->
+                Log.d("MEAL_RECON", "mergedNativeMealItemsByType[$type]=$count")
+            }
+
+        val mergedImportedMealItems = merged.filterIsInstance<TimelineItem.ImportedMealTimelineItem>()
+        Log.d("MEAL_RECON", "merged imported meal items size=${mergedImportedMealItems.size}")
+        mergedImportedMealItems.groupingBy { it.meal.type }.eachCount()
+            .toSortedMap(compareBy { it.name })
+            .forEach { (type, count) ->
+                Log.d("MEAL_RECON", "mergedImportedMealItemsByType[$type]=$count")
+            }
 
         val upcomingItems =
             merged.mapNotNull<TimelineItem, UpcomingSchedule> { item ->
@@ -338,7 +411,11 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 }
 
             is TimelineItem.MealTimelineItem ->
-                item.meal.id.toString()
+                buildString {
+                    append(item.meal.id)
+                    append("|")
+                    append(item.time.toSecondOfDay())
+                }
 
             is TimelineItem.ImportedMealTimelineItem ->
                 item.meal.groupingKey
