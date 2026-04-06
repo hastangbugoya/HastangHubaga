@@ -8,9 +8,10 @@ import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealScheduleEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealScheduleFixedTimeEntity
-import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.meal.MealScheduleWithTimes
+import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.domain.repository.meal.MealRepository
+import com.example.hastanghubaga.domain.usecase.meal.MaterializeMealOccurrencesForDateUseCase
 import com.example.hastanghubaga.feature.schedule.ui.model.AnchorTypeUi
 import com.example.hastanghubaga.feature.schedule.ui.model.AnchoredTimeRowUi
 import com.example.hastanghubaga.feature.schedule.ui.model.FixedTimeRowUi
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
 data class MealsUiState(
@@ -61,7 +63,8 @@ data class MealEditorUiState(
 @HiltViewModel
 class MealsViewModel @Inject constructor(
     private val mealRepository: MealRepository,
-    private val mealScheduleDao: MealScheduleDao
+    private val mealScheduleDao: MealScheduleDao,
+    private val materializeMealOccurrencesForDateUseCase: MaterializeMealOccurrencesForDateUseCase
 ) : ViewModel() {
 
     private val editorState = MutableStateFlow<MealEditorUiState?>(null)
@@ -151,16 +154,13 @@ class MealsViewModel @Inject constructor(
 
     fun onRecurrenceModeChanged(value: RecurrenceMode) {
         scheduleState.updateAndValidate {
-            val normalizedWeekdays =
-                if (value == RecurrenceMode.WEEKLY) {
-                    it.selectedWeekdays.ifEmpty { setOf(WeekdayUi.MONDAY) }
+            it.copy(
+                recurrenceMode = value,
+                selectedWeekdays = if (value == RecurrenceMode.WEEKLY) {
+                    it.selectedWeekdays
                 } else {
                     emptySet()
                 }
-
-            it.copy(
-                recurrenceMode = value,
-                selectedWeekdays = normalizedWeekdays
             )
         }
     }
@@ -182,7 +182,7 @@ class MealsViewModel @Inject constructor(
     fun onStartDateClick() {
         scheduleState.updateAndValidate { current ->
             current.copy(
-                startDate = current.startDate ?: Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
+                startDate = current.startDate ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
             )
         }
     }
@@ -192,7 +192,7 @@ class MealsViewModel @Inject constructor(
             current.copy(
                 hasEndDate = value,
                 endDate = if (value) {
-                    current.endDate ?: current.startDate ?: Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
+                    current.endDate ?: current.startDate ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
                 } else {
                     null
                 }
@@ -204,7 +204,7 @@ class MealsViewModel @Inject constructor(
         scheduleState.updateAndValidate { current ->
             if (!current.hasEndDate) current
             else current.copy(
-                endDate = current.endDate ?: current.startDate ?: Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
+                endDate = current.endDate ?: current.startDate ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
             )
         }
     }
@@ -345,7 +345,7 @@ class MealsViewModel @Inject constructor(
                     interval = validatedSchedule.intervalInput.toIntOrNull()?.coerceAtLeast(1) ?: 1,
                     weeklyDays = validatedSchedule.toWeeklyDaysString(),
                     startDate = validatedSchedule.startDate?.toString()
-                        ?: Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault()).toString(),
+                        ?: Clock.System.todayIn(TimeZone.currentSystemDefault()).toString(),
                     endDate = if (validatedSchedule.hasEndDate) validatedSchedule.endDate?.toString() else null,
                     timingType = validatedSchedule.toTimingTypeString(),
                     isEnabled = true
@@ -379,6 +379,9 @@ class MealsViewModel @Inject constructor(
                 }
             }
 
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            materializeMealOccurrencesForDateUseCase(today)
+
             editorState.value = null
             scheduleState.value = defaultMealScheduleEditorState()
         }
@@ -403,7 +406,7 @@ class MealsViewModel @Inject constructor(
 }
 
 private fun defaultMealScheduleEditorState(): ScheduleEditorState {
-    val today = Clock.System.todayIn(kotlinx.datetime.TimeZone.currentSystemDefault())
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val initial = ScheduleEditorState(
         isEnabled = true,
         recurrenceMode = RecurrenceMode.DAILY,
