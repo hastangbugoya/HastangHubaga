@@ -13,11 +13,13 @@ import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityLog
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
+import com.example.hastanghubaga.domain.model.meal.MealLog
 import com.example.hastanghubaga.domain.model.meal.NutritionInput
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.model.supplement.SupplementDoseLog
 import com.example.hastanghubaga.domain.model.timeline.LogDoseInput
 import com.example.hastanghubaga.domain.repository.activity.ActivityLogRepository
+import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
@@ -43,6 +45,7 @@ import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSu
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
 import com.example.hastanghubaga.feature.today.TodayScreenContract.MealLogInput
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
+import com.example.hastanghubaga.ui.timeline.MealUiModel
 import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
 import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItem
@@ -82,6 +85,7 @@ class TodayScreenViewModel @Inject constructor(
     private val getActivityOccurrencesForDate: GetActivityOccurrencesForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
     private val activityLogRepository: ActivityLogRepository,
+    private val mealLogRepository: MealLogRepository,
     private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
     private val materializeActivityOccurrencesForDate: MaterializeActivityOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
@@ -347,7 +351,7 @@ class TodayScreenViewModel @Inject constructor(
 
             is TodayScreenContract.Intent.LogMealConfirmed -> {
                 val draft = state.value.mealDraft ?: intent.input
-
+                Log.d("MEAL_RECON", "TodayScreenViewModel.LogMealConfirmed> input: $draft")
                 viewModelScope.launch {
                     logMealUseCase(
                         input = TodayScreenContract.run { draft.toDomain() },
@@ -364,19 +368,25 @@ class TodayScreenViewModel @Inject constructor(
             }
 
             is TodayScreenContract.Intent.LogMealTapped -> {
+                val item: MealUiModel = intent.item
                 val logDate = selectedDate.value
-                val start = findPlannedMealTime(intent.mealType) ?: nowLocalTime(clock)
+                val start = item.time
                 val end = addDefaultDuration(start)
+
+                Log.d(
+                    "MEAL_RECON",
+                    "tap using UI item occurrenceId=${item.occurrenceId} mealType=${item.mealType} time=${item.time}"
+                )
 
                 setMealDraft(
                     MealLogInput(
-                        mealType = intent.mealType,
+                        mealType = item.mealType,
                         logDate = logDate,
                         startTime = start,
                         endTime = end,
                         notes = null,
                         nutrition = null,
-                        occurrenceId = null
+                        occurrenceId = item.occurrenceId
                     )
                 )
             }
@@ -418,6 +428,7 @@ class TodayScreenViewModel @Inject constructor(
         val supplementDoseLogs: List<SupplementDoseLog>,
         val mealOccurrences: List<MealOccurrenceEntity>,
         val meals: List<Meal>,
+        val mealLogs: List<MealLog>,
         val importedMeals: List<AkImportedMealEntity>,
         val activityOccurrences: List<ActivityOccurrenceEntity>,
         val activities: List<Activity>,
@@ -429,7 +440,9 @@ class TodayScreenViewModel @Inject constructor(
         viewModelScope.launch {
             selectedDate
                 .flatMapLatest { date ->
-                    combine(
+
+                    // ---------- FIRST BRANCH (supplements + meals + mealLogs) ----------
+                    val mealBaseFlow =
                         combine(
                             getSupplementOccurrencesForDate(date),
                             getActiveSupplements(),
@@ -437,6 +450,7 @@ class TodayScreenViewModel @Inject constructor(
                             getMealOccurrencesForDate(date),
                             getMealsForDate(date)
                         ) { supplementOccurrences, supplements, supplementDoseLogs, mealOccurrences, meals ->
+
                             Log.d("MEAL_RECON", "VM mealOccurrences input size=${mealOccurrences.size}")
                             mealOccurrences.forEachIndexed { index, occurrence ->
                                 Log.d(
@@ -467,20 +481,48 @@ class TodayScreenViewModel @Inject constructor(
                                     Log.d("MEAL_RECON", "VM mealTemplatesByType[$type]=$count")
                                 }
 
-                            QuadA(
+                            MealBaseInputs(
                                 supplementOccurrences = supplementOccurrences,
                                 supplements = supplements,
                                 supplementDoseLogs = supplementDoseLogs,
                                 mealOccurrences = mealOccurrences,
                                 meals = meals
                             )
-                        },
+                        }
+
+                    val mealWithLogsFlow =
+                        combine(
+                            mealBaseFlow,
+                            mealLogRepository.observeMealLogsForDate(date)
+                        ) { base, mealLogs ->
+
+                            Log.d("MEAL_RECON", "VM mealLogs input size=${mealLogs.size}")
+                            mealLogs.forEachIndexed { index, log ->
+                                Log.d(
+                                    "MEAL_RECON",
+                                    "VM mealLogs#$index > id=${log.id} occurrenceId=${log.occurrenceId} mealType=${log.mealType} start=${log.start}"
+                                )
+                            }
+
+                            QuadA(
+                                supplementOccurrences = base.supplementOccurrences,
+                                supplements = base.supplements,
+                                supplementDoseLogs = base.supplementDoseLogs,
+                                mealOccurrences = base.mealOccurrences,
+                                meals = base.meals,
+                                mealLogs = mealLogs
+                            )
+                        }
+
+                    // ---------- SECOND BRANCH (imported + activities) ----------
+                    val activityBranch =
                         combine(
                             getImportedMealsForDate(date),
                             getActivityOccurrencesForDate(date),
                             getActivitiesForDate(date),
                             activityLogRepository.observeActivityLogsForDate(date)
                         ) { importedMeals, activityOccurrences, activities, activityLogs ->
+
                             Log.d("MEAL_RECON", "VM importedMeals input size=${importedMeals.size}")
                             importedMeals.forEachIndexed { index, meal ->
                                 Log.d(
@@ -503,10 +545,12 @@ class TodayScreenViewModel @Inject constructor(
                                 activityLogs = activityLogs
                             )
                         }
-                    ) { a, b ->
+
+                    // ---------- FINAL COMBINE ----------
+                    combine(mealWithLogsFlow, activityBranch) { a, b ->
                         Log.d(
                             "MEAL_RECON",
-                            "VM combine snapshot: mealOccurrences=${a.mealOccurrences.size} meals=${a.meals.size} importedMeals=${b.importedMeals.size}"
+                            "VM combine snapshot: mealOccurrences=${a.mealOccurrences.size} meals=${a.meals.size} mealLogs=${a.mealLogs.size} importedMeals=${b.importedMeals.size}"
                         )
 
                         TimelineInputs(
@@ -515,6 +559,7 @@ class TodayScreenViewModel @Inject constructor(
                             supplementDoseLogs = a.supplementDoseLogs,
                             mealOccurrences = a.mealOccurrences,
                             meals = a.meals,
+                            mealLogs = a.mealLogs,
                             importedMeals = b.importedMeals,
                             activityOccurrences = b.activityOccurrences,
                             activities = b.activities,
@@ -523,7 +568,7 @@ class TodayScreenViewModel @Inject constructor(
                     }.map { inputs ->
                         Log.d(
                             "MEAL_RECON",
-                            "VM before timeline: mealOccurrences=${inputs.mealOccurrences.size} meals=${inputs.meals.size} imported=${inputs.importedMeals.size}"
+                            "VM before timeline: mealOccurrences=${inputs.mealOccurrences.size} meals=${inputs.meals.size} mealLogs=${inputs.mealLogs.size} imported=${inputs.importedMeals.size}"
                         )
 
                         buildTodayTimeline(
@@ -533,6 +578,7 @@ class TodayScreenViewModel @Inject constructor(
                             supplementDoseLogs = inputs.supplementDoseLogs,
                             mealOccurrences = inputs.mealOccurrences,
                             meals = inputs.meals,
+                            mealLogs = inputs.mealLogs,
                             importedMeals = inputs.importedMeals,
                             activityOccurrences = inputs.activityOccurrences,
                             activities = inputs.activities,
@@ -545,21 +591,6 @@ class TodayScreenViewModel @Inject constructor(
 
                     val mealItems = timeline.filterIsInstance<TimelineItem.MealTimelineItem>()
                     Log.d("MEAL_RECON", "VM final native meal items size=${mealItems.size}")
-                    mealItems.groupingBy { it.meal.type }
-                        .eachCount()
-                        .toSortedMap(compareBy { it.name })
-                        .forEach { (type, count) ->
-                            Log.d("MEAL_RECON", "VM finalNativeMealItemsByType[$type]=$count")
-                        }
-
-                    val importedItems = timeline.filterIsInstance<TimelineItem.ImportedMealTimelineItem>()
-                    Log.d("MEAL_RECON", "VM final imported meal items size=${importedItems.size}")
-                    importedItems.groupingBy { it.meal.type }
-                        .eachCount()
-                        .toSortedMap(compareBy { it.name })
-                        .forEach { (type, count) ->
-                            Log.d("MEAL_RECON", "VM finalImportedMealItemsByType[$type]=$count")
-                        }
 
                     _state.update {
                         it.copy(
@@ -578,7 +609,8 @@ class TodayScreenViewModel @Inject constructor(
         val supplements: List<Supplement>,
         val supplementDoseLogs: List<SupplementDoseLog>,
         val mealOccurrences: List<MealOccurrenceEntity>,
-        val meals: List<Meal>
+        val meals: List<Meal>,
+        val mealLogs: List<MealLog>
     )
 
     private data class QuadB(
@@ -586,6 +618,14 @@ class TodayScreenViewModel @Inject constructor(
         val activityOccurrences: List<ActivityOccurrenceEntity>,
         val activities: List<Activity>,
         val activityLogs: List<ActivityLog>
+    )
+
+    private data class MealBaseInputs(
+        val supplementOccurrences: List<SupplementOccurrenceEntity>,
+        val supplements: List<Supplement>,
+        val supplementDoseLogs: List<SupplementDoseLog>,
+        val mealOccurrences: List<MealOccurrenceEntity>,
+        val meals: List<Meal>
     )
 
     private fun materializeSelectedDate(date: LocalDate) {

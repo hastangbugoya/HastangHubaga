@@ -207,6 +207,17 @@ data class ActivityUiModel(
         }
 }
 
+/**
+ * UI-facing native HH meal row.
+ *
+ * [occurrenceId] is nullable because:
+ * - planned meal rows should carry the concrete occurrence identity
+ * - ad-hoc logged meals may have no occurrence linkage
+ *
+ * This allows meal tap → bottom sheet → confirm flows to preserve the exact
+ * planner occurrence being fulfilled, matching the same occurrence-aware merge
+ * model already used for activities.
+ */
 data class MealUiModel(
     override val id: Long,
     override val time: LocalTime,
@@ -217,14 +228,22 @@ data class MealUiModel(
     override val alertOffsetMinutes: Int? = null,
 
     val mealId: Long,
-    val mealType: MealType
+    val mealType: MealType,
+    val occurrenceId: String? = null
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
         TodayUiRowType.MEAL
 
     override val key: String =
-        "MEAL-$mealId"
+        buildString {
+            append("MEAL-")
+            append(mealId)
+            append("-")
+            append(time)
+            append("-")
+            append(occurrenceId ?: "NO_OCCURRENCE")
+        }
 }
 
 /**

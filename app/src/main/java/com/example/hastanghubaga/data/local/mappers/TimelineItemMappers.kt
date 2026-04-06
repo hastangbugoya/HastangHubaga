@@ -25,7 +25,11 @@ fun TimelineItem.toUpcomingSchedule(
                 subtitle = subtitle ?: "later"
             )
 
-        is TimelineItem.MealTimelineItem ->
+        is TimelineItem.MealTimelineItem -> {
+            android.util.Log.d(
+                "MEAL_RECON",
+                "map MealTimelineItem -> MealUiModel mealId=${meal.id} type=${meal.type} occurrenceId=$occurrenceId isCompleted=$isCompleted time=$time"
+            )
             UpcomingSchedule(
                 type = TodayUiRowType.MEAL,
                 referenceId = meal.id,
@@ -38,6 +42,7 @@ fun TimelineItem.toUpcomingSchedule(
                     ?: meal.type.name,
                 subtitle = meal.notes
             )
+        }
 
         is TimelineItem.ActivityTimelineItem ->
             UpcomingSchedule(

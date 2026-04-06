@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.ui.timeline
 
+import android.util.Log
 import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.supplement.SupplementWithUserSettings
@@ -74,7 +75,12 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 occurrenceId = occurrenceId
             )
 
-        is TimelineItem.MealTimelineItem ->
+        is TimelineItem.MealTimelineItem -> {
+            Log.d(
+                "MEAL_RECON",
+                "map MealTimelineItem -> MealUiModel mealId=${meal.id} type=${meal.type} occurrenceId=$occurrenceId isCompleted=$isCompleted time=$time"
+            )
+
             MealUiModel(
                 id = meal.id,
                 time = time,
@@ -82,10 +88,12 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                     .takeIf { it.isNotBlank() }
                     ?: meal.type.name,
                 subtitle = meal.notes,
-                isCompleted = false,
+                isCompleted = isCompleted,
                 mealId = meal.id,
-                mealType = meal.type
+                mealType = meal.type,
+                occurrenceId = occurrenceId
             )
+        }
 
         is TimelineItem.ImportedMealTimelineItem -> {
             val importedMealId = importedMealStableId(meal.groupingKey)

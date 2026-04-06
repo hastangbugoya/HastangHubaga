@@ -239,5 +239,5 @@ private fun dayOfWeekOffset(day: DayOfWeek, weekStartsOn: DayOfWeek): Int {
     return (dayIdx - startIdx + 7) % 7
 }
 
-private fun java.time.Month.toKotlinxMonth(): kotlinx.datetime.Month =
-    kotlinx.datetime.Month.entries.first { it.number == this.value }
+private fun java.time.Month.toKotlinxMonth(): Month =
+    Month.entries.first { it.number == this.value }

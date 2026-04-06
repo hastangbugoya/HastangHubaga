@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
+import android.util.Log
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
@@ -42,6 +43,15 @@ class BuildTodayTimelineUseCase @Inject constructor(
         activities: List<Activity> = emptyList(),
         activityLogs: List<ActivityLog> = emptyList()
     ): List<TimelineItem> {
+
+        Log.d("MEAL_RECON", "=== BuildTodayTimeline START date=$date ===")
+
+        mealOccurrences.forEach {
+            Log.d(
+                "MEAL_RECON",
+                "occurrence input id=${it.id} mealId=${it.mealId} plannedTime=${it.plannedTimeSeconds}"
+            )
+        }
 
         val supplementLookup = supplements.associateBy { it.id }
         val supplementTitleLookup = supplements.associate { it.id to it.name }
@@ -138,6 +148,14 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     .thenBy { itemStableSecondaryKey(it) }
             )
 
+        Log.d("MEAL_RECON", "=== FINAL MEAL ITEMS ===")
+        merged.filterIsInstance<TimelineItem.MealTimelineItem>().forEach {
+            Log.d(
+                "MEAL_RECON",
+                "final meal item type=${it.meal.type} occurrenceId=${it.occurrenceId} isCompleted=${it.isCompleted} time=${it.time}"
+            )
+        }
+
         val upcomingItems =
             merged.mapNotNull { it.toUpcomingSchedule(date) }
 
@@ -157,6 +175,11 @@ class BuildTodayTimelineUseCase @Inject constructor(
             occurrences.mapNotNull { o ->
                 val meal = lookup[o.mealId] ?: return@mapNotNull null
                 val t = LocalTime.fromSecondOfDay(o.plannedTimeSeconds)
+
+                Log.d(
+                    "MEAL_RECON",
+                    "BUILD planned meal occurrenceId=${o.id} mealId=${o.mealId} type=${meal.type} time=$t"
+                )
 
                 TimelineItem.MealTimelineItem(
                     time = t,
@@ -186,6 +209,11 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
                     val actualTime = log.start.time
 
+                    Log.d(
+                        "MEAL_RECON",
+                        "MERGE completed occurrenceId=${plannedItem.occurrenceId} -> actualTime=$actualTime"
+                    )
+
                     TimelineItem.MealTimelineItem(
                         time = actualTime,
                         occurrenceId = plannedItem.occurrenceId,
@@ -203,6 +231,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     val meal = log.mealId?.let(lookup::get) ?: return@mapNotNull null
                     val actualTime = log.start.time
 
+                    Log.d("MEAL_RECON", "ADHOC log id=${log.id} time=$actualTime")
+
                     TimelineItem.MealTimelineItem(
                         time = actualTime,
                         occurrenceId = "adhoc_${log.id}",
@@ -216,16 +246,6 @@ class BuildTodayTimelineUseCase @Inject constructor(
         return mergedPlanned + adHocLogs
     }
 
-    /**
-     * Activities follow the same merge contract as meals:
-     *
-     * 1. Planned occurrences always materialize as timeline candidates.
-     * 2. A log with a matching occurrenceId replaces the planned card's display time and marks it completed.
-     * 3. A log without occurrenceId becomes an ad-hoc completed timeline item.
-     *
-     * This keeps the timeline faithful to actual execution while preserving the planned-vs-actual
-     * scheduling model used elsewhere in the app.
-     */
     private fun buildMergedActivityTimelineItems(
         occurrences: List<ActivityOccurrenceEntity>,
         lookup: Map<Long, Activity>,

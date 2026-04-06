@@ -1,13 +1,13 @@
 package com.example.hastanghubaga.feature.today
 
 import androidx.compose.runtime.Composable
-import com.example.hastanghubaga.data.local.entity.meal.MealType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
+import com.example.hastanghubaga.ui.timeline.MealUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import kotlinx.datetime.Instant
@@ -114,11 +114,17 @@ object TodayScreenContract {
         data object DismissExerciseSheet : Intent
 
         /**
-         * User tapped a meal row on the timeline and wants to log the
-         * planned meal occurrence.
+         * User tapped a native HH meal row on the timeline and wants to log the
+         * exact planned meal occurrence represented by that row.
+         *
+         * Important:
+         * - The tapped [MealUiModel] is the source of truth.
+         * - Do not reconstruct meal logging state from meal type alone.
+         * - This preserves row-level planner identity such as [MealUiModel.occurrenceId]
+         *   and exact placement time from the tapped timeline item.
          */
         data class LogMealTapped(
-            val mealType: MealType,
+            val item: MealUiModel
         ) : Intent
 
         /**
@@ -272,7 +278,7 @@ object TodayScreenContract {
      * "I ate this meal at this time", while still leaving room for a meal window.
      */
     data class MealLogInput(
-        val mealType: MealType,
+        val mealType: com.example.hastanghubaga.data.local.entity.meal.MealType,
         val logDate: LocalDate,
         val startTime: LocalTime,
         val endTime: LocalTime? = null,
@@ -285,7 +291,7 @@ object TodayScreenContract {
         LogMealInput(
             mealType = mealType,
             timeUseIntent = TimeUseIntent.Explicit(logDate, startTime),
-            occurrenceId = occurrenceId, // ADD THIS
+            occurrenceId = occurrenceId,
             notes = notes,
             nutrition = nutrition?.toDomain()
         )

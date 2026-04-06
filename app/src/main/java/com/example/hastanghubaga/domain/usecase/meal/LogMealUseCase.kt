@@ -1,5 +1,6 @@
 package com.example.hastanghubaga.domain.usecase.meal
 
+import android.util.Log
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
@@ -42,7 +43,7 @@ class LogMealUseCase @Inject constructor(
         )
 
         val startTimestamp = localDateTimeToEpochMillis(date, time)
-
+        Log.d("MEAL_RECON","LogMealUseCase> input: ${input}")
         return repo.insertMealLog(
             mealId = null,
             occurrenceId = input.occurrenceId,
