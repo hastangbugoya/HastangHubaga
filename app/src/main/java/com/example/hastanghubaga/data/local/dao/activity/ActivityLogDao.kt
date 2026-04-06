@@ -101,20 +101,24 @@ interface ActivityLogDao {
         endUtcMillis: Long
     ): Flow<List<ActivityLogEntity>>
 
-    @Query(
-        """
-        SELECT occurrenceId
-        FROM activity_logs
-        WHERE occurrenceId IS NOT NULL
-          AND startTimestamp >= :startUtcMillis
-          AND startTimestamp < :endUtcMillis
-        """
-    )
-    suspend fun getSatisfiedOccurrenceIdsForDay(
-        startUtcMillis: Long,
-        endUtcMillis: Long
-    ): List<String>
+// --Commented out by Inspection START (4/6/2026 3:19 PM):
+//    @Query(
+//        """
+//        SELECT occurrenceId
+//        FROM activity_logs
+//        WHERE occurrenceId IS NOT NULL
+//          AND startTimestamp >= :startUtcMillis
+//          AND startTimestamp < :endUtcMillis
+//        """
+//    )
+//    suspend fun getSatisfiedOccurrenceIdsForDay(
+//        startUtcMillis: Long,
+//        endUtcMillis: Long
+//    ): List<String>
+// --Commented out by Inspection STOP (4/6/2026 3:19 PM)
 
-    @Query("SELECT * FROM activity_logs WHERE id = :id LIMIT 1")
-    suspend fun getActivityLogById(id: Long): ActivityLogEntity?
+// --Commented out by Inspection START (4/6/2026 3:19 PM):
+//    @Query("SELECT * FROM activity_logs WHERE id = :id LIMIT 1")
+//    suspend fun getActivityLogById(id: Long): ActivityLogEntity?
+// --Commented out by Inspection STOP (4/6/2026 3:19 PM)
 }
