@@ -32,6 +32,7 @@ import com.example.hastanghubaga.domain.usecase.meal.GetImportedMealsForDateUseC
 import com.example.hastanghubaga.domain.usecase.meal.GetMealOccurrencesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
+import com.example.hastanghubaga.domain.usecase.meal.MaterializeMealOccurrencesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetActiveSupplementsUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementDoseLogsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementOccurrencesForDateUseCase
@@ -92,6 +93,7 @@ class TodayScreenViewModel @Inject constructor(
     private val supplementIngredientDao: SupplementIngredientDao,
     private val ingredientEntityDao: IngredientEntityDao,
     private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
+    private val materializeMealOccurrencesForDate: MaterializeMealOccurrencesForDateUseCase,
     private val materializeActivityOccurrencesForDate: MaterializeActivityOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
     private val handleTimelineItemTapUseCase: HandleTimelineItemTapUseCase,
@@ -685,6 +687,10 @@ class TodayScreenViewModel @Inject constructor(
                 date = date,
                 meals = meals,
                 importedMeals = importedMeals
+            )
+
+            materializeMealOccurrencesForDate(
+                date = date
             )
 
             materializeActivityOccurrencesForDate(
