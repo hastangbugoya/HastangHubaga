@@ -3,17 +3,22 @@ package com.example.hastanghubaga.feature.supplements.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleWriteModel
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
+import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
+import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.data.local.entity.supplement.ScheduleRecurrenceType
 import com.example.hastanghubaga.data.local.entity.supplement.ScheduleTimingType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementEntity
+import com.example.hastanghubaga.data.local.entity.supplement.SupplementIngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
+import com.example.hastanghubaga.domain.repository.supplement.IngredientRepository
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.usecase.supplement.MaterializeSupplementOccurrencesForDateUseCase
@@ -50,6 +55,21 @@ data class SupplementsUiState(
     val editor: SupplementEditorUiState? = null
 )
 
+data class IngredientPickerItemUi(
+    val ingredientId: Long,
+    val name: String,
+    val defaultUnit: IngredientUnit,
+    val isSelected: Boolean
+)
+
+data class SupplementIngredientEditorItemUi(
+    val ingredientId: Long,
+    val ingredientName: String,
+    val displayName: String,
+    val amountPerServingInput: String,
+    val unit: IngredientUnit
+)
+
 data class SupplementEditorUiState(
     val id: Long? = null,
     val name: String = "",
@@ -60,13 +80,33 @@ data class SupplementEditorUiState(
     val scheduleEditors: List<ScheduleEditorState> = listOf(
         ScheduleEditorReducer.initialState()
     ),
-    val scheduleSaveErrors: List<String> = emptyList()
+    val scheduleSaveErrors: List<String> = emptyList(),
+
+    /**
+     * Canonical ingredients available for supplement linking.
+     * This powers the future checklist/picker UI.
+     */
+    val availableIngredients: List<IngredientPickerItemUi> = emptyList(),
+
+    /**
+     * Supplement-specific ingredient rows currently attached to this supplement.
+     * These rows hold per-supplement values such as label display name, amount,
+     * and unit.
+     */
+    val linkedIngredients: List<SupplementIngredientEditorItemUi> = emptyList(),
+
+    /**
+     * UI flag for the future ingredient checklist sheet/dialog.
+     */
+    val isIngredientPickerVisible: Boolean = false
 )
 
 @HiltViewModel
 class SupplementsViewModel @Inject constructor(
     private val supplementEntityDao: SupplementEntityDao,
+    private val supplementIngredientDao: SupplementIngredientDao,
     private val supplementScheduleDao: SupplementScheduleDao,
+    private val ingredientRepository: IngredientRepository,
     private val materializeSupplementOccurrencesForDateUseCase: MaterializeSupplementOccurrencesForDateUseCase
 ) : ViewModel() {
 
@@ -109,16 +149,26 @@ class SupplementsViewModel @Inject constructor(
         )
 
     fun onAddClick() {
-        editorState.value = SupplementEditorUiState(
-            isNew = true,
-            scheduleEditors = listOf(ScheduleEditorReducer.initialState())
-        )
+        viewModelScope.launch {
+            val ingredients = ingredientRepository.getAllIngredients()
+
+            editorState.value = SupplementEditorUiState(
+                isNew = true,
+                scheduleEditors = listOf(ScheduleEditorReducer.initialState()),
+                availableIngredients = ingredients.toPickerItems(selectedIngredientIds = emptySet()),
+                linkedIngredients = emptyList(),
+                isIngredientPickerVisible = false
+            )
+        }
     }
 
     fun onEditClick(id: Long) {
         viewModelScope.launch {
             val supplement = supplementEntityDao.getSupplementById(id) ?: return@launch
             val persistedSchedules = supplementScheduleDao.getSchedulesForSupplement(id)
+            val allIngredients = ingredientRepository.getAllIngredients()
+            val ingredientById = allIngredients.associateBy { it.id }
+            val existingLinks = supplementIngredientDao.getLinksForSupplement(id)
 
             val mappedScheduleEditors = if (persistedSchedules.isEmpty()) {
                 listOf(ScheduleEditorReducer.initialState())
@@ -134,6 +184,17 @@ class SupplementsViewModel @Inject constructor(
                 }
             }
 
+            val linkedIngredientItems = existingLinks.map { link ->
+                val canonical = ingredientById[link.ingredientId]
+                SupplementIngredientEditorItemUi(
+                    ingredientId = link.ingredientId,
+                    ingredientName = canonical?.name ?: link.displayName,
+                    displayName = link.displayName,
+                    amountPerServingInput = link.amountPerServing.toDisplayString(),
+                    unit = link.unit
+                )
+            }
+
             editorState.value = SupplementEditorUiState(
                 id = supplement.id,
                 name = supplement.name,
@@ -142,7 +203,12 @@ class SupplementsViewModel @Inject constructor(
                 isActive = supplement.isActive,
                 isNew = false,
                 scheduleEditors = mappedScheduleEditors,
-                scheduleSaveErrors = emptyList()
+                scheduleSaveErrors = emptyList(),
+                availableIngredients = allIngredients.toPickerItems(
+                    selectedIngredientIds = linkedIngredientItems.map { it.ingredientId }.toSet()
+                ),
+                linkedIngredients = linkedIngredientItems,
+                isIngredientPickerVisible = false
             )
         }
     }
@@ -161,6 +227,114 @@ class SupplementsViewModel @Inject constructor(
 
     fun onIsActiveChanged(value: Boolean) {
         editorState.update { current -> current?.copy(isActive = value) }
+    }
+
+    fun onOpenIngredientPicker() {
+        editorState.update { current ->
+            current?.copy(isIngredientPickerVisible = true)
+        }
+    }
+
+    fun onDismissIngredientPicker() {
+        editorState.update { current ->
+            current?.copy(isIngredientPickerVisible = false)
+        }
+    }
+
+    fun onIngredientCheckedChanged(
+        ingredientId: Long,
+        checked: Boolean
+    ) {
+        editorState.update { current ->
+            current ?: return@update null
+
+            val ingredient = current.availableIngredients
+                .firstOrNull { it.ingredientId == ingredientId }
+
+            if (ingredient == null) {
+                return@update current
+            }
+
+            val updatedLinkedIngredients = if (checked) {
+                if (current.linkedIngredients.any { it.ingredientId == ingredientId }) {
+                    current.linkedIngredients
+                } else {
+                    current.linkedIngredients + SupplementIngredientEditorItemUi(
+                        ingredientId = ingredient.ingredientId,
+                        ingredientName = ingredient.name,
+                        displayName = ingredient.name,
+                        amountPerServingInput = "",
+                        unit = ingredient.defaultUnit
+                    )
+                }
+            } else {
+                current.linkedIngredients.filterNot { it.ingredientId == ingredientId }
+            }
+
+            current.copy(
+                availableIngredients = current.availableIngredients.map { item ->
+                    if (item.ingredientId == ingredientId) {
+                        item.copy(isSelected = checked)
+                    } else {
+                        item
+                    }
+                },
+                linkedIngredients = updatedLinkedIngredients
+            )
+        }
+    }
+
+    fun onLinkedIngredientDisplayNameChanged(
+        ingredientId: Long,
+        value: String
+    ) {
+        editorState.update { current ->
+            current?.copy(
+                linkedIngredients = current.linkedIngredients.map { item ->
+                    if (item.ingredientId == ingredientId) {
+                        item.copy(displayName = value)
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
+    }
+
+    fun onLinkedIngredientAmountChanged(
+        ingredientId: Long,
+        value: String
+    ) {
+        if (value.isEmpty() || value.toDoubleOrNull() != null) {
+            editorState.update { current ->
+                current?.copy(
+                    linkedIngredients = current.linkedIngredients.map { item ->
+                        if (item.ingredientId == ingredientId) {
+                            item.copy(amountPerServingInput = value)
+                        } else {
+                            item
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    fun onLinkedIngredientUnitChanged(
+        ingredientId: Long,
+        unit: IngredientUnit
+    ) {
+        editorState.update { current ->
+            current?.copy(
+                linkedIngredients = current.linkedIngredients.map { item ->
+                    if (item.ingredientId == ingredientId) {
+                        item.copy(unit = unit)
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
     }
 
     fun onAddScheduleClick() {
@@ -268,6 +442,24 @@ class SupplementsViewModel @Inject constructor(
             supplementScheduleDao.replaceSchedulesForSupplement(
                 supplementId = supplementId,
                 schedules = writeModels
+            )
+
+            supplementIngredientDao.replaceLinksForSupplement(
+                supplementId = supplementId,
+                links = editor.linkedIngredients.mapNotNull { item ->
+                    val parsedAmount = item.amountPerServingInput.trim().toDoubleOrNull()
+                    if (parsedAmount == null) {
+                        null
+                    } else {
+                        SupplementIngredientEntity(
+                            supplementId = supplementId,
+                            ingredientId = item.ingredientId,
+                            displayName = item.displayName.trim().ifBlank { item.ingredientName },
+                            amountPerServing = parsedAmount,
+                            unit = item.unit
+                        )
+                    }
+                }
             )
 
             materializeSupplementOccurrencesForDateUseCase(
@@ -498,6 +690,27 @@ class SupplementsViewModel @Inject constructor(
             is ScheduleValidationError.InvalidTimeFormat -> "One or more fixed times are invalid."
             is ScheduleValidationError.InvalidOffset -> "One or more anchor offsets are invalid."
             ScheduleValidationError.EndDateBeforeStartDate -> "End date cannot be before start date."
+        }
+    }
+
+    private fun List<IngredientEntity>.toPickerItems(
+        selectedIngredientIds: Set<Long>
+    ): List<IngredientPickerItemUi> {
+        return sortedBy { it.name.lowercase() }.map { ingredient ->
+            IngredientPickerItemUi(
+                ingredientId = ingredient.id,
+                name = ingredient.name,
+                defaultUnit = ingredient.defaultUnit,
+                isSelected = ingredient.id in selectedIngredientIds
+            )
+        }
+    }
+
+    private fun Double.toDisplayString(): String {
+        return if (this % 1.0 == 0.0) {
+            toInt().toString()
+        } else {
+            toString()
         }
     }
 }

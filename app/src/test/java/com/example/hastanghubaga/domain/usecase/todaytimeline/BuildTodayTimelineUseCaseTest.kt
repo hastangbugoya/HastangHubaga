@@ -1,5 +1,7 @@
 package com.example.hastanghubaga.domain.usecase.todaytimeline
 
+import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
+import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.supplement.DoseAnchorType
 import com.example.hastanghubaga.data.local.entity.supplement.FrequencyType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
@@ -126,6 +128,7 @@ class BuildTodayTimelineUseCaseTest {
         )
 
     private fun meal(
+        id: Long,
         name: String,
         at: LocalDateTime
     ): Meal =
@@ -134,13 +137,44 @@ class BuildTodayTimelineUseCaseTest {
             at = at
         )
 
+    private fun mealOccurrence(
+        id: String,
+        mealId: Long,
+        time: LocalTime
+    ): MealOccurrenceEntity =
+        MealOccurrenceEntity(
+            id = id,
+            mealId = mealId,
+            scheduleId = null,
+            date = testDate.toString(),
+            plannedTimeSeconds = time.toSecondOfDay(),
+            sourceType = com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceSourceType.SCHEDULED,
+            isDeleted = false
+        )
+
     private fun activity(
+        id: Long,
         name: String,
         at: LocalDateTime
     ): Activity =
         FakeActivityFactory.create(
             name = name,
             at = at
+        )
+
+    private fun activityOccurrence(
+        id: String,
+        activityId: Long,
+        time: LocalTime
+    ): ActivityOccurrenceEntity =
+        ActivityOccurrenceEntity(
+            id = id,
+            activityId = activityId,
+            scheduleId = null,
+            date = testDate.toString(),
+            plannedTimeSeconds = time.toSecondOfDay(),
+            sourceType = com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceSourceType.SCHEDULED,
+            isDeleted = false
         )
 
     private fun activityLog(
@@ -269,8 +303,9 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `meals are mapped correctly`() = runTest {
+    fun `meal occurrences are mapped correctly`() = runTest {
         val meal = meal(
+            id = 10L,
             name = "Lunch",
             at = LocalDateTime(2025, 1, 1, 12, 30)
         )
@@ -279,6 +314,13 @@ class BuildTodayTimelineUseCaseTest {
             date = testDate,
             supplementOccurrences = emptyList(),
             supplements = emptyList(),
+            mealOccurrences = listOf(
+                mealOccurrence(
+                    id = "meal-occ-1",
+                    mealId = meal.id,
+                    time = LocalTime(12, 30)
+                )
+            ),
             meals = listOf(meal)
         )
 
@@ -288,18 +330,33 @@ class BuildTodayTimelineUseCaseTest {
     }
 
     @Test
-    fun `activity logs are mapped correctly`() = runTest {
+    fun `activity occurrence plus log are mapped correctly`() = runTest {
+        val activity = activity(
+            id = 1L,
+            name = "Workout",
+            at = LocalDateTime(2025, 1, 1, 6, 0)
+        )
+
         val log = activityLog(
             id = 10L,
             activityId = 1L,
             activityType = ActivityType.STRENGTH_TRAINING,
-            at = LocalDateTime(2025, 1, 1, 6, 0)
+            at = LocalDateTime(2025, 1, 1, 6, 0),
+            occurrenceId = "act-occ-1"
         )
 
         val result = useCase(
             date = testDate,
             supplementOccurrences = emptyList(),
             supplements = emptyList(),
+            activityOccurrences = listOf(
+                activityOccurrence(
+                    id = "act-occ-1",
+                    activityId = activity.id,
+                    time = LocalTime(6, 0)
+                )
+            ),
+            activities = listOf(activity),
             activityLogs = listOf(log)
         )
 
@@ -307,6 +364,7 @@ class BuildTodayTimelineUseCaseTest {
         assertEquals(LocalTime(6, 0), item.time)
         assertEquals(1L, item.activityId)
         assertEquals("Workout", item.title)
+        assertTrue(item.isCompleted)
     }
 
     @Test
@@ -317,15 +375,23 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val meal = meal(
-            "Breakfast",
-            LocalDateTime(2025, 1, 1, 8, 0)
+            id = 10L,
+            name = "Breakfast",
+            at = LocalDateTime(2025, 1, 1, 8, 0)
+        )
+
+        val activity = activity(
+            id = 2L,
+            name = "Workout",
+            at = LocalDateTime(2025, 1, 1, 6, 30)
         )
 
         val log = activityLog(
             id = 10L,
             activityId = 2L,
             activityType = ActivityType.RUNNING,
-            at = LocalDateTime(2025, 1, 1, 6, 30)
+            at = LocalDateTime(2025, 1, 1, 6, 30),
+            occurrenceId = "act-occ-1"
         )
 
         val result = useCase(
@@ -338,7 +404,22 @@ class BuildTodayTimelineUseCaseTest {
                 )
             ),
             supplements = listOf(supplement),
+            mealOccurrences = listOf(
+                mealOccurrence(
+                    id = "meal-occ-1",
+                    mealId = meal.id,
+                    time = LocalTime(8, 0)
+                )
+            ),
             meals = listOf(meal),
+            activityOccurrences = listOf(
+                activityOccurrence(
+                    id = "act-occ-1",
+                    activityId = activity.id,
+                    time = LocalTime(6, 30)
+                )
+            ),
+            activities = listOf(activity),
             activityLogs = listOf(log)
         )
 
@@ -360,8 +441,9 @@ class BuildTodayTimelineUseCaseTest {
         )
 
         val meal = meal(
-            "Snack",
-            LocalDateTime(2025, 1, 1, 9, 0)
+            id = 10L,
+            name = "Snack",
+            at = LocalDateTime(2025, 1, 1, 9, 0)
         )
 
         val result = useCase(
@@ -374,6 +456,13 @@ class BuildTodayTimelineUseCaseTest {
                 )
             ),
             supplements = listOf(supplement),
+            mealOccurrences = listOf(
+                mealOccurrence(
+                    id = "meal-occ-1",
+                    mealId = meal.id,
+                    time = LocalTime(9, 0)
+                )
+            ),
             meals = listOf(meal)
         )
 

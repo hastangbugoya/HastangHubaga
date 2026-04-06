@@ -72,7 +72,8 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 doseState = doseState,
                 defaultUnit = defaultUnit,
                 suggestedDose = suggestedDose,
-                occurrenceId = occurrenceId
+                occurrenceId = occurrenceId,
+                ingredients = ingredients
             )
 
         is TimelineItem.MealTimelineItem -> {
@@ -141,7 +142,8 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 supplementId = supplementId,
                 scheduledTime = scheduledTime,
                 amountText = amount?.toString(),
-                unitText = unit
+                unitText = unit,
+                ingredients = ingredients
             )
     }
 

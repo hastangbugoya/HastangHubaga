@@ -3,8 +3,8 @@ package com.example.hastanghubaga.ui.timeline
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.meal.Meal
-import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import com.example.hastanghubaga.domain.model.supplement.MealAwareDoseState
+import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import kotlinx.datetime.LocalTime
 
 sealed interface TimelineItem {
@@ -21,6 +21,20 @@ sealed interface TimelineItem {
      * time and should not reinterpret source model timestamps.
      */
     val time: LocalTime
+
+    /**
+     * UI-ready supplement ingredient row for expanded timeline card display.
+     *
+     * Important:
+     * - [name] is the display ingredient name already resolved upstream
+     * - [amountText] is the display-ready amount/unit text
+     * - formatting/styling is handled by UI rendering, not by flattening into a
+     *   single string here
+     */
+    data class TimelineIngredientUi(
+        val name: String,
+        val amountText: String
+    )
 
     /**
      * Planned supplement timeline row.
@@ -59,7 +73,8 @@ sealed interface TimelineItem {
         val suggestedDose: Double,
         val doseState: MealAwareDoseState? = null,
         val scheduledTime: LocalTime = time,
-        val isTaken: Boolean = false
+        val isTaken: Boolean = false,
+        val ingredients: List<TimelineIngredientUi> = emptyList()
     ) : TimelineItem
 
     /**
@@ -159,6 +174,7 @@ sealed interface TimelineItem {
         override val time: LocalTime,
         val amount: Double?,
         val unit: String?,
-        val scheduledTime: LocalTime? = null
+        val scheduledTime: LocalTime? = null,
+        val ingredients: List<TimelineIngredientUi> = emptyList()
     ) : TimelineItem
 }

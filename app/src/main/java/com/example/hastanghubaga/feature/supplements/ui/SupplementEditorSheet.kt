@@ -7,15 +7,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -30,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
 import com.example.hastanghubaga.feature.schedule.ui.ScheduleEditorSection
 import com.example.hastanghubaga.feature.schedule.ui.model.ScheduleEditorAction
 import kotlinx.datetime.Instant
@@ -51,6 +60,12 @@ fun SupplementEditorSheet(
     onBrandChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onIsActiveChanged: (Boolean) -> Unit,
+    onOpenIngredientPicker: () -> Unit,
+    onDismissIngredientPicker: () -> Unit,
+    onIngredientCheckedChanged: (ingredientId: Long, checked: Boolean) -> Unit,
+    onLinkedIngredientDisplayNameChanged: (ingredientId: Long, value: String) -> Unit,
+    onLinkedIngredientAmountChanged: (ingredientId: Long, value: String) -> Unit,
+    onLinkedIngredientUnitChanged: (ingredientId: Long, unit: IngredientUnit) -> Unit,
     onAddScheduleClick: () -> Unit,
     onRemoveScheduleClick: (Int) -> Unit,
     onScheduleAction: (Int, ScheduleEditorAction) -> Unit,
@@ -137,6 +152,8 @@ fun SupplementEditorSheet(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .imePadding()
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -198,6 +215,130 @@ fun SupplementEditorSheet(
             Switch(
                 checked = state.isActive,
                 onCheckedChange = onIsActiveChanged
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Ingredients",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            TextButton(
+                onClick = {
+                    if (state.isIngredientPickerVisible) {
+                        onDismissIngredientPicker()
+                    } else {
+                        onOpenIngredientPicker()
+                    }
+                }
+            ) {
+                Text(if (state.isIngredientPickerVisible) "Done" else "Manage ingredients")
+            }
+        }
+
+        Text(
+            text = "Pick canonical ingredients, then edit supplement-specific label, amount, and unit below.",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        if (state.isIngredientPickerVisible) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (state.availableIngredients.isEmpty()) {
+                    Text(
+                        text = "No ingredients available yet. Create ingredients first from Settings.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    state.availableIngredients.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "Default unit: ${item.defaultUnit.displayLabel()}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+
+                            Checkbox(
+                                checked = item.isSelected,
+                                onCheckedChange = { checked ->
+                                    onIngredientCheckedChanged(item.ingredientId, checked)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(4.dp))
+        }
+
+        if (state.linkedIngredients.isNotEmpty()) {
+            Text(
+                text = "Linked ingredient values",
+                style = MaterialTheme.typography.titleSmall
+            )
+
+            state.linkedIngredients.forEach { item ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = item.ingredientName,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+
+                    OutlinedTextField(
+                        value = item.displayName,
+                        onValueChange = { onLinkedIngredientDisplayNameChanged(item.ingredientId, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Display name") },
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = item.amountPerServingInput,
+                        onValueChange = { onLinkedIngredientAmountChanged(item.ingredientId, it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Amount per serving") },
+                        singleLine = true
+                    )
+
+                    IngredientUnitDropdownField(
+                        label = "Unit",
+                        selectedUnit = item.unit,
+                        onUnitSelected = { onLinkedIngredientUnitChanged(item.ingredientId, it) }
+                    )
+
+                    HorizontalDivider()
+                }
+            }
+        } else {
+            Text(
+                text = "No ingredients linked yet.",
+                style = MaterialTheme.typography.bodySmall
             )
         }
 
@@ -368,7 +509,7 @@ fun SupplementEditorSheet(
         }
 
         if (isExisting) {
-            TextButton(
+            OutlinedButton(
                 onClick = onDeleteClick,
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 14.dp)
@@ -380,6 +521,51 @@ fun SupplementEditorSheet(
         Spacer(Modifier.height(8.dp))
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun IngredientUnitDropdownField(
+    label: String,
+    selectedUnit: IngredientUnit,
+    onUnitSelected: (IngredientUnit) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedUnit.displayLabel(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            IngredientUnit.entries.forEach { unit ->
+                DropdownMenuItem(
+                    text = { Text(unit.displayLabel()) },
+                    onClick = {
+                        expanded = false
+                        onUnitSelected(unit)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun IngredientUnit.displayLabel(): String = name
 
 private fun LocalDate.toEpochMillisUtc(): Long {
     return atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds()

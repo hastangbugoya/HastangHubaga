@@ -21,6 +21,7 @@ import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementDailyLogDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementNutritionDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
@@ -40,6 +41,7 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+
     @Provides
     @Singleton
     fun provideDatabase(
@@ -58,6 +60,7 @@ object DatabaseModule {
                 Log.e("Meow", "DB INSTANCE CREATED")
             }
 
+    // --- Supplement ---
     @Provides
     fun provideSupplementEntityDao(db: AppDatabase): SupplementEntityDao =
         db.supplementEntityDao()
@@ -67,12 +70,20 @@ object DatabaseModule {
         db.supplementScheduleDao()
 
     @Provides
-    fun provideIngredientDao(db: AppDatabase): IngredientEntityDao =
-        db.ingredientEntityDao()
+    fun provideSupplementIngredientDao(db: AppDatabase): SupplementIngredientDao =
+        db.supplementIngredientDao()
 
     @Provides
     fun provideSupplementDailyLogDao(db: AppDatabase): SupplementDailyLogDao =
         db.supplementDailyLogDao()
+
+    @Provides
+    fun provideSupplementNutritionDao(db: AppDatabase): SupplementNutritionDao =
+        db.supplementNutritionDao()
+
+    @Provides
+    fun provideSupplementOccurrenceDao(db: AppDatabase): SupplementOccurrenceDao =
+        db.supplementOccurrenceDao()
 
     @Provides
     @Singleton
@@ -87,6 +98,16 @@ object DatabaseModule {
     fun provideSupplementUserSettingsDao(db: AppDatabase): SupplementUserSettingsDao =
         db.supplementUserSettingsDao()
 
+    // --- Ingredient ---
+    @Provides
+    fun provideIngredientDao(db: AppDatabase): IngredientEntityDao =
+        db.ingredientEntityDao()
+
+    @Provides
+    fun provideIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
+        db.ingredientPreferenceDao()
+
+    // --- Activity ---
     @Provides
     fun provideActivityEntityDao(db: AppDatabase): ActivityEntityDao =
         db.activityEntityDao()
@@ -103,6 +124,7 @@ object DatabaseModule {
     fun provideActivityLogDao(db: AppDatabase): ActivityLogDao =
         db.activityLogDao()
 
+    // --- Meal ---
     @Provides
     fun provideMealEntityDao(db: AppDatabase): MealEntityDao =
         db.mealEntityDao()
@@ -120,6 +142,10 @@ object DatabaseModule {
         db.mealLogDao()
 
     @Provides
+    fun provideMealOccurrenceDao(db: AppDatabase): MealOccurrenceDao =
+        db.mealOccurrenceDao()
+
+    @Provides
     fun provideAkImportedLogDao(db: AppDatabase): AkImportedLogDao =
         db.akImportedLogDao()
 
@@ -127,13 +153,10 @@ object DatabaseModule {
     fun provideAkImportedMealDao(db: AppDatabase): AkImportedMealDao =
         db.akImportedMealDao()
 
+    // --- Nutrition ---
     @Provides
     fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
         db.userNutritionGoalsEntityDao()
-
-    @Provides
-    fun provideUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
-        db.upcomingScheduleDao()
 
     @Provides
     fun provideNutritionPlanEntityDao(db: AppDatabase): NutritionPlanEntityDao =
@@ -143,19 +166,8 @@ object DatabaseModule {
     fun provideNutrientGoalDao(db: AppDatabase): NutrientGoalDao =
         db.nutrientGoalDao()
 
+    // --- Timeline ---
     @Provides
-    fun provideIngredientPreferenceDao(db: AppDatabase): IngredientPreferenceDao =
-        db.ingredientPreferenceDao()
-
-    @Provides
-    fun provideSupplementNutritionDao(db: AppDatabase): SupplementNutritionDao =
-        db.supplementNutritionDao()
-
-    @Provides
-    fun provideSupplementOccurrenceDao(db: AppDatabase): SupplementOccurrenceDao =
-        db.supplementOccurrenceDao()
-
-    @Provides
-    fun provideMealOccurrenceDao(db: AppDatabase): MealOccurrenceDao =
-        db.mealOccurrenceDao()
+    fun provideUpcomingScheduleDao(db: AppDatabase): UpcomingScheduleDao =
+        db.upcomingScheduleDao()
 }

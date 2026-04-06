@@ -183,7 +183,7 @@ class SupplementRepositoryImpl @Inject constructor(
         supplement.isActive
 
     override fun getAllIngredients(): Flow<List<Ingredient>> =
-        ingredientDao.getAllIngredientsFlow()
+        ingredientDao.observeAllIngredients()
             .map { it.map(IngredientEntity::toDomain) }
 
     override suspend fun getDailyIngredientSummary(

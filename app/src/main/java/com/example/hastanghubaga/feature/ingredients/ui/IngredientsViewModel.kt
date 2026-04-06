@@ -2,10 +2,11 @@ package com.example.hastanghubaga.feature.ingredients.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.supplement.IngredientUnit
+import com.example.hastanghubaga.domain.repository.supplement.IngredientRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class IngredientEditorState(
     val ingredientId: Long? = null,
@@ -39,10 +39,10 @@ data class IngredientsUiState(
 
 @HiltViewModel
 class IngredientsViewModel @Inject constructor(
-    private val ingredientDao: IngredientEntityDao
+    private val ingredientRepository: IngredientRepository
 ) : ViewModel() {
 
-    private val ingredientsFlow = ingredientDao.getAllIngredientsFlow()
+    private val ingredientsFlow = ingredientRepository.observeAllIngredients()
     private val editorState = MutableStateFlow(IngredientEditorState())
 
     val uiState: StateFlow<IngredientsUiState> =
@@ -66,7 +66,7 @@ class IngredientsViewModel @Inject constructor(
 
     fun onIngredientClick(ingredientId: Long) {
         viewModelScope.launch {
-            val ingredient = ingredientDao.getIngredientById(ingredientId) ?: return@launch
+            val ingredient = ingredientRepository.getIngredientById(ingredientId) ?: return@launch
             editorState.value = ingredient.toEditorState()
         }
     }
@@ -133,7 +133,7 @@ class IngredientsViewModel @Inject constructor(
         viewModelScope.launch {
             editorState.update { it.copy(isSaving = true, errorMessage = null) }
 
-            val existingByName = ingredientDao.getIngredientByName(trimmedName)
+            val existingByName = ingredientRepository.getIngredientByName(trimmedName)
             if (existingByName != null && existingByName.id != current.ingredientId) {
                 editorState.update {
                     it.copy(
@@ -156,11 +156,7 @@ class IngredientsViewModel @Inject constructor(
                 category = trimmedCategory.ifBlank { null }
             )
 
-            if (current.ingredientId == null) {
-                ingredientDao.insertIngredient(entity)
-            } else {
-                ingredientDao.updateIngredient(entity)
-            }
+            ingredientRepository.upsertIngredient(entity)
 
             editorState.value = IngredientEditorState()
         }
@@ -171,8 +167,8 @@ class IngredientsViewModel @Inject constructor(
         val ingredientId = current.ingredientId ?: return
 
         viewModelScope.launch {
-            val ingredient = ingredientDao.getIngredientById(ingredientId) ?: return@launch
-            ingredientDao.deleteIngredient(ingredient)
+            val ingredient = ingredientRepository.getIngredientById(ingredientId) ?: return@launch
+            ingredientRepository.deleteIngredient(ingredient)
             editorState.value = IngredientEditorState()
         }
     }

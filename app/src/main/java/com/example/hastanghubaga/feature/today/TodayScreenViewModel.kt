@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
+import com.example.hastanghubaga.data.local.dao.supplement.SupplementIngredientDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealOccurrenceEntity
@@ -52,6 +54,7 @@ import com.example.hastanghubaga.ui.timeline.TimelineItem
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.TodayUiRowType
 import com.example.hastanghubaga.ui.timeline.toTimelineItemUiModels
+import com.example.hastanghubaga.ui.util.asDisplayTextNonComposable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +89,8 @@ class TodayScreenViewModel @Inject constructor(
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
     private val activityLogRepository: ActivityLogRepository,
     private val mealLogRepository: MealLogRepository,
+    private val supplementIngredientDao: SupplementIngredientDao,
+    private val ingredientEntityDao: IngredientEntityDao,
     private val materializeSupplementOccurrencesForDate: MaterializeSupplementOccurrencesForDateUseCase,
     private val materializeActivityOccurrencesForDate: MaterializeActivityOccurrencesForDateUseCase,
     private val buildTodayTimeline: BuildTodayTimelineUseCase,
@@ -441,7 +446,6 @@ class TodayScreenViewModel @Inject constructor(
             selectedDate
                 .flatMapLatest { date ->
 
-                    // ---------- FIRST BRANCH (supplements + meals + mealLogs) ----------
                     val mealBaseFlow =
                         combine(
                             getSupplementOccurrencesForDate(date),
@@ -514,7 +518,6 @@ class TodayScreenViewModel @Inject constructor(
                             )
                         }
 
-                    // ---------- SECOND BRANCH (imported + activities) ----------
                     val activityBranch =
                         combine(
                             getImportedMealsForDate(date),
@@ -546,7 +549,6 @@ class TodayScreenViewModel @Inject constructor(
                             )
                         }
 
-                    // ---------- FINAL COMBINE ----------
                     combine(mealWithLogsFlow, activityBranch) { a, b ->
                         Log.d(
                             "MEAL_RECON",
@@ -571,11 +573,15 @@ class TodayScreenViewModel @Inject constructor(
                             "VM before timeline: mealOccurrences=${inputs.mealOccurrences.size} meals=${inputs.meals.size} mealLogs=${inputs.mealLogs.size} imported=${inputs.importedMeals.size}"
                         )
 
+                        val supplementIngredientsBySupplementId =
+                            buildSupplementIngredientsBySupplementId(inputs.supplements)
+
                         buildTodayTimeline(
                             date = date,
                             supplementOccurrences = inputs.supplementOccurrences,
                             supplements = inputs.supplements,
                             supplementDoseLogs = inputs.supplementDoseLogs,
+                            supplementIngredientsBySupplementId = supplementIngredientsBySupplementId,
                             mealOccurrences = inputs.mealOccurrences,
                             meals = inputs.meals,
                             mealLogs = inputs.mealLogs,
@@ -602,6 +608,48 @@ class TodayScreenViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    private suspend fun buildSupplementIngredientsBySupplementId(
+        supplements: List<Supplement>
+    ): Map<Long, List<TimelineItem.TimelineIngredientUi>> {
+        val supplementIds = supplements.map { it.id }.toSet()
+        if (supplementIds.isEmpty()) return emptyMap()
+
+        val ingredientLookup =
+            ingredientEntityDao.getAllIngredients().associateBy { it.id }
+
+        return supplementIngredientDao.getAllLinks()
+            .asSequence()
+            .filter { it.supplementId in supplementIds }
+            .groupBy { it.supplementId }
+            .mapValues { (_, links) ->
+                links.map { link ->
+                    val canonicalName = ingredientLookup[link.ingredientId]?.name
+                    val displayName = link.displayName?.takeIf { it.isNotBlank() }
+                    val resolvedName = canonicalName ?: displayName ?: "Ingredient"
+
+                    TimelineItem.TimelineIngredientUi(
+                        name = resolvedName,
+                        amountText = buildIngredientAmountText(
+                            amount = link.amountPerServing,
+                            unitText = link.unit?.name
+                        )
+                    )
+                }
+            }
+    }
+
+    private fun buildIngredientAmountText(
+        amount: Double?,
+        unitText: String?
+    ): String {
+        val amountPart = amount?.asDisplayTextNonComposable().orEmpty()
+        val unitPart = unitText?.takeIf { it.isNotBlank() }.orEmpty()
+
+        return listOf(amountPart, unitPart)
+            .filter { it.isNotBlank() }
+            .joinToString(separator = " ")
     }
 
     private data class QuadA(

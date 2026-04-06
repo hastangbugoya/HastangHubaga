@@ -35,6 +35,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
         supplementOccurrences: List<SupplementOccurrenceEntity>,
         supplements: List<Supplement>,
         supplementDoseLogs: List<SupplementDoseLog> = emptyList(),
+        supplementIngredientsBySupplementId: Map<Long, List<TimelineItem.TimelineIngredientUi>> = emptyMap(),
         mealOccurrences: List<MealOccurrenceEntity> = emptyList(),
         meals: List<Meal> = emptyList(),
         mealLogs: List<MealLog> = emptyList(),
@@ -86,7 +87,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     subtitle = subtitle,
                     defaultUnit = supplement.recommendedDoseUnit,
                     suggestedDose = supplement.recommendedServingSize,
-                    scheduledTime = plannedTime
+                    scheduledTime = plannedTime,
+                    ingredients = supplementIngredientsBySupplementId[supplement.id].orEmpty()
                 )
             }
 
@@ -107,7 +109,8 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     time = log.timestamp.time,
                     amount = log.actualServingTaken,
                     unit = log.doseUnit.name,
-                    scheduledTime = log.occurrenceId?.let(supplementOccurrenceTimeLookup::get)
+                    scheduledTime = log.occurrenceId?.let(supplementOccurrenceTimeLookup::get),
+                    ingredients = supplementIngredientsBySupplementId[log.supplementId].orEmpty()
                 )
             }
 

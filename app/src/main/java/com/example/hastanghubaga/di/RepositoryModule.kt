@@ -2,6 +2,7 @@ package com.example.hastanghubaga.di
 
 import com.example.hastanghubaga.data.repository.ActivityLogRepositoryImpl
 import com.example.hastanghubaga.data.repository.ActivityOccurrenceRepositoryImpl
+import com.example.hastanghubaga.data.repository.IngredientRepositoryImpl
 import com.example.hastanghubaga.data.repository.MealLogRepositoryImpl
 import com.example.hastanghubaga.data.repository.MealOccurrenceRepositoryImpl
 import com.example.hastanghubaga.data.repository.NutritionAggregateRepositoryImpl
@@ -12,6 +13,7 @@ import com.example.hastanghubaga.domain.repository.activity.ActivityOccurrenceRe
 import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.repository.meal.MealOccurrenceRepository
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionAggregateRepository
+import com.example.hastanghubaga.domain.repository.supplement.IngredientRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogReadRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementOccurrenceRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementRepository
@@ -42,6 +44,12 @@ abstract class RepositoryModule {
     abstract fun bindSupplementOccurrenceRepository(
         impl: SupplementOccurrenceRepositoryImpl
     ): SupplementOccurrenceRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIngredientRepository(
+        impl: IngredientRepositoryImpl
+    ): IngredientRepository
 
     @Binds
     @Singleton

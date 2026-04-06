@@ -138,6 +138,7 @@ data class SupplementUiModel(
     val defaultUnit: SupplementDoseUnit,
     val suggestedDose: Double,
     val occurrenceId: String? = null,
+    val ingredients: List<TimelineItem.TimelineIngredientUi> = emptyList()
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =
@@ -304,7 +305,8 @@ data class SupplementDoseLogUiModel(
      */
     val scheduledTime: LocalTime?,
     val amountText: String?,
-    val unitText: String?
+    val unitText: String?,
+    val ingredients: List<TimelineItem.TimelineIngredientUi> = emptyList()
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType = TodayUiRowType.SUPPLEMENT_DOSE_LOG

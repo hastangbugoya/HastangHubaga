@@ -65,7 +65,11 @@ import kotlinx.serialization.Serializable
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("supplementId"), Index("ingredientId")]
+    indices = [
+        Index("supplementId"),
+        Index("ingredientId"),
+        Index(value = ["supplementId", "ingredientId"], unique = true)
+    ]
 )
 data class SupplementIngredientEntity(
     @PrimaryKey(autoGenerate = true)

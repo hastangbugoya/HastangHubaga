@@ -43,7 +43,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +80,8 @@ import com.example.hastanghubaga.ui.common.SnackbarController
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.ImportedMealUiModel
 import com.example.hastanghubaga.ui.timeline.MealUiModel
+import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
+import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
 import com.example.hastanghubaga.ui.timeline.icon
 import com.example.hastanghubaga.ui.tokens.Dimens
@@ -700,6 +706,14 @@ fun TimelineRow(
     item: TimelineItemUiModel,
     onClick: (TimelineItemUiModel) -> Unit = {}
 ) {
+    var isExpanded by remember(item.key) { mutableStateOf(false) }
+    val isSupplementCard = item is SupplementUiModel || item is SupplementDoseLogUiModel
+    val supplementIngredients = when (item) {
+        is SupplementUiModel -> item.ingredients
+        is SupplementDoseLogUiModel -> item.ingredients
+        else -> emptyList()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -710,7 +724,13 @@ fun TimelineRow(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
                 enabled = true,
-                onClick = { onClick(item) }
+                onClick = {
+                    if (isSupplementCard) {
+                        isExpanded = !isExpanded
+                    } else {
+                        onClick(item)
+                    }
+                }
             )
             .padding(Dimens.SpaceS)
     ) {
@@ -755,6 +775,54 @@ fun TimelineRow(
                     text = it,
                     style = MaterialTheme.typography.bodySmall
                 )
+            }
+
+            if (isExpanded && supplementIngredients.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                supplementIngredients.forEach { ingredient ->
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(ingredient.name)
+                            }
+                            if (ingredient.amountText.isNotBlank()) {
+                                append(" ")
+                                append(ingredient.amountText)
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            if (isSupplementCard) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    when (item) {
+                        is SupplementUiModel -> {
+                            TextButton(
+                                onClick = { onClick(item) }
+                            ) {
+                                Text("Log")
+                            }
+                        }
+
+                        is SupplementDoseLogUiModel -> {
+                            TextButton(
+                                onClick = { isExpanded = !isExpanded }
+                            ) {
+                                Text(if (isExpanded) "Hide" else "Details")
+                            }
+                        }
+
+                        else -> Unit
+                    }
+                }
             }
         }
     }
