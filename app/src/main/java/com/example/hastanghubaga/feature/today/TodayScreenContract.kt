@@ -2,6 +2,7 @@ package com.example.hastanghubaga.feature.today
 
 import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
+import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
@@ -79,6 +80,33 @@ object TodayScreenContract {
             val title: String,
             val defaultUnit: SupplementDoseUnit,
             val suggestedDose: Double?
+        ) : Intent
+
+        /**
+         * Opens the temporary force-log activity picker.
+         *
+         * This is intentionally separate from tapping a planned activity row.
+         * It allows the user to log an actual activity even when that activity
+         * is not currently represented by a scheduled/planned timeline item for
+         * the selected date.
+         */
+        data object ForceLogActivityTapped : Intent
+
+        /**
+         * Result from the temporary force-log activity picker.
+         *
+         * The selected activity should then flow into the existing exercise/activity
+         * logging draft path with:
+         * - occurrenceId = null
+         *
+         * This preserves the distinction between:
+         * - planned/scheduled activity occurrences
+         * - actual manual/force-logged activity sessions
+         */
+        data class ForceLogActivitySelected(
+            val activityId: Long,
+            val activityType: ActivityType,
+            val title: String
         ) : Intent
 
         /**
@@ -207,6 +235,17 @@ object TodayScreenContract {
          */
         data class ShowForceLogSupplementPicker(
             val supplements: List<Supplement>
+        ) : Effect
+
+        /**
+         * Shows the temporary activity picker for force-log flows.
+         *
+         * The picker should present active activities only.
+         * Selecting one should lead into the existing activity logging draft path
+         * with no occurrence linkage.
+         */
+        data class ShowForceLogActivityPicker(
+            val activities: List<Activity>
         ) : Effect
 
         /**

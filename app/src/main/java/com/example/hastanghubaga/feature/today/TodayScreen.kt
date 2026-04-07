@@ -51,12 +51,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.isExercise
 import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Dose
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Exercise
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogActivityPicker
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ImportedMeal
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Meal
@@ -70,6 +72,8 @@ import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.Exerci
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseIntensityChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseNotesChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseStartTimeChanged
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogActivitySelected
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogActivityTapped
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementSelected
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementTapped
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.SupplementLogOptionSelected
@@ -105,6 +109,10 @@ sealed interface ActiveLocalSheet {
 
     data class ForceLogSupplementPicker(
         val supplements: List<Supplement>
+    ) : ActiveLocalSheet
+
+    data class ForceLogActivityPicker(
+        val activities: List<Activity>
     ) : ActiveLocalSheet
 
     data class Exercise(
@@ -190,6 +198,12 @@ fun TodayScreen(
                         supplements = effect.supplements
                     )
                 }
+
+                is TodayScreenContract.Effect.ShowForceLogActivityPicker -> {
+                    activeSheet = ForceLogActivityPicker(
+                        activities = effect.activities
+                    )
+                }
             }
         }
     }
@@ -229,6 +243,9 @@ fun TodayScreen(
         },
         onForceLogSupplement = {
             viewModel.onIntent(ForceLogSupplementTapped)
+        },
+        onForceLogActivity = {
+            viewModel.onIntent(ForceLogActivityTapped)
         }
     )
 
@@ -265,6 +282,7 @@ fun TodayScreen(
                     }
                     is SupplementLogChoice -> activeSheet = null
                     is ForceLogSupplementPicker -> activeSheet = null
+                    is ForceLogActivityPicker -> activeSheet = null
                     is Meal -> {
                         viewModel.onIntent(DismissMealSheet)
                         activeSheet = null
@@ -383,6 +401,22 @@ fun TodayScreen(
                                     title = supplement.name,
                                     defaultUnit = supplement.recommendedDoseUnit,
                                     suggestedDose = supplement.recommendedServingSize
+                                )
+                            )
+                            activeSheet = null
+                        }
+                    )
+                }
+
+                is ForceLogActivityPicker -> {
+                    ForceLogActivityPickerSheetContent(
+                        activities = sheet.activities,
+                        onActivitySelected = { activity ->
+                            viewModel.onIntent(
+                                ForceLogActivitySelected(
+                                    activityId = activity.id,
+                                    activityType = activity.type,
+                                    title = activity.type.name.replace('_', ' ')
                                 )
                             )
                             activeSheet = null
@@ -647,7 +681,8 @@ fun TodayScreenContent(
     state: TodayScreenContract.State,
     onItemClick: (TimelineItemUiModel) -> Unit,
     onRefresh: () -> Unit,
-    onForceLogSupplement: () -> Unit
+    onForceLogSupplement: () -> Unit,
+    onForceLogActivity: () -> Unit
 ) {
     when {
         state.isLoading -> LoadingView()
@@ -677,6 +712,17 @@ fun TodayScreenContent(
                     .padding(horizontal = 16.dp)
             ) {
                 Text("Force log supplement")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onForceLogActivity,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("Force log activity")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -985,6 +1031,57 @@ private fun ForceLogSupplementPickerSheetContent(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForceLogActivityPickerSheetContent(
+    activities: List<Activity>,
+    onActivitySelected: (Activity) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Force log activity",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Choose an active activity to log.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(
+                items = activities,
+                key = { it.id }
+            ) { activity ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onActivitySelected(activity) }
+                        .padding(vertical = 12.dp)
+                ) {
+                    Text(
+                        text = activity.type.name.replace('_', ' '),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    activity.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }

@@ -1,20 +1,19 @@
 package com.example.hastanghubaga.data.repository
 
-import android.util.Log
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityEntity
-import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.data.local.mappers.toDomain
+import com.example.hastanghubaga.data.local.mappers.toEntity
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.repository.activity.ActivityRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
-import javax.inject.Inject
 
 class ActivityRepositoryImpl @Inject constructor(
     private val dao: ActivityEntityDao,
@@ -23,6 +22,9 @@ class ActivityRepositoryImpl @Inject constructor(
 
     override fun observeAll(): Flow<List<Activity>> =
         dao.observeAllActivities().map { list -> list.map { it.toDomain() } }
+
+    override fun observeActiveActivities(): Flow<List<Activity>> =
+        dao.observeActiveActivities().map { list -> list.map { it.toDomain() } }
 
     override fun observeActivity(id: Long): Flow<Activity?> =
         dao.observeActivity(id).map { it?.toDomain() }
@@ -42,9 +44,7 @@ class ActivityRepositoryImpl @Inject constructor(
             occurrenceDao.observeOccurrencesWithActivityForDate(date.toString())
 
         return combine(unscheduledFlow, scheduledFlow) { unscheduled, scheduled ->
-
             val unscheduledMapped = unscheduled.map { it.toDomain() }
-
             val scheduledMapped = scheduled.map { it.toDomain() }
 
             (unscheduledMapped + scheduledMapped)
@@ -61,14 +61,12 @@ class ActivityRepositoryImpl @Inject constructor(
     ): Long {
         return dao.insertActivity(
             ActivityEntity(
-                id = 0L, // auto-generate
+                id = 0L,
                 type = type,
                 startTimestamp = startTimestamp,
                 endTimestamp = endTimestamp,
                 notes = notes,
                 intensity = intensity,
-
-                // 🔑 NEW: align with supplement behavior
                 isActive = true
             )
         )

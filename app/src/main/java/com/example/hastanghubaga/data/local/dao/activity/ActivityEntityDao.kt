@@ -18,6 +18,27 @@ interface ActivityEntityDao {
     @Query("SELECT * FROM activities ORDER BY startTimestamp DESC")
     fun observeAllActivities(): Flow<List<ActivityEntity>>
 
+    /**
+     * Observe active activity templates/rows that are eligible for manual
+     * force-log selection from Today screen.
+     *
+     * Important:
+     * - Active only
+     * - Not date-scoped
+     * - Does not merge scheduled occurrences
+     *
+     * This keeps the force-log picker distinct from the timeline's
+     * planned-occurrence query path.
+     */
+    @Query(
+        """
+        SELECT * FROM activities
+        WHERE isActive = 1
+        ORDER BY startTimestamp DESC
+    """
+    )
+    fun observeActiveActivities(): Flow<List<ActivityEntity>>
+
     @Query("SELECT * FROM activities WHERE id = :id")
     fun observeActivity(id: Long): Flow<ActivityEntity?>
 

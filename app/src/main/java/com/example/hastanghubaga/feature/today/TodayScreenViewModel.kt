@@ -24,6 +24,7 @@ import com.example.hastanghubaga.domain.repository.activity.ActivityLogRepositor
 import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
+import com.example.hastanghubaga.domain.usecase.activity.GetActiveActivitiesUseCase
 import com.example.hastanghubaga.domain.usecase.activity.GetActivitiesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.GetActivityOccurrencesForDateUseCase
 import com.example.hastanghubaga.domain.usecase.activity.MaterializeActivityOccurrencesForDateUseCase
@@ -45,6 +46,7 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.LogSupplementDoseU
 import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowDoseInputDialog
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogActivityPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
@@ -91,6 +93,7 @@ class TodayScreenViewModel @Inject constructor(
     private val getImportedMealsForDate: GetImportedMealsForDateUseCase,
     private val getActivityOccurrencesForDate: GetActivityOccurrencesForDateUseCase,
     private val getActivitiesForDate: GetActivitiesForDateUseCase,
+    private val getActiveActivities: GetActiveActivitiesUseCase,
     private val activityLogRepository: ActivityLogRepository,
     private val mealLogRepository: MealLogRepository,
     private val supplementIngredientDao: SupplementIngredientDao,
@@ -185,6 +188,41 @@ class TodayScreenViewModel @Inject constructor(
                         )
                     )
                 }
+            }
+
+            TodayScreenContract.Intent.ForceLogActivityTapped -> {
+                viewModelScope.launch {
+                    val activities = getActiveActivities().first()
+                    _effect.send(
+                        ShowForceLogActivityPicker(
+                            activities = activities
+                        )
+                    )
+                }
+            }
+
+            is TodayScreenContract.Intent.ForceLogActivitySelected -> {
+                val logDate = selectedDate.value
+                val start = nowLocalTime(clock)
+                val end = addDefaultDuration(start)
+
+                Log.d(
+                    "ACTIVITY_RECON",
+                    "force log activity selected activityId=${intent.activityId} type=${intent.activityType} title=${intent.title}"
+                )
+
+                setExerciseDraft(
+                    ExerciseDraft(
+                        activityId = intent.activityId,
+                        activityType = intent.activityType,
+                        logDate = logDate,
+                        startTime = start,
+                        endTime = end,
+                        notes = "",
+                        intensity = 0,
+                        occurrenceId = null
+                    )
+                )
             }
 
             is TodayScreenContract.Intent.ConfirmDose -> {
