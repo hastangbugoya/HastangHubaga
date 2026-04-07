@@ -6,30 +6,42 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Represents a nutrient-level goal associated with a nutrition plan.
+ * Child row for a nutrition plan.
  *
- * Each row defines a constraint for a single nutritional dimension
- * (ingredient / nutrient), such as:
- * - Calories
- * - Protein
- * - Sodium
- * - Vitamin D
+ * One row = one nutrient constraint inside one plan.
  *
- * This entity represents *constraints*, not consumption.
+ * This is intentionally normalized so HH can support:
+ * - multiple plans
+ * - multiple active plans
+ * - overlapping nutrient rules across plans
+ * - future import of AK plans without requiring a separate schema
  *
- * Design principles:
- * - One nutrient = one row
- * - No hard-coded nutrients
- * - Fully extensible without schema changes
+ * Important design choice:
+ * - We store a canonical [nutrientKey] string rather than an ingredient ID.
+ * - HH can later map AK payload names/keys into this canonical key space during import.
+ * - That keeps the storage model stable even if external payloads differ from HH naming.
  *
- * Nutrient goals are evaluated against actual consumption
- * (from NutritionTotalsRepository) by a separate calculator layer.
+ * Value semantics:
+ * - [minValue] = lower bound, nullable
+ * - [targetValue] = advisory target, nullable
+ * - [maxValue] = upper bound, nullable
+ *
+ * At least one of min/target/max should be non-null. That rule is expected to be enforced
+ * by repository / use case validation rather than by the entity alone.
+ *
+ * Future AI/dev note:
+ * Effective active-plan resolution should happen above the persistence layer:
+ * - effective min = highest active min
+ * - effective max = lowest active max
+ * - target remains advisory for now
+ * - if effective min > effective max, that nutrient is in conflict
  */
 @Entity(
-    tableName = "nutrient_goals",
+    tableName = "nutrition_plan_goals",
     indices = [
-        Index("planId"),
-        Index("ingredientId")
+        Index(value = ["planId"]),
+        Index(value = ["nutrientKey"]),
+        Index(value = ["planId", "nutrientKey"], unique = true)
     ],
     foreignKeys = [
         ForeignKey(
@@ -43,61 +55,43 @@ import androidx.room.PrimaryKey
 data class NutrientGoalEntity(
 
     /**
-     * Auto-generated primary key for this nutrient goal.
+     * Surrogate primary key for this plan-goal row.
      */
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
 
     /**
-     * ID of the nutrition plan this goal belongs to.
-     *
-     * Multiple nutrient goals may belong to the same plan.
-     * Deleting a plan will cascade-delete its goals.
+     * Parent nutrition plan ID.
      */
     val planId: Long,
 
     /**
-     * Identifier of the ingredient / nutrient this goal applies to.
+     * Canonical HH nutrient identifier for this goal row.
      *
-     * This should match the IDs used by nutrition aggregation
-     * (NutritionTotalsRepository).
+     * Examples might later include keys such as:
+     * - calories
+     * - protein
+     * - carbs
+     * - fat
+     * - sodium
+     *
+     * Do not store raw AK source field names here unless they are first normalized
+     * into HH's canonical key space.
      */
-    val ingredientId: Long,
+    val nutrientKey: String,
 
     /**
-     * Desired daily target amount for this nutrient.
-     *
-     * Examples:
-     * - Calories: 2200
-     * - Protein: 150
-     * - Vitamin D: 600
+     * Optional minimum desired amount for this nutrient.
      */
-    val target: Double,
+    val minValue: Double? = null,
 
     /**
-     * Optional upper limit for this nutrient.
-     *
-     * Used for nutrients where excessive intake should be flagged
-     * (e.g. sodium, vitamin A).
-     *
-     * Null indicates no upper bound.
+     * Optional advisory target for this nutrient.
      */
-    val upperLimit: Double?,
+    val targetValue: Double? = null,
 
     /**
-     * Unit of measurement for both target and upper limit.
-     *
-     * Must match the unit used in nutrition aggregation to ensure
-     * valid comparisons.
+     * Optional maximum allowed amount for this nutrient.
      */
-    val unit: String,
-
-    /**
-     * Whether this nutrient goal is currently enabled.
-     *
-     * Allows temporarily disabling individual goals without
-     * removing them from the plan.
-     */
-    val isEnabled: Boolean
+    val maxValue: Double? = null
 )
-

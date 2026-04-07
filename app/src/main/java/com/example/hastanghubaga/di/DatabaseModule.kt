@@ -27,7 +27,6 @@ import com.example.hastanghubaga.data.local.dao.supplement.SupplementOccurrenceD
 import com.example.hastanghubaga.data.local.dao.supplement.SupplementScheduleDao
 import com.example.hastanghubaga.data.local.dao.timeline.UpcomingScheduleDao
 import com.example.hastanghubaga.data.local.dao.user.SupplementUserSettingsDao
-import com.example.hastanghubaga.data.local.dao.user.UserNutritionGoalsEntityDao
 import com.example.hastanghubaga.data.local.dao.widget.IngredientPreferenceDao
 import com.example.hastanghubaga.data.local.db.AppDatabase
 import com.example.hastanghubaga.data.local.db.callback.DatabaseCallback
@@ -154,10 +153,6 @@ object DatabaseModule {
         db.akImportedMealDao()
 
     // --- Nutrition ---
-    @Provides
-    fun provideUserNutritionGoalsEntityDao(db: AppDatabase): UserNutritionGoalsEntityDao =
-        db.userNutritionGoalsEntityDao()
-
     @Provides
     fun provideNutritionPlanEntityDao(db: AppDatabase): NutritionPlanEntityDao =
         db.nutritionPlanEntityDao()

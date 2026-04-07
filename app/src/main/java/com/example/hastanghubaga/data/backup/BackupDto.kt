@@ -5,7 +5,7 @@ import com.example.hastanghubaga.data.local.entity.meal.MealNutritionEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionGoalsEntity
 import com.example.hastanghubaga.data.local.entity.supplement.*
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
-import com.example.hastanghubaga.domain.model.nutrition.NutritionGoal
+
 
 /**
  * Data Transfer Object representing a complete encrypted backup file.

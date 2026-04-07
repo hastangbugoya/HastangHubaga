@@ -25,6 +25,7 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
         Log.d("SeedDebug", "Room onCreate() callback CALLED")
 
         val today: LocalDate = DomainTimePolicy.todayLocal()
+        val now = System.currentTimeMillis()
 
         fun millisAt(hour: Int, minute: Int): Long =
             JavaTimeAdapter.domainLocalDateTimeToUtcMillis(
@@ -400,37 +401,56 @@ VALUES
             )
         }
 
-        runSection("nutrition_goals") {
+        runSection("nutrition_plans") {
             db.execSQL(
                 """
-INSERT INTO nutrition_goals (
+INSERT INTO nutrition_plan
+(
+    id,
     type,
     name,
     startDate,
     endDate,
-    dailyProteinTarget,
-    dailyFatTarget,
-    dailyCarbTarget,
-    dailyCalorieTarget,
-    sodiumLimitMg,
-    cholesterolLimitMg,
-    fiberTargetGrams,
-    isActive
+    isActive,
+    sourceType,
+    sourcePlanId,
+    createdAt,
+    updatedAt
 )
-VALUES (
+VALUES
+(
+    1,
     'CUTTING',
     'Sustainable Cut 50+',
-    ${System.currentTimeMillis()},
+    $now,
     NULL,
-    165.0,
-    70.0,
-    180.0,
-    2100.0,
-    2300.0,
-    300.0,
-    30.0,
-    1
+    1,
+    'LOCAL',
+    NULL,
+    $now,
+    $now
 );
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+INSERT INTO nutrition_plan_goals
+(
+    planId,
+    nutrientKey,
+    minValue,
+    targetValue,
+    maxValue
+)
+VALUES
+    (1, 'protein', 165.0, 165.0, NULL),
+    (1, 'fat', NULL, 70.0, 70.0),
+    (1, 'carbs', NULL, 180.0, 180.0),
+    (1, 'calories', NULL, 2100.0, 2100.0),
+    (1, 'sodium', NULL, NULL, 2300.0),
+    (1, 'cholesterol', NULL, NULL, 300.0),
+    (1, 'fiber', 30.0, 30.0, NULL);
                 """.trimIndent()
             )
         }

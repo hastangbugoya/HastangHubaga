@@ -6,6 +6,7 @@ import com.example.hastanghubaga.data.repository.IngredientRepositoryImpl
 import com.example.hastanghubaga.data.repository.MealLogRepositoryImpl
 import com.example.hastanghubaga.data.repository.MealOccurrenceRepositoryImpl
 import com.example.hastanghubaga.data.repository.NutritionAggregateRepositoryImpl
+import com.example.hastanghubaga.data.repository.NutritionGoalsRepositoryImpl
 import com.example.hastanghubaga.data.repository.SupplementOccurrenceRepositoryImpl
 import com.example.hastanghubaga.data.repository.SupplementRepositoryImpl
 import com.example.hastanghubaga.domain.repository.activity.ActivityLogRepository
@@ -13,6 +14,7 @@ import com.example.hastanghubaga.domain.repository.activity.ActivityOccurrenceRe
 import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.repository.meal.MealOccurrenceRepository
 import com.example.hastanghubaga.domain.repository.nutrition.NutritionAggregateRepository
+import com.example.hastanghubaga.domain.repository.nutrition.NutritionPlanRepository
 import com.example.hastanghubaga.domain.repository.supplement.IngredientRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementDoseLogReadRepository
 import com.example.hastanghubaga.domain.repository.supplement.SupplementOccurrenceRepository
@@ -80,4 +82,10 @@ abstract class RepositoryModule {
     abstract fun bindNutritionAggregateRepository(
         impl: NutritionAggregateRepositoryImpl
     ): NutritionAggregateRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNutritionPlanRepository(
+        impl: NutritionGoalsRepositoryImpl
+    ): NutritionPlanRepository
 }

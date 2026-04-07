@@ -1,83 +1,101 @@
-# 📱 HastangHubaga
+# HastangHubaga (HH)
 
-**HastangHubaga (HH)** is a planner-first health tracking app focused on
-**timeline-driven daily execution** across:
+> System-first Android application modeling real-world behavior through a unified, extensible timeline engine.
 
--   🧪 Supplements\
--   🏃 Activities\
--   🍽 Meals
+---
 
-------------------------------------------------------------------------
+## 🚀 Overview
 
-# 🧠 Core Philosophy
+HastangHubaga (HH) is an offline-first Android application that unifies meals, supplements, and activities into a single timeline-driven system.
 
-HH follows a **planner-first architecture**:
+Unlike traditional tracker apps, HH is built around a domain-first architecture where scheduling, execution, and history are modeled explicitly.
 
-Template → Schedule → Occurrence → Log → Timeline
+---
 
-------------------------------------------------------------------------
+## 🎯 Key Impact
 
-# ⚙️ Architecture Overview
+- Designed and implemented a scalable domain-driven architecture for lifestyle tracking
+- Built a unified timeline engine merging planned and actual events deterministically
+- Replaced rigid schema design with normalized, extensible models
+- Enabled multi-plan nutrition system with conflict resolution logic
+- Implemented cross-app data ingestion via content provider integration
 
-## Templates
+---
 
--   MealEntity
--   ActivityEntity
--   SupplementEntity
+## 🧠 Core Architecture
 
-## Schedules
+### Template → Occurrence → Log Model
 
--   Daily / Weekly / Anchored / Fixed time
+- Template: defines the entity
+- Occurrence: defines scheduled instance
+- Log: defines actual execution
 
-## Occurrences
+Enables:
+- accurate historical reconstruction
+- flexible scheduling updates
+- deterministic state generation
 
--   MealOccurrenceEntity
--   ActivityOccurrenceEntity
--   SupplementOccurrenceEntity
+---
 
-## Logs
+### Timeline Engine
 
--   MealLogEntity
--   ActivityLogEntity
--   SupplementDailyLogEntity
+Central orchestration via:
 
-------------------------------------------------------------------------
+BuildTodayTimelineUseCase
 
-# 🔁 Shared Scheduling Engine
+- merges planned occurrences and logs
+- logs override planned items
+- supports ad-hoc events
 
-All domains use a shared scheduling engine:
+---
 
-materializeXOccurrencesForDate(date)
+### Nutrition System (Normalized Design)
 
-------------------------------------------------------------------------
+- Multiple concurrent plans
+- Per-nutrient constraints (min / target / max)
+- Conflict detection (min > max)
+- Source-aware design for external integration
 
-# ⚠️ Critical Rule
+---
 
-Occurrences must be materialized before they can be observed.
+## 🏗️ Tech Stack
 
-------------------------------------------------------------------------
+- Kotlin
+- Jetpack Compose
+- Coroutines + Flow
+- Room (SQLite)
+- Hilt (Dagger)
+- WorkManager
 
-# 🧩 Timeline Merge
+---
 
--   Planned occurrences
--   Logged items
--   Merge by occurrenceId
+## 🧩 Engineering Strengths
 
-------------------------------------------------------------------------
+- Clean Architecture (Domain/Data/UI separation)
+- Repository + Use Case pattern
+- Strong data modeling and normalization
+- Reactive data flow with Flow
+- Offline-first design
 
-# ✅ Recent Fix
+---
 
-Meal occurrences were not materialized on future date open.
+## 🔗 Integration
 
-Fix: - Added MaterializeMealOccurrencesForDateUseCase to
-TodayScreenViewModel
+- Cross-app integration with AdobongKangkong (AK)
+- JSON-based content provider ingestion
+- Designed for forward-compatible syncing
 
-------------------------------------------------------------------------
+---
 
-# 🚀 Tech Stack
+## 📌 Status
 
--   Kotlin
--   Jetpack Compose
--   Room
--   Hilt
--   Coroutines / Flow
+Active development focused on:
+- architecture robustness
+- correctness and consistency
+- extensibility for future features
+
+---
+
+## ⭐ Summary
+
+HastangHubaga demonstrates strong system design, domain modeling, and scalable Android architecture suitable for complex real-world applications.

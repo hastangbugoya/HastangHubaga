@@ -1,4 +1,5 @@
 package com.example.hastanghubaga.domain.model.nutrition
+
 /**
  * Represents nutritional values for a single consumable item.
  *

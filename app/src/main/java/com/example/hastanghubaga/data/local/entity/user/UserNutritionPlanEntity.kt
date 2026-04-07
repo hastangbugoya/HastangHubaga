@@ -5,65 +5,108 @@ import androidx.room.PrimaryKey
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 
 /**
- * Represents a high-level user-defined nutrition strategy or plan.
+ * Represents a nutrition plan in HH.
  *
- * A nutrition plan defines *intent*, not consumption or progress.
- * It acts as a container for a set of nutrient-level goals
- * (see [NutrientGoalEntity]).
+ * A plan is a container for nutrient-level constraints (see [NutrientGoalEntity]).
  *
- * Examples of plans:
- * - "Cut"
- * - "Maintenance"
- * - "Bulk"
- * - "Low Sodium"
+ * This entity is intentionally focused on:
+ * - identity
+ * - lifecycle
+ * - activation state
+ * - source metadata (local vs imported)
  *
- * This entity is intentionally minimal:
- * - It does NOT contain nutrient targets
- * - It does NOT contain totals or progress
- * - It does NOT contain widget or UI state
+ * It does NOT contain nutrient values.
  *
- * Nutrient targets are normalized into [NutrientGoalEntity] and
- * associated via a foreign key relationship.
+ * ---
+ * ## Key design decisions
  *
- * Design rationale:
- * - Allows unlimited nutrients without schema changes
- * - Enables multiple plans in the future
- * - Keeps Room migrations simple and predictable
- * - Separates strategy (plan) from constraints (goals)
+ * ### 1. Multi-plan + multi-active support
+ * - Multiple plans can exist simultaneously
+ * - Multiple plans can be active at the same time
+ * - Conflict resolution happens at the domain layer (NOT here)
+ *
+ * ### 2. Source-aware storage
+ * - Imported AK plans are stored in the SAME table as local plans
+ * - Differentiated using [sourceType] and [sourcePlanId]
+ *
+ * ### 3. No "single active plan" assumption
+ * - We intentionally DO NOT enforce only one active plan
+ *
+ * ### 4. Time-bound plans
+ * - startDate / endDate allow historical and phased plans
+ *
+ * ---
+ * ## Future AI/dev note
+ * Effective nutrient ranges are computed across ACTIVE plans:
+ * - effective min = highest min
+ * - effective max = lowest max
+ * - conflicts when min > max
  */
 @Entity(tableName = "nutrition_plan")
 data class UserNutritionPlanEntity(
 
     /**
-     * Primary key for the nutrition plan.
+     * Auto-generated primary key.
      *
-     * Using a stable ID (default = 1L) allows a single active plan
-     * today, while remaining forward-compatible with multiple plans
-     * in the future.
+     * IMPORTANT:
+     * We no longer force a single plan (no id = 1L).
      */
-    @PrimaryKey val id: Long = 1L,
-    val type: NutritionGoalType,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
+
     /**
-     * Human-readable name of the plan.
-     *
-     * Examples: "Cut", "Maintenance", "Lean Bulk"
+     * Classification of the plan (cut, bulk, etc.).
+     */
+    val type: NutritionGoalType,
+
+    /**
+     * Human-readable name.
      */
     val name: String,
 
     /**
+     * Plan start date (epoch millis).
+     */
+    val startDate: Long,
+
+    /**
+     * Optional end date (null = ongoing).
+     */
+    val endDate: Long? = null,
+
+    /**
      * Whether this plan is currently active.
      *
-     * Only one plan should be active at a time.
-     * This flag allows plans to be stored, switched,
-     * or archived without deletion.
+     * NOTE:
+     * Multiple plans may be active simultaneously.
      */
     val isActive: Boolean,
 
     /**
-     * ISO-8601 timestamp indicating when the plan was created.
+     * Source type of the plan.
      *
-     * Stored as a string to keep this entity persistence-only
-     * and avoid time-zone logic at the data layer.
+     * Suggested values:
+     * - "LOCAL"
+     * - "AK_IMPORTED"
+     *
+     * Kept as String for flexibility and forward compatibility.
      */
-    val createdAt: String
+    val sourceType: String,
+
+    /**
+     * External source identifier (e.g., AK plan ID).
+     *
+     * Null for local plans.
+     */
+    val sourcePlanId: String? = null,
+
+    /**
+     * Creation timestamp (epoch millis).
+     */
+    val createdAt: Long,
+
+    /**
+     * Last updated timestamp (epoch millis).
+     */
+    val updatedAt: Long
 )

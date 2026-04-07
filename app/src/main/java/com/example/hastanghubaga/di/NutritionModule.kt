@@ -18,18 +18,6 @@ abstract class NutritionModule {
 
     @Binds
     @Singleton
-    abstract fun bindNutritionGoalsRepository(
-        impl: NutritionGoalsRepositoryImpl
-    ): NutritionGoalsRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindNutritionPlanRepository(
-        impl: NutritionPlanRepositoryImpl
-    ): NutritionPlanRepository
-
-    @Binds
-    @Singleton
     abstract fun bindNutritionTotalsRepository(
         impl: NutrientTotalsRepositoryImpl
     ): NutrientTotalsRepository
