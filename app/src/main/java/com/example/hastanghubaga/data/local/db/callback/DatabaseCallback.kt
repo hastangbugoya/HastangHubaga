@@ -21,11 +21,18 @@ import javax.inject.Inject
  * - HH nutrition goals CRUD currently uses the normalized tables:
  *   - nutrition_plan
  *   - nutrition_plan_goals
+ *   - nutrition_plan_success_criteria
  * - The Nutrition Goals editor currently sources selectable nutrient keys from the
  *   canonical ingredients table.
  * - Therefore, core nutrition nutrients/macros must be pre-seeded into ingredients.
  * - The seeded codes below are aligned to AK CsvNutrientCatalog codes so HH and AK
  *   can refer to the same nutrient keys later.
+ *
+ * Success criteria note:
+ * - successMode lives on nutrition_plan
+ * - nutrition_plan_success_criteria is only meaningful when successMode is
+ *   CUSTOM_SELECTED_GOALS
+ * - We seed example criteria now so future compliance work already has a valid shape
  */
 class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
@@ -435,6 +442,7 @@ INSERT INTO nutrition_plan
     isActive,
     sourceType,
     sourcePlanId,
+    successMode,
     createdAt,
     updatedAt
 )
@@ -448,6 +456,7 @@ VALUES
     1,
     'LOCAL',
     NULL,
+    'CUSTOM_SELECTED_GOALS',
     $now,
     $now
 );
@@ -472,6 +481,21 @@ VALUES
     (1, 'SODIUM_MG', NULL, NULL, 2300.0),
     (1, 'CHOLESTEROL_MG', NULL, NULL, 300.0),
     (1, 'FIBER_G', 30.0, 30.0, NULL);
+                """.trimIndent()
+            )
+        }
+
+        runSection("nutrition_plan_success_criteria") {
+            db.execSQL(
+                """
+INSERT INTO nutrition_plan_success_criteria
+(
+    planId,
+    nutrientKey
+)
+VALUES
+    (1, 'CALORIES_KCAL'),
+    (1, 'PROTEIN_G');
                 """.trimIndent()
             )
         }

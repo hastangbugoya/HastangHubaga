@@ -17,6 +17,7 @@ import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.meal.MealScheduleDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanSuccessCriteriaDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -56,10 +57,11 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementOccurren
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleEntity
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementScheduleFixedTimeEntity
-import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.local.entity.user.NutrientGoalEntity
 import com.example.hastanghubaga.data.local.entity.user.SupplementUserSettingsEntity
+import com.example.hastanghubaga.data.local.entity.user.UpcomingScheduleEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanEntity
+import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanSuccessCriteriaEntity
 import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEntity
 
 @Database(
@@ -99,9 +101,10 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         UpcomingScheduleEntity::class,
         UserNutritionPlanEntity::class,
         NutrientGoalEntity::class,
+        UserNutritionPlanSuccessCriteriaEntity::class,
         IngredientPreferenceEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -133,6 +136,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun upcomingScheduleDao(): UpcomingScheduleDao
     abstract fun nutritionPlanEntityDao(): NutritionPlanEntityDao
     abstract fun nutrientGoalDao(): NutrientGoalDao
+
+    // ✅ NEW DAO
+    abstract fun nutritionPlanSuccessCriteriaDao(): NutritionPlanSuccessCriteriaDao
+
     abstract fun ingredientPreferenceDao(): IngredientPreferenceDao
     abstract fun supplementNutritionDao(): SupplementNutritionDao
 
