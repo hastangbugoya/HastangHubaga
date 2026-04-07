@@ -25,7 +25,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -722,62 +725,84 @@ fun TodayScreenContent(
     when {
         state.isLoading -> LoadingView()
         state.errorMessage != null -> ErrorView(state.errorMessage)
-        else -> Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = state.selectedDate.toString(),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+        else -> {
+            var isActionMenuExpanded by remember { mutableStateOf(false) }
 
-            state.dailyCompliance?.let { compliance ->
-                DailyComplianceSummaryCard(
-                    compliance = compliance,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = state.selectedDate.toString(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
+                state.dailyCompliance?.let { compliance ->
+                    DailyComplianceSummaryCard(
+                        compliance = compliance,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Box {
+                        Button(
+                            onClick = { isActionMenuExpanded = true }
+                        ) {
+                            Text("Actions")
+                            Spacer(modifier = Modifier.height(0.dp))
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "Open actions"
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = isActionMenuExpanded,
+                            onDismissRequest = { isActionMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Force log supplement") },
+                                onClick = {
+                                    isActionMenuExpanded = false
+                                    onForceLogSupplement()
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = { Text("Force log activity") },
+                                onClick = {
+                                    isActionMenuExpanded = false
+                                    onForceLogActivity()
+                                }
+                            )
+
+                            DropdownMenuItem(
+                                text = { Text("Force log meal") },
+                                onClick = {
+                                    isActionMenuExpanded = false
+                                    onForceLogMeal()
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                TimelineList(
+                    modifier = Modifier.weight(1f),
+                    items = state.uiTimelineItems,
+                    onItemClick = onItemClick
+                )
             }
-
-            Button(
-                onClick = onForceLogSupplement,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Force log supplement")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onForceLogActivity,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Force log activity")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = onForceLogMeal,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text("Force log meal")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            TimelineList(
-                modifier = Modifier.weight(1f),
-                items = state.uiTimelineItems,
-                onItemClick = onItemClick
-            )
         }
     }
 }
