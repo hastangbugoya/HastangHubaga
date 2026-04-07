@@ -53,12 +53,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.isExercise
+import com.example.hastanghubaga.domain.model.meal.Meal as MealTemplate
 import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Dose
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Exercise
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogActivityPicker
+import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogMealPicker
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.ImportedMeal
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Meal
@@ -74,6 +76,8 @@ import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.Exerci
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ExerciseStartTimeChanged
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogActivitySelected
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogActivityTapped
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogMealSelected
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogMealTapped
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementSelected
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.ForceLogSupplementTapped
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Intent.SupplementLogOptionSelected
@@ -113,6 +117,10 @@ sealed interface ActiveLocalSheet {
 
     data class ForceLogActivityPicker(
         val activities: List<Activity>
+    ) : ActiveLocalSheet
+
+    data class ForceLogMealPicker(
+        val meals: List<MealTemplate>
     ) : ActiveLocalSheet
 
     data class Exercise(
@@ -204,6 +212,12 @@ fun TodayScreen(
                         activities = effect.activities
                     )
                 }
+
+                is TodayScreenContract.Effect.ShowForceLogMealPicker -> {
+                    activeSheet = ForceLogMealPicker(
+                        meals = effect.meals
+                    )
+                }
             }
         }
     }
@@ -246,6 +260,9 @@ fun TodayScreen(
         },
         onForceLogActivity = {
             viewModel.onIntent(ForceLogActivityTapped)
+        },
+        onForceLogMeal = {
+            viewModel.onIntent(ForceLogMealTapped)
         }
     )
 
@@ -283,6 +300,7 @@ fun TodayScreen(
                     is SupplementLogChoice -> activeSheet = null
                     is ForceLogSupplementPicker -> activeSheet = null
                     is ForceLogActivityPicker -> activeSheet = null
+                    is ForceLogMealPicker -> activeSheet = null
                     is Meal -> {
                         viewModel.onIntent(DismissMealSheet)
                         activeSheet = null
@@ -417,6 +435,22 @@ fun TodayScreen(
                                     activityId = activity.id,
                                     activityType = activity.type,
                                     title = activity.type.name.replace('_', ' ')
+                                )
+                            )
+                            activeSheet = null
+                        }
+                    )
+                }
+
+                is ForceLogMealPicker -> {
+                    ForceLogMealPickerSheetContent(
+                        meals = sheet.meals,
+                        onMealSelected = { meal ->
+                            viewModel.onIntent(
+                                ForceLogMealSelected(
+                                    mealId = meal.id,
+                                    mealType = meal.type,
+                                    title = meal.name
                                 )
                             )
                             activeSheet = null
@@ -682,7 +716,8 @@ fun TodayScreenContent(
     onItemClick: (TimelineItemUiModel) -> Unit,
     onRefresh: () -> Unit,
     onForceLogSupplement: () -> Unit,
-    onForceLogActivity: () -> Unit
+    onForceLogActivity: () -> Unit,
+    onForceLogMeal: () -> Unit
 ) {
     when {
         state.isLoading -> LoadingView()
@@ -723,6 +758,17 @@ fun TodayScreenContent(
                     .padding(horizontal = 16.dp)
             ) {
                 Text("Force log activity")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onForceLogMeal,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("Force log meal")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1082,6 +1128,55 @@ private fun ForceLogActivityPickerSheetContent(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForceLogMealPickerSheetContent(
+    meals: List<MealTemplate>,
+    onMealSelected: (MealTemplate) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Force log meal",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Text(
+            text = "Choose a meal to log.",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(
+                items = meals,
+                key = { it.id }
+            ) { meal ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onMealSelected(meal) }
+                        .padding(vertical = 12.dp)
+                ) {
+                    Text(
+                        text = meal.name,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        text = meal.type.name.replace('_', ' '),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

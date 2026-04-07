@@ -5,6 +5,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
+import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
@@ -106,6 +107,33 @@ object TodayScreenContract {
         data class ForceLogActivitySelected(
             val activityId: Long,
             val activityType: ActivityType,
+            val title: String
+        ) : Intent
+
+        /**
+         * Opens the temporary force-log meal picker.
+         *
+         * This is intentionally separate from tapping a planned meal row.
+         * It allows the user to log an actual meal even when that meal is not
+         * currently represented by a scheduled/planned timeline item for the
+         * selected date.
+         */
+        data object ForceLogMealTapped : Intent
+
+        /**
+         * Result from the temporary force-log meal picker.
+         *
+         * The selected meal should then flow into the existing meal logging draft
+         * path with:
+         * - occurrenceId = null
+         *
+         * This preserves the distinction between:
+         * - planned/scheduled meal occurrences
+         * - actual manual/force-logged meal logs
+         */
+        data class ForceLogMealSelected(
+            val mealId: Long,
+            val mealType: com.example.hastanghubaga.data.local.entity.meal.MealType,
             val title: String
         ) : Intent
 
@@ -249,6 +277,17 @@ object TodayScreenContract {
         ) : Effect
 
         /**
+         * Shows the temporary meal picker for force-log flows.
+         *
+         * The picker should present active meal templates only.
+         * Selecting one should lead into the existing meal logging draft path
+         * with no occurrence linkage.
+         */
+        data class ShowForceLogMealPicker(
+            val meals: List<Meal>
+        ) : Effect
+
+        /**
          * Shows the supplement dose input dialog.
          *
          * [occurrenceId] is optional and allows the dialog confirmation path to
@@ -325,6 +364,9 @@ object TodayScreenContract {
      * This represents user-editable meal logging state on the Today screen.
      * It intentionally mirrors the role that [ExerciseDraft] plays for activities.
      *
+     * [mealId] preserves template identity for both planned native HH meals and
+     * force-logged HH meals chosen from the Today picker.
+     *
      * [occurrenceId] preserves linkage to the planned meal occurrence so the
      * actual meal log can later fulfill/suppress the matching planned row.
      *
@@ -332,6 +374,7 @@ object TodayScreenContract {
      * "I ate this meal at this time", while still leaving room for a meal window.
      */
     data class MealLogInput(
+        val mealId: Long? = null,
         val mealType: com.example.hastanghubaga.data.local.entity.meal.MealType,
         val logDate: LocalDate,
         val startTime: LocalTime,
@@ -343,9 +386,11 @@ object TodayScreenContract {
 
     fun MealLogInput.toDomain(): LogMealInput =
         LogMealInput(
+            mealId = mealId,
+            occurrenceId = occurrenceId,
             mealType = mealType,
             timeUseIntent = TimeUseIntent.Explicit(logDate, startTime),
-            occurrenceId = occurrenceId,
+            endTime = endTime,
             notes = notes,
             nutrition = nutrition?.toDomain()
         )

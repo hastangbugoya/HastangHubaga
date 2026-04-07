@@ -47,6 +47,7 @@ import com.example.hastanghubaga.domain.usecase.todaytimeline.TimelineTapAction
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowDoseInputDialog
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogActivityPicker
+import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogMealPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowForceLogSupplementPicker
 import com.example.hastanghubaga.feature.today.TodayScreenContract.Effect.ShowSupplementLogChoice
 import com.example.hastanghubaga.feature.today.TodayScreenContract.ExerciseDraft
@@ -220,6 +221,44 @@ class TodayScreenViewModel @Inject constructor(
                         endTime = end,
                         notes = "",
                         intensity = 0,
+                        occurrenceId = null
+                    )
+                )
+            }
+
+            TodayScreenContract.Intent.ForceLogMealTapped -> {
+                viewModelScope.launch {
+                    val meals = getMealsForDate(selectedDate.value)
+                        .first()
+                        .filter { it.isActive }
+
+                    _effect.send(
+                        ShowForceLogMealPicker(
+                            meals = meals
+                        )
+                    )
+                }
+            }
+
+            is TodayScreenContract.Intent.ForceLogMealSelected -> {
+                val logDate = selectedDate.value
+                val start = nowLocalTime(clock)
+                val end = addDefaultDuration(start)
+
+                Log.d(
+                    "MEAL_RECON",
+                    "force log meal selected mealId=${intent.mealId} mealType=${intent.mealType} title=${intent.title}"
+                )
+
+                setMealDraft(
+                    MealLogInput(
+                        mealId = intent.mealId,
+                        mealType = intent.mealType,
+                        logDate = logDate,
+                        startTime = start,
+                        endTime = end,
+                        notes = null,
+                        nutrition = null,
                         occurrenceId = null
                     )
                 )
@@ -426,11 +465,12 @@ class TodayScreenViewModel @Inject constructor(
 
                 Log.d(
                     "MEAL_RECON",
-                    "tap using UI item occurrenceId=${item.occurrenceId} mealType=${item.mealType} time=${item.time}"
+                    "tap using UI item mealId=${item.id} occurrenceId=${item.occurrenceId} mealType=${item.mealType} time=${item.time}"
                 )
 
                 setMealDraft(
                     MealLogInput(
+                        mealId = item.id,
                         mealType = item.mealType,
                         logDate = logDate,
                         startTime = start,
@@ -902,7 +942,7 @@ class TodayScreenViewModel @Inject constructor(
     private fun setMealDraft(draft: MealLogInput) {
         Log.d(
             "MEAL_RECON",
-            "setMealDraft mealType=${draft.mealType} occurrenceId=${draft.occurrenceId} start=${draft.startTime} end=${draft.endTime}"
+            "setMealDraft mealId=${draft.mealId} mealType=${draft.mealType} occurrenceId=${draft.occurrenceId} start=${draft.startTime} end=${draft.endTime}"
         )
         _state.update { it.copy(mealDraft = draft) }
     }

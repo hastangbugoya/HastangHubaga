@@ -4,12 +4,12 @@ import android.util.Log
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
 import com.example.hastanghubaga.domain.repository.meal.MealLogRepository
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
+import javax.inject.Inject
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.toInstant
-import javax.inject.Inject
 
 /**
  * Saves one actual logged meal.
@@ -29,6 +29,12 @@ import javax.inject.Inject
  *   existing persisted log row rather than create a duplicate
  * - if [LogMealInput.occurrenceId] is null, this is treated as an ad-hoc /
  *   force-logged meal and may insert as a new independent row
+ *
+ * Important:
+ * - [LogMealInput.mealId] should be preserved whenever the log came from a known
+ *   HH meal template, including force-log picker flows
+ * - [LogMealInput.endTime] is optional and should persist when supplied
+ * - nutrition values should pass through unchanged when supplied
  */
 class LogMealUseCase @Inject constructor(
     private val repo: MealLogRepository
@@ -43,13 +49,23 @@ class LogMealUseCase @Inject constructor(
         )
 
         val startTimestamp = localDateTimeToEpochMillis(date, time)
-        Log.d("MEAL_RECON","LogMealUseCase> input: ${input}")
+        val endTimestamp =
+            input.endTime?.let { endTime ->
+                localDateTimeToEpochMillis(date, endTime)
+            }
+
+        Log.d("MEAL_RECON", "LogMealUseCase> input=$input")
+        Log.d(
+            "MEAL_RECON",
+            "LogMealUseCase> resolved mealId=${input.mealId} occurrenceId=${input.occurrenceId} start=$startTimestamp end=$endTimestamp calories=${input.nutrition?.calories}"
+        )
+
         return repo.insertMealLog(
-            mealId = null,
+            mealId = input.mealId,
             occurrenceId = input.occurrenceId,
             mealType = input.mealType,
             startTimestamp = startTimestamp,
-            endTimestamp = null,
+            endTimestamp = endTimestamp,
             notes = input.notes,
             calories = input.nutrition?.calories,
             proteinGrams = input.nutrition?.proteinGrams,
