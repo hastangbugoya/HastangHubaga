@@ -195,6 +195,7 @@ class NutritionGoalsRepositoryImpl @Inject constructor(
             isActive = isActive,
             sourceType = sourceType,
             sourcePlanId = sourcePlanId,
+            successMode = successMode,
             createdAt = createdAt,
             updatedAt = updatedAt
         )
@@ -209,6 +210,7 @@ class NutritionGoalsRepositoryImpl @Inject constructor(
             isActive = isActive,
             sourceType = sourceType,
             sourcePlanId = sourcePlanId,
+            successMode = successMode,
             createdAt = createdAt,
             updatedAt = updatedAt
         )

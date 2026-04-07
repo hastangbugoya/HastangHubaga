@@ -16,6 +16,7 @@ import com.example.hastanghubaga.data.local.dao.meal.MealOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.meal.MealScheduleDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
+import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanSuccessCriteriaDao
 import com.example.hastanghubaga.data.local.dao.supplement.DailyStartTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.dao.supplement.IngredientEntityDao
@@ -160,6 +161,12 @@ object DatabaseModule {
     @Provides
     fun provideNutrientGoalDao(db: AppDatabase): NutrientGoalDao =
         db.nutrientGoalDao()
+
+    @Provides
+    fun provideNutritionPlanSuccessCriteriaDao(
+        db: AppDatabase
+    ): NutritionPlanSuccessCriteriaDao =
+        db.nutritionPlanSuccessCriteriaDao()
 
     // --- Timeline ---
     @Provides
