@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.LogMealInput
+import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.domain.time.TimeUseIntent
@@ -27,7 +28,21 @@ object TodayScreenContract {
         val domainTimelineItems: List<TimelineItem> = emptyList(),
         val errorMessage: String? = null,
         val exerciseDraft: ExerciseDraft? = null,
-        val mealDraft: MealLogInput? = null
+        val mealDraft: MealLogInput? = null,
+
+        /**
+         * Daily nutrition compliance result for the selected date.
+         *
+         * Phase 1:
+         * - Computed and stored on state
+         * - Not yet required to render in Today UI
+         *
+         * Future:
+         * - Today header summary
+         * - Calendar/day coloring
+         * - Drill-down into plan and nutrient comparisons
+         */
+        val dailyCompliance: DailyComplianceResult? = null
     )
 
     /**

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.isExercise
+import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
 import com.example.hastanghubaga.feature.today.ActiveLocalSheet.Dose
@@ -658,6 +659,17 @@ fun TodayScreenContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
+            state.dailyCompliance?.let { compliance ->
+                DailyComplianceSummaryCard(
+                    compliance = compliance,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Button(
                 onClick = onForceLogSupplement,
                 modifier = Modifier
@@ -674,6 +686,61 @@ fun TodayScreenContent(
                 items = state.uiTimelineItems,
                 onItemClick = onItemClick
             )
+        }
+    }
+}
+
+@Composable
+private fun DailyComplianceSummaryCard(
+    compliance: DailyComplianceResult,
+    modifier: Modifier = Modifier
+) {
+    val successText =
+        if (compliance.isSuccessful) "Compliant" else "Not compliant"
+
+    val planCount = compliance.planResults.size
+    val passedPlans = compliance.planResults.count { it.isSuccessful }
+
+    Box(
+        modifier = modifier
+            .border(color = UiColors.Primary(), width = 1.dp)
+            .background(color = MaterialTheme.colorScheme.surface)
+            .padding(12.dp)
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Daily nutrition compliance",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = successText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = if (planCount == 1) {
+                    "$passedPlans of 1 plan passed"
+                } else {
+                    "$passedPlans of $planCount plans passed"
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            if (compliance.planResults.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                compliance.planResults.forEach { plan ->
+                    val planStatus = if (plan.isSuccessful) "Pass" else "Fail"
+                    Text(
+                        text = "• ${plan.planName}: $planStatus",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }

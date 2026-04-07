@@ -33,6 +33,8 @@ import com.example.hastanghubaga.domain.usecase.meal.GetMealOccurrencesForDateUs
 import com.example.hastanghubaga.domain.usecase.meal.GetMealsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.meal.LogMealUseCase
 import com.example.hastanghubaga.domain.usecase.meal.MaterializeMealOccurrencesForDateUseCase
+import com.example.hastanghubaga.domain.usecase.nutrition.GetDailyNutritionComplianceUseCase
+import com.example.hastanghubaga.domain.usecase.nutrition.GetLocalDailyNutritionIntakeUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetActiveSupplementsUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementDoseLogsForDateUseCase
 import com.example.hastanghubaga.domain.usecase.supplement.GetSupplementOccurrencesForDateUseCase
@@ -70,6 +72,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -100,7 +103,9 @@ class TodayScreenViewModel @Inject constructor(
     private val logSupplementDoseUseCase: LogSupplementDoseUseCase,
     private val savedStateHandle: SavedStateHandle,
     private val saveExerciseActivityUseCase: SaveExerciseActivityUseCase,
-    private val logMealUseCase: LogMealUseCase
+    private val logMealUseCase: LogMealUseCase,
+    private val getDailyNutritionComplianceUseCase: GetDailyNutritionComplianceUseCase,
+    private val getLocalDailyNutritionIntakeUseCase: GetLocalDailyNutritionIntakeUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TodayScreenContract.State())
@@ -127,6 +132,7 @@ class TodayScreenViewModel @Inject constructor(
         _state.update { it.copy(selectedDate = selectedDate.value) }
         materializeSelectedDate(selectedDate.value)
         observeTimeline()
+        observeDailyCompliance()
         Log.d("Meow", "TodayVM init: ${hashCode()}")
     }
 
@@ -609,6 +615,31 @@ class TodayScreenViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    private fun observeDailyCompliance() {
+        viewModelScope.launch {
+            selectedDate.collect { date ->
+                val complianceResult = runCatching {
+                    withContext(Dispatchers.Default) {
+                        val intake = getLocalDailyNutritionIntakeUseCase(date)
+                        getDailyNutritionComplianceUseCase(
+                            intake = intake
+                        )
+                    }
+                }.onFailure { throwable ->
+                    Log.e(
+                        "NUTRITION_COMPLIANCE",
+                        "Failed to evaluate daily compliance for date=$date",
+                        throwable
+                    )
+                }.getOrNull()
+
+                _state.update {
+                    it.copy(dailyCompliance = complianceResult)
+                }
+            }
         }
     }
 

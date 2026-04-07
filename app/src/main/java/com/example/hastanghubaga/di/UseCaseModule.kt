@@ -3,10 +3,12 @@ package com.example.hastanghubaga.di
 import com.example.hastanghubaga.data.local.dao.nutrition.NutrientGoalDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanEntityDao
 import com.example.hastanghubaga.data.local.dao.nutrition.NutritionPlanSuccessCriteriaDao
+import com.example.hastanghubaga.domain.repository.nutrition.NutritionAggregateRepository
 import com.example.hastanghubaga.domain.usecase.nutrition.EvaluateDailyNutritionComplianceUseCase
 import com.example.hastanghubaga.domain.usecase.nutrition.EvaluateNutrientUseCase
 import com.example.hastanghubaga.domain.usecase.nutrition.EvaluatePlanComplianceUseCase
 import com.example.hastanghubaga.domain.usecase.nutrition.GetDailyNutritionComplianceUseCase
+import com.example.hastanghubaga.domain.usecase.nutrition.GetLocalDailyNutritionIntakeUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -71,5 +73,14 @@ object UseCaseModule {
     ): GetDailyNutritionComplianceUseCase =
         GetDailyNutritionComplianceUseCase(
             evaluateDailyNutritionComplianceUseCase = evaluateDailyNutritionComplianceUseCase
+        )
+
+    @Provides
+    @Singleton
+    fun provideGetLocalDailyNutritionIntakeUseCase(
+        nutritionAggregateRepository: NutritionAggregateRepository
+    ): GetLocalDailyNutritionIntakeUseCase =
+        GetLocalDailyNutritionIntakeUseCase(
+            nutritionAggregateRepository = nutritionAggregateRepository
         )
 }
