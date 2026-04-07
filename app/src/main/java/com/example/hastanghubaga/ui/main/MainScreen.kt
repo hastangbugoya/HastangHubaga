@@ -36,6 +36,9 @@ import com.example.hastanghubaga.feature.ingredients.ui.IngredientsViewModel
 import com.example.hastanghubaga.feature.meals.ui.MealEditorSheet
 import com.example.hastanghubaga.feature.meals.ui.MealsScreen
 import com.example.hastanghubaga.feature.meals.ui.MealsViewModel
+import com.example.hastanghubaga.feature.nutritiongoals.ui.NutritionGoalsEditorSheet
+import com.example.hastanghubaga.feature.nutritiongoals.ui.NutritionGoalsScreen
+import com.example.hastanghubaga.feature.nutritiongoals.ui.NutritionGoalsViewModel
 import com.example.hastanghubaga.feature.settings.eventtimes.DefaultEventTimesScreen
 import com.example.hastanghubaga.feature.settings.eventtimes.DefaultEventTimesViewModel
 import com.example.hastanghubaga.feature.supplements.ui.SupplementEditorSheet
@@ -64,7 +67,8 @@ private enum class SettingsSubscreen {
     ACTIVITIES,
     INGREDIENTS,
     MEALS,
-    EVENT_TIMES
+    EVENT_TIMES,
+    NUTRITION_GOALS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,6 +82,7 @@ fun MainScreen() {
     val activitiesViewModel: ActivitiesViewModel = hiltViewModel()
     val ingredientsViewModel: IngredientsViewModel = hiltViewModel()
     val mealsViewModel: MealsViewModel = hiltViewModel()
+    val nutritionGoalsViewModel: NutritionGoalsViewModel = hiltViewModel()
     val settingsViewModel: SettingsViewModel = hiltViewModel()
     val defaultEventTimesViewModel: DefaultEventTimesViewModel = hiltViewModel()
 
@@ -85,6 +90,7 @@ fun MainScreen() {
     val activitiesState by activitiesViewModel.state.collectAsState()
     val ingredientsState by ingredientsViewModel.uiState.collectAsState()
     val mealsState by mealsViewModel.state.collectAsState()
+    val nutritionGoalsState by nutritionGoalsViewModel.uiState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -337,6 +343,23 @@ fun MainScreen() {
                             )
                         }
 
+                        SettingsSubscreen.NUTRITION_GOALS -> {
+                            NutritionGoalsScreen(
+                                items = nutritionGoalsState.items,
+                                onAddClick = { nutritionGoalsViewModel.onAddClick() },
+                                onItemClick = { id ->
+                                    nutritionGoalsViewModel.onPlanClick(id)
+                                },
+                                onTogglePlanActive = { id, isActive ->
+                                    nutritionGoalsViewModel.onTogglePlanActive(id, isActive)
+                                },
+                                onBackClick = {
+                                    settingsSubscreen = SettingsSubscreen.ROOT
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
                         SettingsSubscreen.ROOT -> {
                             SettingsScreen(
                                 onImportFromAdobongKangkong = {
@@ -344,6 +367,9 @@ fun MainScreen() {
                                 },
                                 onOpenSupplements = {
                                     settingsSubscreen = SettingsSubscreen.SUPPLEMENTS
+                                },
+                                onOpenNutritionGoals = {
+                                    settingsSubscreen = SettingsSubscreen.NUTRITION_GOALS
                                 },
                                 onOpenNutrients = {
                                     bottomSheetController.show {
@@ -483,6 +509,32 @@ fun MainScreen() {
                     onSaveClick = ingredientsViewModel::onSaveClick,
                     onDeleteClick = ingredientsViewModel::onDeleteClick,
                     onDismiss = ingredientsViewModel::onDismissEditor
+                )
+            }
+        }
+
+        val nutritionEditor = nutritionGoalsState.editor
+        if (nutritionEditor != null) {
+            ModalBottomSheet(
+                onDismissRequest = { nutritionGoalsViewModel.onDismissEditor() }
+            ) {
+                NutritionGoalsEditorSheet(
+                    state = nutritionEditor,
+                    nutrientCatalog = nutritionGoalsState.nutrientCatalog,
+                    onNameChanged = nutritionGoalsViewModel::onNameChanged,
+                    onTypeChanged = nutritionGoalsViewModel::onTypeChanged,
+                    onStartDateChanged = nutritionGoalsViewModel::onStartDateChanged,
+                    onEndDateChanged = nutritionGoalsViewModel::onEndDateChanged,
+                    onIsActiveChanged = nutritionGoalsViewModel::onIsActiveChanged,
+                    onAddGoalRow = nutritionGoalsViewModel::onAddGoalRow,
+                    onRemoveGoalRow = nutritionGoalsViewModel::onRemoveGoalRow,
+                    onGoalNutrientChanged = nutritionGoalsViewModel::onGoalNutrientChanged,
+                    onGoalMinChanged = nutritionGoalsViewModel::onGoalMinChanged,
+                    onGoalTargetChanged = nutritionGoalsViewModel::onGoalTargetChanged,
+                    onGoalMaxChanged = nutritionGoalsViewModel::onGoalMaxChanged,
+                    onSaveClick = nutritionGoalsViewModel::onSaveClick,
+                    onDeleteClick = nutritionGoalsViewModel::onDeleteClick,
+                    onDismiss = nutritionGoalsViewModel::onDismissEditor
                 )
             }
         }

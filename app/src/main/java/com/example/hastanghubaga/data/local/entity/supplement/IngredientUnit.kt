@@ -30,6 +30,7 @@ enum class IngredientUnit {
     IU,
     ML,
     OZ,
+    KCAL,
     CFU,
     CAPSULE,
     TABLET,
@@ -69,5 +70,7 @@ fun IngredientUnit.DisplayCase(size: Double): String {
             if (isSingular) "tablet" else "tablets"
         IngredientUnit.SCOOP ->
             if (isSingular) "scoop" else "scoops"
+
+        IngredientUnit.KCAL -> "kcal"
     }
 }

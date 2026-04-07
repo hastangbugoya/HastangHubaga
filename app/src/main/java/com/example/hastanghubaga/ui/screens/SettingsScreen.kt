@@ -31,11 +31,12 @@ private data class SettingsDestinationUi(
 fun SettingsScreen(
     onImportFromAdobongKangkong: () -> Unit,
     onOpenSupplements: () -> Unit,
+    onOpenNutritionGoals: () -> Unit,
     onOpenNutrients: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenIngredients: () -> Unit,
     onOpenMeals: () -> Unit,
-    onOpenEventTimes: () -> Unit // ✅ NEW
+    onOpenEventTimes: () -> Unit
 ) {
     val items = listOf(
         SettingsDestinationUi(
@@ -44,7 +45,12 @@ fun SettingsScreen(
             onClick = onImportFromAdobongKangkong
         ),
         SettingsDestinationUi(
-            title = "Event Times", // ✅ NEW
+            title = "Nutrition Goals",
+            subtitle = "Create and manage nutrition plans and nutrient goal targets",
+            onClick = onOpenNutritionGoals
+        ),
+        SettingsDestinationUi(
+            title = "Event Times",
             subtitle = "Edit default anchor times (wake up, meals, sleep, etc.)",
             onClick = onOpenEventTimes
         ),

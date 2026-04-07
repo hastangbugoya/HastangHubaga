@@ -16,6 +16,16 @@ import javax.inject.Inject
  * Debugging note:
  * This callback now logs before and after each seed section so failures can be
  * pinpointed on-device instead of silently producing an empty database.
+ *
+ * Nutrition goals note:
+ * - HH nutrition goals CRUD currently uses the normalized tables:
+ *   - nutrition_plan
+ *   - nutrition_plan_goals
+ * - The Nutrition Goals editor currently sources selectable nutrient keys from the
+ *   canonical ingredients table.
+ * - Therefore, core nutrition nutrients/macros must be pre-seeded into ingredients.
+ * - The seeded codes below are aligned to AK CsvNutrientCatalog codes so HH and AK
+ *   can refer to the same nutrient keys later.
  */
 class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
 
@@ -62,7 +72,7 @@ VALUES
   (8,  'Vitamin B9 (Folate / Methylfolate)', 'FOLATE_DFE_MCG', 'MCG', 400.0, 'MCG', 1000.0, 'MCG', 'Vitamin'),
   (9,  'Vitamin B12 (Cobalamin)', 'VITAMIN_B12_MCG', 'MCG', 2.4, 'MCG', NULL, NULL, 'Vitamin'),
   (10, 'Vitamin C (Ascorbic Acid)', 'VITAMIN_C_MG', 'MG', 90.0, 'MG', 2000.0, 'MG', 'Vitamin'),
-  (11, 'Vitamin D3 (Cholecalciferol)', 'VITAMIN_D_MCG', 'IU', 800.0, 'IU', 4000.0, 'IU', 'Vitamin'),
+  (11, 'Vitamin D3 (Cholecalciferol)', 'VITAMIN_D_MCG', 'MCG', 20.0, 'MCG', 100.0, 'MCG', 'Vitamin'),
   (12, 'Vitamin E (Tocopherol)', 'VITAMIN_E_MG', 'MG', 15.0, 'MG', 1000.0, 'MG', 'Vitamin'),
   (13, 'Vitamin K2 (MK-7)', 'VITAMIN_K_MCG', 'MCG', 120.0, 'MCG', NULL, NULL, 'Vitamin'),
   (14, 'Calcium', 'CALCIUM_MG', 'MG', 1000.0, 'MG', 2500.0, 'MG', 'Mineral'),
@@ -96,8 +106,19 @@ VALUES
   (42, 'Alpha Lipoic Acid (ALA)', 'ALA_MG', 'MG', NULL, NULL, NULL, NULL, 'Antioxidant'),
   (43, 'Bacopa Monnieri', 'BACOPA_MG', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
   (44, 'Ginkgo Biloba', 'GINKGO_MG', 'MG', NULL, NULL, NULL, NULL, 'Nootropic'),
-  (45, 'Electrolyte Blend', 'ELECTROLYTES_MG', 'MG', NULL, NULL, NULL, NULL, 'Hydration')
-;
+  (45, 'Electrolyte Blend', 'ELECTROLYTES_MG', 'MG', NULL, NULL, NULL, NULL, 'Hydration'),
+  (46, 'Calories', 'CALORIES_KCAL', 'KCAL', NULL, NULL, NULL, NULL, 'Energy'),
+  (47, 'Carbohydrates', 'CARBS_G', 'G', NULL, NULL, NULL, NULL, 'Macro'),
+  (48, 'Protein', 'PROTEIN_G', 'G', NULL, NULL, NULL, NULL, 'Macro'),
+  (49, 'Fat', 'FAT_G', 'G', NULL, NULL, NULL, NULL, 'Fat'),
+  (50, 'Fiber', 'FIBER_G', 'G', 30.0, 'G', NULL, NULL, 'Fiber'),
+  (51, 'Cholesterol', 'CHOLESTEROL_MG', 'MG', NULL, NULL, NULL, NULL, 'Sterol'),
+  (52, 'Sugars', 'SUGARS_G', 'G', NULL, NULL, NULL, NULL, 'Sugar'),
+  (53, 'Added Sugars', 'ADDED_SUGARS_G', 'G', NULL, NULL, NULL, NULL, 'Sugar'),
+  (54, 'Saturated Fat', 'SATURATED_FAT_G', 'G', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+  (55, 'Trans Fat', 'TRANS_FAT_G', 'G', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+  (56, 'Monounsaturated Fat', 'MONO_FAT_G', 'G', NULL, NULL, NULL, NULL, 'Fatty Acid'),
+  (57, 'Polyunsaturated Fat', 'POLY_FAT_G', 'G', NULL, NULL, NULL, NULL, 'Fatty Acid');
                 """.trimIndent()
             )
         }
@@ -444,13 +465,13 @@ INSERT INTO nutrition_plan_goals
     maxValue
 )
 VALUES
-    (1, 'protein', 165.0, 165.0, NULL),
-    (1, 'fat', NULL, 70.0, 70.0),
-    (1, 'carbs', NULL, 180.0, 180.0),
-    (1, 'calories', NULL, 2100.0, 2100.0),
-    (1, 'sodium', NULL, NULL, 2300.0),
-    (1, 'cholesterol', NULL, NULL, 300.0),
-    (1, 'fiber', 30.0, 30.0, NULL);
+    (1, 'PROTEIN_G', 165.0, 165.0, NULL),
+    (1, 'FAT_G', NULL, 70.0, 70.0),
+    (1, 'CARBS_G', NULL, 180.0, 180.0),
+    (1, 'CALORIES_KCAL', NULL, 2100.0, 2100.0),
+    (1, 'SODIUM_MG', NULL, NULL, 2300.0),
+    (1, 'CHOLESTEROL_MG', NULL, NULL, 300.0),
+    (1, 'FIBER_G', 30.0, 30.0, NULL);
                 """.trimIndent()
             )
         }

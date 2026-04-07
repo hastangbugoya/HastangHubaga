@@ -9,6 +9,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.ScheduleTimingType
 import com.example.hastanghubaga.data.local.entity.supplement.SupplementDoseUnit
 import com.example.hastanghubaga.data.local.entity.user.ScheduleTypeEntity
 import com.example.hastanghubaga.domain.model.activity.ActivityType
+import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
 import com.example.hastanghubaga.domain.schedule.model.TimeAnchor
 import java.time.DayOfWeek
 import java.time.Instant
@@ -87,6 +88,17 @@ class Converters {
     @TypeConverter
     fun toActivityType(value: String?): ActivityType? =
         value?.let { ActivityType.valueOf(it) }
+
+    // -------------------------
+    // Nutrition converters
+    // -------------------------
+    @TypeConverter
+    fun fromNutritionGoalType(type: NutritionGoalType?): String? =
+        type?.name
+
+    @TypeConverter
+    fun toNutritionGoalType(value: String?): NutritionGoalType? =
+        value?.let { NutritionGoalType.valueOf(it) }
 
     // -------------------------
     // LocalDateTime converters
