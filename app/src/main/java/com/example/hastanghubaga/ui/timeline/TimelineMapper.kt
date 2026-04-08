@@ -106,7 +106,14 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 subtitle = buildImportedMealSubtitle(meal.notes),
                 isCompleted = true,
                 importedMealId = importedMealId,
-                mealType = meal.type
+                mealType = meal.type,
+                totalCalories = meal.totalCalories,
+                totalProtein = meal.totalProtein,
+                totalCarbs = meal.totalCarbs,
+                totalFat = meal.totalFat,
+                totalSodium = meal.totalSodium,
+                totalCholesterol = meal.totalCholesterol,
+                totalFiber = meal.totalFiber
             )
         }
 

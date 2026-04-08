@@ -1252,9 +1252,102 @@ private fun ImportedMealBottomSheetContent(
 
         Spacer(modifier = Modifier.height(4.dp))
 
+        ImportedMealNutrientTable(item = item)
+
         Text(
             text = "This meal is read-only in HastangHubaga.",
             style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun ImportedMealNutrientTable(
+    item: ImportedMealUiModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(width = 1.dp, color = MaterialTheme.colorScheme.outline)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Nutrients",
+            style = MaterialTheme.typography.titleSmall
+        )
+
+        ImportedMealNutrientRow(
+            label = "Calories",
+            value = item.totalCalories.toString()
+        )
+        ImportedMealNutrientRow(
+            label = "Protein",
+            value = formatImportedMealNumber(item.totalProtein),
+            unit = "g"
+        )
+        ImportedMealNutrientRow(
+            label = "Carbs",
+            value = formatImportedMealNumber(item.totalCarbs),
+            unit = "g"
+        )
+        ImportedMealNutrientRow(
+            label = "Fat",
+            value = formatImportedMealNumber(item.totalFat),
+            unit = "g"
+        )
+
+        item.totalSodium?.let { sodium ->
+            ImportedMealNutrientRow(
+                label = "Sodium",
+                value = formatImportedMealNumber(sodium),
+                unit = "mg"
+            )
+        }
+
+        item.totalCholesterol?.let { cholesterol ->
+            ImportedMealNutrientRow(
+                label = "Cholesterol",
+                value = formatImportedMealNumber(cholesterol),
+                unit = "mg"
+            )
+        }
+
+        item.totalFiber?.let { fiber ->
+            ImportedMealNutrientRow(
+                label = "Fiber",
+                value = formatImportedMealNumber(fiber),
+                unit = "g"
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportedMealNutrientRow(
+    label: String,
+    value: String,
+    unit: String? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Text(
+            text = buildString {
+                append(value)
+                if (!unit.isNullOrBlank()) {
+                    append(" ")
+                    append(unit)
+                }
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -1284,6 +1377,14 @@ private fun TodayScreenContract.NutritionInput.isAllNull(): Boolean =
             sodiumMg == null &&
             cholesterolMg == null &&
             fiberGrams == null
+
+private fun formatImportedMealNumber(value: Double): String {
+    return if (value % 1.0 == 0.0) {
+        value.toInt().toString()
+    } else {
+        value.toString()
+    }
+}
 
 internal fun LocalTime.toDisplayText(): String {
     val hourText = hour.toString().padStart(2, '0')

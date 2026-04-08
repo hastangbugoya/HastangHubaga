@@ -288,6 +288,9 @@ data class MealUiModel(
  *
  * This is intentionally separate from [MealUiModel] so imported AK meals do not
  * go through HH native meal interactions such as "log a new meal now".
+ *
+ * Nutrient values here are display-only snapshots already persisted in HH from
+ * the AK import pipeline. Do not treat them as editable HH meal nutrition.
  */
 data class ImportedMealUiModel(
     override val id: Long,
@@ -299,7 +302,14 @@ data class ImportedMealUiModel(
     override val alertOffsetMinutes: Int? = null,
 
     val importedMealId: Long,
-    val mealType: MealType
+    val mealType: MealType,
+    val totalCalories: Int,
+    val totalProtein: Double,
+    val totalCarbs: Double,
+    val totalFat: Double,
+    val totalSodium: Double? = null,
+    val totalCholesterol: Double? = null,
+    val totalFiber: Double? = null
 ) : TimelineItemUiModel {
 
     override val rowType: TodayUiRowType =

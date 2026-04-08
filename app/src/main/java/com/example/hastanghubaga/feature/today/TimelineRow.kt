@@ -354,5 +354,12 @@ private fun previewImportedMealItem(): ImportedMealUiModel =
         subtitle = "Adobong Kangkong + rice",
         isCompleted = true,
         importedMealId = 101L,
-        mealType = MealType.DINNER
+        mealType = MealType.DINNER,
+        totalCalories = 540,
+        totalProtein = 22.0,
+        totalCarbs = 68.0,
+        totalFat = 18.0,
+        totalSodium = 780.0,
+        totalCholesterol = 35.0,
+        totalFiber = 6.0
     )
