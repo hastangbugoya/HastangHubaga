@@ -723,8 +723,14 @@ fun TodayScreenContent(
     onForceLogMeal: () -> Unit
 ) {
     when {
-        state.isLoading -> LoadingView()
-        state.errorMessage != null -> ErrorView(state.errorMessage)
+        state.isLoading -> {
+            LoadingView()
+        }
+
+        state.errorMessage != null -> {
+            ErrorView(state.errorMessage)
+        }
+
         else -> {
             val topBarActions = remember(
                 onRefresh,
@@ -752,18 +758,25 @@ fun TodayScreenContent(
                 )
             }
 
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
                 BasicScreenTopBar(
                     title = state.selectedDate.toString(),
                     overflowActions = topBarActions
                 )
 
                 state.dailyCompliance?.let { compliance ->
-                    DailyComplianceSummaryCard(
-                        compliance = compliance,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    val totalPlans = compliance.planResults.size
+                    val passedPlans = compliance.planResults.count { it.isSuccessful }
+
+                    Text(
+                        text = "Goals ($passedPlans/$totalPlans)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(
+                            horizontal = 16.dp,
+                            vertical = 8.dp
+                        )
                     )
                 }
 
@@ -861,7 +874,9 @@ fun TimelineRow(
     onClick: (TimelineItemUiModel) -> Unit = {}
 ) {
     var isExpanded by rememberSaveable(item.key) { mutableStateOf(false) }
+
     val isSupplementCard = item is SupplementUiModel || item is SupplementDoseLogUiModel
+
     val supplementIngredients = when (item) {
         is SupplementUiModel -> item.ingredients
         is SupplementDoseLogUiModel -> item.ingredients
@@ -888,7 +903,9 @@ fun TimelineRow(
             )
             .padding(Dimens.SpaceS)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -923,10 +940,10 @@ fun TimelineRow(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            item.subtitle?.let {
+            item.subtitle?.let { subtitle ->
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = it,
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -937,9 +954,12 @@ fun TimelineRow(
                 supplementIngredients.forEach { ingredient ->
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            withStyle(
+                                style = SpanStyle(fontWeight = FontWeight.Bold)
+                            ) {
                                 append(ingredient.name)
                             }
+
                             if (ingredient.amountText.isNotBlank()) {
                                 append(" ")
                                 append(ingredient.amountText)
@@ -950,31 +970,17 @@ fun TimelineRow(
                 }
             }
 
-            if (isSupplementCard) {
+            if (item is SupplementUiModel && isExpanded) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    when (item) {
-                        is SupplementUiModel -> {
-                            TextButton(
-                                onClick = { onClick(item) }
-                            ) {
-                                Text("Log")
-                            }
-                        }
-
-                        is SupplementDoseLogUiModel -> {
-                            TextButton(
-                                onClick = { isExpanded = !isExpanded }
-                            ) {
-                                Text(if (isExpanded) "Hide" else "Details")
-                            }
-                        }
-
-                        else -> Unit
+                    TextButton(
+                        onClick = { onClick(item) }
+                    ) {
+                        Text("Log")
                     }
                 }
             }
