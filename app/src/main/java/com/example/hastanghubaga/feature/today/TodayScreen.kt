@@ -43,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -890,7 +891,7 @@ fun TimelineRow(
     item: TimelineItemUiModel,
     onClick: (TimelineItemUiModel) -> Unit = {}
 ) {
-    var isExpanded by remember(item.key) { mutableStateOf(false) }
+    var isExpanded by rememberSaveable(item.key) { mutableStateOf(false) }
     val isSupplementCard = item is SupplementUiModel || item is SupplementDoseLogUiModel
     val supplementIngredients = when (item) {
         is SupplementUiModel -> item.ingredients
