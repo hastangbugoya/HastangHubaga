@@ -25,10 +25,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -90,6 +87,8 @@ import com.example.hastanghubaga.ui.common.BottomSheetController
 import com.example.hastanghubaga.ui.common.ErrorView
 import com.example.hastanghubaga.ui.common.LoadingView
 import com.example.hastanghubaga.ui.common.SnackbarController
+import com.example.hastanghubaga.ui.components.BasicScreenTopBar
+import com.example.hastanghubaga.ui.components.BasicTopBarAction
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.ImportedMealUiModel
 import com.example.hastanghubaga.ui.timeline.MealUiModel
@@ -727,13 +726,36 @@ fun TodayScreenContent(
         state.isLoading -> LoadingView()
         state.errorMessage != null -> ErrorView(state.errorMessage)
         else -> {
-            var isActionMenuExpanded by remember { mutableStateOf(false) }
+            val topBarActions = remember(
+                onRefresh,
+                onForceLogSupplement,
+                onForceLogActivity,
+                onForceLogMeal
+            ) {
+                listOf(
+                    BasicTopBarAction(
+                        label = "Refresh",
+                        onClick = onRefresh
+                    ),
+                    BasicTopBarAction(
+                        label = "Force log supplement",
+                        onClick = onForceLogSupplement
+                    ),
+                    BasicTopBarAction(
+                        label = "Force log activity",
+                        onClick = onForceLogActivity
+                    ),
+                    BasicTopBarAction(
+                        label = "Force log meal",
+                        onClick = onForceLogMeal
+                    )
+                )
+            }
 
             Column(modifier = Modifier.fillMaxSize()) {
-                Text(
-                    text = state.selectedDate.toString(),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                BasicScreenTopBar(
+                    title = state.selectedDate.toString(),
+                    overflowActions = topBarActions
                 )
 
                 state.dailyCompliance?.let { compliance ->
@@ -741,62 +763,9 @@ fun TodayScreenContent(
                         compliance = compliance,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Box {
-                        Button(
-                            onClick = { isActionMenuExpanded = true }
-                        ) {
-                            Text("Actions")
-                            Spacer(modifier = Modifier.height(0.dp))
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = "Open actions"
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = isActionMenuExpanded,
-                            onDismissRequest = { isActionMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Force log supplement") },
-                                onClick = {
-                                    isActionMenuExpanded = false
-                                    onForceLogSupplement()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text("Force log activity") },
-                                onClick = {
-                                    isActionMenuExpanded = false
-                                    onForceLogActivity()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text("Force log meal") },
-                                onClick = {
-                                    isActionMenuExpanded = false
-                                    onForceLogMeal()
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 TimelineList(
                     modifier = Modifier.weight(1f),
