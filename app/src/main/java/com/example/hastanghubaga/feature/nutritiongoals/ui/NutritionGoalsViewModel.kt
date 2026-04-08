@@ -11,6 +11,8 @@ import com.example.hastanghubaga.data.local.entity.supplement.IngredientEntity
 import com.example.hastanghubaga.data.local.entity.user.NutrientGoalEntity
 import com.example.hastanghubaga.data.local.entity.user.UserNutritionPlanEntity
 import com.example.hastanghubaga.domain.model.nutrition.NutritionGoalType
+import com.example.hastanghubaga.domain.usecase.nutrition.AkImportedGoalValue
+import com.example.hastanghubaga.domain.usecase.nutrition.ReadAkNutritionGoalsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,10 +67,36 @@ data class NutritionPlanEditorState(
     val isEditing: Boolean = planId != null
 }
 
+data class AkImportedGoalPickerItemUi(
+    val selectionKey: String,
+    val nutrientKey: String,
+    val displayName: String,
+    val unitLabel: String?,
+    val minValue: Double?,
+    val targetValue: Double?,
+    val maxValue: Double?,
+    val sourceKindLabel: String,
+    val hhSupportText: String
+)
+
+data class AkImportedGoalPickerState(
+    val isVisible: Boolean = false,
+    val isLoading: Boolean = false,
+    val exportedAtEpochMs: Long? = null,
+    val loadedAtEpochMs: Long? = null,
+    val source: String? = null,
+    val items: List<AkImportedGoalPickerItemUi> = emptyList(),
+    val selectedKeys: Set<String> = emptySet(),
+    val errorMessage: String? = null
+) {
+    val hasCachedItems: Boolean = items.isNotEmpty()
+}
+
 data class NutritionGoalsUiState(
     val items: List<NutritionPlanListItemUi> = emptyList(),
     val nutrientCatalog: List<NutritionGoalCatalogItemUi> = emptyList(),
-    val editor: NutritionPlanEditorState? = null
+    val editor: NutritionPlanEditorState? = null,
+    val akImportedGoalPicker: AkImportedGoalPickerState = AkImportedGoalPickerState()
 )
 
 @HiltViewModel
@@ -76,17 +104,28 @@ class NutritionGoalsViewModel @Inject constructor(
     private val appDatabase: AppDatabase,
     private val nutritionPlanEntityDao: NutritionPlanEntityDao,
     private val nutrientGoalDao: NutrientGoalDao,
-    private val ingredientEntityDao: IngredientEntityDao
+    private val ingredientEntityDao: IngredientEntityDao,
+    private val readAkNutritionGoalsUseCase: ReadAkNutritionGoalsUseCase
 ) : ViewModel() {
 
     private val editorState = MutableStateFlow<NutritionPlanEditorState?>(null)
+    private val akImportedGoalPickerState = MutableStateFlow(AkImportedGoalPickerState())
+
+    /**
+     * Raw cached AK rows.
+     *
+     * We intentionally cache the imported AK values separately from the picker UI items
+     * so the picker can be rebuilt later with fresh HH editor-side comparison/support text.
+     */
+    private var cachedAkImportedGoals: List<AkImportedGoalValue> = emptyList()
 
     val uiState: StateFlow<NutritionGoalsUiState> =
         combine(
             nutritionPlanEntityDao.observeAllPlans(),
             ingredientEntityDao.observeAllIngredients(),
-            editorState
-        ) { plans, ingredients, editor ->
+            editorState,
+            akImportedGoalPickerState
+        ) { plans, ingredients, editor, akImportedGoalPicker ->
             NutritionGoalsUiState(
                 items = plans.map { plan ->
                     NutritionPlanListItemUi(
@@ -108,7 +147,8 @@ class NutritionGoalsViewModel @Inject constructor(
                         )
                     }
                     .sortedBy { it.displayName },
-                editor = editor
+                editor = editor,
+                akImportedGoalPicker = akImportedGoalPicker
             )
         }.stateIn(
             scope = viewModelScope,
@@ -169,6 +209,13 @@ class NutritionGoalsViewModel @Inject constructor(
 
     fun onDismissEditor() {
         editorState.value = null
+        akImportedGoalPickerState.update { current ->
+            current.copy(
+                isVisible = false,
+                selectedKeys = emptySet(),
+                errorMessage = null
+            )
+        }
     }
 
     fun onNameChanged(value: String) {
@@ -276,6 +323,216 @@ class NutritionGoalsViewModel @Inject constructor(
                 goalRows = current.goalRows.map { row ->
                     if (row.rowId == rowId) row.copy(maxValueInput = value) else row
                 },
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * Manual, user-triggered AK reference flow.
+     *
+     * Behavior:
+     * - only works while an editor is open
+     * - reuses cached imported AK data when still fresh
+     * - otherwise re-reads the current AK goals snapshot
+     * - never persists imported AK data directly
+     * - only exposes a temporary picker/reference buffer in VM state
+     */
+    fun onReferToAkClick() {
+        val currentEditor = editorState.value ?: return
+
+        val now = Clock.System.now().toEpochMilliseconds()
+        val currentPickerState = akImportedGoalPickerState.value
+        val hasFreshCache = currentPickerState.loadedAtEpochMs != null &&
+                cachedAkImportedGoals.isNotEmpty() &&
+                now - currentPickerState.loadedAtEpochMs <= AK_REFERENCE_STALE_AFTER_MS
+
+        if (hasFreshCache) {
+            akImportedGoalPickerState.update { current ->
+                current.copy(
+                    isVisible = true,
+                    isLoading = false,
+                    items = cachedAkImportedGoals.map { importedGoal ->
+                        importedGoal.toPickerItemUi(currentEditor)
+                    },
+                    errorMessage = null
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            akImportedGoalPickerState.update { current ->
+                current.copy(
+                    isVisible = true,
+                    isLoading = true,
+                    errorMessage = null,
+                    selectedKeys = emptySet()
+                )
+            }
+
+            when (val result = readAkNutritionGoalsUseCase()) {
+                is ReadAkNutritionGoalsUseCase.Result.Success -> {
+                    val loadedAt = Clock.System.now().toEpochMilliseconds()
+                    val importedRows = result.snapshot.macros + result.snapshot.nutrients
+                    cachedAkImportedGoals = importedRows
+
+                    akImportedGoalPickerState.value = AkImportedGoalPickerState(
+                        isVisible = true,
+                        isLoading = false,
+                        exportedAtEpochMs = result.snapshot.exportedAtEpochMs,
+                        loadedAtEpochMs = loadedAt,
+                        source = result.snapshot.source,
+                        items = importedRows.map { importedGoal ->
+                            importedGoal.toPickerItemUi(currentEditor)
+                        },
+                        selectedKeys = emptySet(),
+                        errorMessage = null
+                    )
+
+                    editorState.update { current ->
+                        current?.copy(errorMessage = null)
+                    }
+                }
+
+                is ReadAkNutritionGoalsUseCase.Result.Error -> {
+                    cachedAkImportedGoals = emptyList()
+
+                    akImportedGoalPickerState.update { current ->
+                        current.copy(
+                            isVisible = false,
+                            isLoading = false,
+                            items = emptyList(),
+                            selectedKeys = emptySet(),
+                            errorMessage = result.message.ifBlank {
+                                "Failed to read current AK goals."
+                            }
+                        )
+                    }
+
+                    editorState.update { current ->
+                        current?.copy(
+                            errorMessage = result.message.ifBlank {
+                                "Failed to read current AK goals."
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun onDismissAkGoalPicker() {
+        akImportedGoalPickerState.update { current ->
+            current.copy(
+                isVisible = false,
+                isLoading = false,
+                selectedKeys = emptySet(),
+                errorMessage = null
+            )
+        }
+    }
+
+    fun onAkGoalCheckedChanged(
+        selectionKey: String,
+        isChecked: Boolean
+    ) {
+        akImportedGoalPickerState.update { current ->
+            val updatedSelection = current.selectedKeys.toMutableSet().apply {
+                if (isChecked) add(selectionKey) else remove(selectionKey)
+            }
+
+            current.copy(
+                selectedKeys = updatedSelection,
+                errorMessage = null
+            )
+        }
+    }
+
+    /**
+     * Copies user-selected imported AK goal rows into the current editor only.
+     *
+     * Rules:
+     * - does NOT persist anything
+     * - if an imported nutrientKey already exists in the editor, replace that row's
+     *   min/target/max and display metadata
+     * - otherwise append a new row
+     * - if the editor only has the default empty row, that placeholder row is removed
+     *   before imported rows are added
+     */
+    fun onApplySelectedAkGoals() {
+        val currentEditor = editorState.value ?: return
+        val currentPicker = akImportedGoalPickerState.value
+
+        if (currentPicker.selectedKeys.isEmpty()) {
+            editorState.update { current ->
+                current?.copy(errorMessage = "Select at least one AK goal to apply.")
+            }
+            return
+        }
+
+        val selectedImportedItems = currentPicker.items
+            .filter { it.selectionKey in currentPicker.selectedKeys }
+
+        if (selectedImportedItems.isEmpty()) {
+            editorState.update { current ->
+                current?.copy(errorMessage = "Selected AK goals could not be resolved.")
+            }
+            return
+        }
+
+        val baseRows = currentEditor.goalRows
+            .filterNot { it.isBlankPlaceholder() }
+            .toMutableList()
+
+        selectedImportedItems.forEach { importedItem ->
+            val existingIndex = baseRows.indexOfFirst { row ->
+                row.nutrientKey.trim() == importedItem.nutrientKey.trim()
+            }
+
+            val replacementRow = if (existingIndex >= 0) {
+                baseRows[existingIndex].copy(
+                    nutrientKey = importedItem.nutrientKey,
+                    nutrientDisplayName = importedItem.displayName,
+                    unitLabel = importedItem.unitLabel,
+                    minValueInput = importedItem.minValue?.toString().orEmpty(),
+                    targetValueInput = importedItem.targetValue?.toString().orEmpty(),
+                    maxValueInput = importedItem.maxValue?.toString().orEmpty()
+                )
+            } else {
+                NutritionGoalEditorRowUi(
+                    rowId = nextNutritionGoalRowId(),
+                    nutrientKey = importedItem.nutrientKey,
+                    nutrientDisplayName = importedItem.displayName,
+                    unitLabel = importedItem.unitLabel,
+                    minValueInput = importedItem.minValue?.toString().orEmpty(),
+                    targetValueInput = importedItem.targetValue?.toString().orEmpty(),
+                    maxValueInput = importedItem.maxValue?.toString().orEmpty()
+                )
+            }
+
+            if (existingIndex >= 0) {
+                baseRows[existingIndex] = replacementRow
+            } else {
+                baseRows += replacementRow
+            }
+        }
+
+        editorState.update { current ->
+            current?.copy(
+                goalRows = if (baseRows.isEmpty()) {
+                    listOf(defaultNutritionGoalEditorRow())
+                } else {
+                    baseRows
+                },
+                errorMessage = null
+            )
+        }
+
+        akImportedGoalPickerState.update { current ->
+            current.copy(
+                isVisible = false,
+                selectedKeys = emptySet(),
                 errorMessage = null
             )
         }
@@ -403,6 +660,13 @@ class NutritionGoalsViewModel @Inject constructor(
                 }
 
                 editorState.value = null
+                akImportedGoalPickerState.update { currentPicker ->
+                    currentPicker.copy(
+                        isVisible = false,
+                        selectedKeys = emptySet(),
+                        errorMessage = null
+                    )
+                }
             } catch (t: Throwable) {
                 editorState.update {
                     it?.copy(
@@ -422,6 +686,13 @@ class NutritionGoalsViewModel @Inject constructor(
             val existing = nutritionPlanEntityDao.getPlanById(planId) ?: return@launch
             nutritionPlanEntityDao.delete(existing)
             editorState.value = null
+            akImportedGoalPickerState.update { picker ->
+                picker.copy(
+                    isVisible = false,
+                    selectedKeys = emptySet(),
+                    errorMessage = null
+                )
+            }
         }
     }
 
@@ -474,6 +745,57 @@ class NutritionGoalsViewModel @Inject constructor(
             maxValue = maxValue
         )
     }
+
+    private fun AkImportedGoalValue.toPickerItemUi(
+        currentEditor: NutritionPlanEditorState
+    ): AkImportedGoalPickerItemUi {
+        val ingredientCatalogMatch = uiState.value.nutrientCatalog
+            .firstOrNull { it.nutrientKey == canonicalKey }
+
+        val existingEditorRow = currentEditor.goalRows.firstOrNull { row ->
+            row.nutrientKey.trim() == canonicalKey.trim()
+        }
+
+        return AkImportedGoalPickerItemUi(
+            selectionKey = "${sourceKind.name}:$sourceKey",
+            nutrientKey = canonicalKey,
+            displayName = ingredientCatalogMatch?.displayName ?: displayName,
+            unitLabel = ingredientCatalogMatch?.unitLabel ?: unit,
+            minValue = minValue,
+            targetValue = targetValue,
+            maxValue = maxValue,
+            sourceKindLabel = sourceKind.name,
+            hhSupportText = buildHhSupportText(existingEditorRow)
+        )
+    }
+
+    private fun buildHhSupportText(
+        existingEditorRow: NutritionGoalEditorRowUi?
+    ): String {
+        if (existingEditorRow == null) {
+            return "HH current: not set"
+        }
+
+        val parts = buildList {
+            existingEditorRow.minValueInput.trim()
+                .takeIf { it.isNotBlank() }
+                ?.let { add("Min $it") }
+
+            existingEditorRow.targetValueInput.trim()
+                .takeIf { it.isNotBlank() }
+                ?.let { add("Target $it") }
+
+            existingEditorRow.maxValueInput.trim()
+                .takeIf { it.isNotBlank() }
+                ?.let { add("Max $it") }
+        }
+
+        return if (parts.isEmpty()) {
+            "HH current: not set"
+        } else {
+            "HH current: ${parts.joinToString(" • ")}"
+        }
+    }
 }
 
 private data class ParsedGoalRow(
@@ -484,6 +806,7 @@ private data class ParsedGoalRow(
 )
 
 private const val SOURCE_TYPE_LOCAL = "LOCAL"
+private const val AK_REFERENCE_STALE_AFTER_MS = 10 * 60 * 1000L
 
 private fun defaultNutritionGoalEditorRow(): NutritionGoalEditorRowUi =
     NutritionGoalEditorRowUi(
@@ -492,6 +815,15 @@ private fun defaultNutritionGoalEditorRow(): NutritionGoalEditorRowUi =
 
 private fun IngredientEntity.toNutritionKey(): String =
     code.trim().ifBlank { name.trim() }
+
+private fun NutritionGoalEditorRowUi.isBlankPlaceholder(): Boolean {
+    return nutrientKey.isBlank() &&
+            nutrientDisplayName.isBlank() &&
+            unitLabel.isNullOrBlank() &&
+            minValueInput.isBlank() &&
+            targetValueInput.isBlank() &&
+            maxValueInput.isBlank()
+}
 
 private var nextNutritionGoalGeneratedRowId: Long = 0L
 
