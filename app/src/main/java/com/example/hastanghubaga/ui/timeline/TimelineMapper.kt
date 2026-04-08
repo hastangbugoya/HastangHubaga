@@ -115,10 +115,7 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 id = activityId,
                 time = time,
                 title = title,
-                subtitle = subtitle ?: buildActivitySubtitle(
-                    scheduledTime = scheduledTime,
-                    isWorkout = isWorkout
-                ),
+                subtitle = subtitle,
                 isCompleted = isCompleted,
                 activityId = activityId,
                 activityType = title.toActivityTypeOrOther(),
@@ -166,17 +163,6 @@ private fun buildDoseLogSubtitle(
             append("(scheduled $it)")
         }
     }.ifBlank { null }
-}
-
-private fun buildActivitySubtitle(
-    scheduledTime: kotlinx.datetime.LocalTime,
-    isWorkout: Boolean
-): String {
-    return if (isWorkout) {
-        "Scheduled $scheduledTime • Workout"
-    } else {
-        "Scheduled $scheduledTime"
-    }
 }
 
 private fun buildImportedMealSubtitle(notes: String?): String {

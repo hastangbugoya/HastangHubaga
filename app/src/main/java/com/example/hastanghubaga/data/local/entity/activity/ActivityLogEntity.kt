@@ -107,5 +107,24 @@ data class ActivityLogEntity(
      * - 5 = moderate
      * - 10 = maximal effort
      */
-    val intensity: Int? = null
+    val intensity: Int? = null,
+
+    /**
+     * Optional saved-address override for the actual performed activity.
+     *
+     * Highest priority in location resolution.
+     */
+    val savedAddressId: Long? = null,
+
+    /**
+     * Optional raw/free-text location override for the actual performed activity.
+     *
+     * Used when no saved address is selected or when the user provides
+     * a custom/non-mappable location.
+     *
+     * App logic should later prefer only one active source at a time:
+     * - savedAddressId
+     * - addressAsRawString
+     */
+    val addressAsRawString: String? = null,
 )

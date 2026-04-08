@@ -8,6 +8,7 @@ import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityLogDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityScheduleDao
+import com.example.hastanghubaga.data.local.dao.location.AddressDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
@@ -36,6 +37,7 @@ import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEn
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleAnchoredTimeEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityScheduleFixedTimeEntity
+import com.example.hastanghubaga.data.local.entity.location.AddressEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedLogEntity
 import com.example.hastanghubaga.data.local.entity.meal.AkImportedMealEntity
 import com.example.hastanghubaga.data.local.entity.meal.MealEntity
@@ -103,8 +105,9 @@ import com.example.hastanghubaga.data.local.entity.widget.IngredientPreferenceEn
         NutrientGoalEntity::class,
         UserNutritionPlanSuccessCriteriaEntity::class,
         IngredientPreferenceEntity::class,
+        AddressEntity::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -142,6 +145,8 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun ingredientPreferenceDao(): IngredientPreferenceDao
     abstract fun supplementNutritionDao(): SupplementNutritionDao
+
+    abstract fun addressDao(): AddressDao
 
     companion object
 }

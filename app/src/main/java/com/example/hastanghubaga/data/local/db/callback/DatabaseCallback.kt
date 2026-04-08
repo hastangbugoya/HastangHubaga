@@ -63,6 +63,18 @@ class DatabaseCallback @Inject constructor() : RoomDatabase.Callback() {
             }
         }
 
+        runSection("addresses") {
+            db.execSQL(
+                """
+INSERT INTO addresses
+(id, label, fullAddress, isFavorite, createdAt, updatedAt)
+VALUES
+    (1, 'Gold''s Gym Long Beach', '2750 E 4th St, Long Beach, CA 90814', 1, $now, $now),
+    (2, '24 Hour Fitness Long Beach Super-Sport', '100 Oceangate, Long Beach, CA 90802', 1, $now, $now);
+                """.trimIndent()
+            )
+        }
+
         runSection("ingredients") {
             db.execSQL(
                 """
@@ -374,18 +386,20 @@ VALUES
             Log.d("SeedDebug", "Inserted meal occurrences for date=$today")
         }
 
+// ONLY showing the modified section — everything else stays EXACTLY the same
+
         runSection("activities") {
             db.execSQL(
                 """
 INSERT INTO activities
-(id, type, startTimestamp, endTimestamp, notes, intensity, isWorkout, isActive, sendAlert, alertOffsetMinutes)
+(id, type, startTimestamp, endTimestamp, notes, intensity, isWorkout, isActive, sendAlert, alertOffsetMinutes, savedAddressId, addressAsRawString)
 VALUES
-    (1, 'STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 7, 1, 1, 0, 0),
-    (2, 'WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 3, 1, 1, 0, 0),
-    (3, 'WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', NULL, 0, 1, 0, 0),
-    (4, 'RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', NULL, 0, 1, 0, 0),
-    (5, 'SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', NULL, 0, 0, 0, 0);
-                """.trimIndent()
+    (1, 'STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 7, 1, 1, 0, 0, 1, NULL),
+    (2, 'WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 3, 1, 1, 0, 0, NULL, NULL),
+    (3, 'WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', NULL, 0, 1, 0, 0, NULL, NULL),
+    (4, 'RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', NULL, 0, 1, 0, 0, NULL, NULL),
+    (5, 'SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', NULL, 0, 0, 0, 0, NULL, NULL);
+        """.trimIndent()
             )
             Log.d("SeedDebug", "Inserted activities for date=$today")
             Log.d("SeedDebug", "Sample activity ts=${millisAt(7, 0)}")

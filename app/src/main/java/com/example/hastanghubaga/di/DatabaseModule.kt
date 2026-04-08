@@ -7,6 +7,7 @@ import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityLogDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityOccurrenceDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityScheduleDao
+import com.example.hastanghubaga.data.local.dao.location.AddressDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedLogDao
 import com.example.hastanghubaga.data.local.dao.meal.AkImportedMealDao
 import com.example.hastanghubaga.data.local.dao.meal.MealEntityDao
@@ -123,6 +124,11 @@ object DatabaseModule {
     @Provides
     fun provideActivityLogDao(db: AppDatabase): ActivityLogDao =
         db.activityLogDao()
+
+    // --- Location ---
+    @Provides
+    fun provideAddressDao(db: AppDatabase): AddressDao =
+        db.addressDao()
 
     // --- Meal ---
     @Provides

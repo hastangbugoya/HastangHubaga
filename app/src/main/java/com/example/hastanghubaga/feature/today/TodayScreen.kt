@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,11 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -40,21 +36,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.isExercise
-import com.example.hastanghubaga.domain.model.meal.Meal as MealTemplate
 import com.example.hastanghubaga.domain.model.nutrition.DailyComplianceResult
 import com.example.hastanghubaga.domain.model.supplement.Supplement
 import com.example.hastanghubaga.domain.time.DomainTimePolicy
@@ -92,16 +83,13 @@ import com.example.hastanghubaga.ui.components.BasicTopBarAction
 import com.example.hastanghubaga.ui.timeline.ActivityUiModel
 import com.example.hastanghubaga.ui.timeline.ImportedMealUiModel
 import com.example.hastanghubaga.ui.timeline.MealUiModel
-import com.example.hastanghubaga.ui.timeline.SupplementDoseLogUiModel
-import com.example.hastanghubaga.ui.timeline.SupplementUiModel
 import com.example.hastanghubaga.ui.timeline.TimelineItemUiModel
-import com.example.hastanghubaga.ui.timeline.icon
-import com.example.hastanghubaga.ui.tokens.Dimens
 import com.example.hastanghubaga.ui.tokens.UiColors
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlin.math.roundToInt
+import com.example.hastanghubaga.domain.model.meal.Meal as MealTemplate
 
 sealed interface ActiveLocalSheet {
     data class Dose(
@@ -868,125 +856,7 @@ fun TimelineList(
     }
 }
 
-@Composable
-fun TimelineRow(
-    item: TimelineItemUiModel,
-    onClick: (TimelineItemUiModel) -> Unit = {}
-) {
-    var isExpanded by rememberSaveable(item.key) { mutableStateOf(false) }
 
-    val isSupplementCard = item is SupplementUiModel || item is SupplementDoseLogUiModel
-
-    val supplementIngredients = when (item) {
-        is SupplementUiModel -> item.ingredients
-        is SupplementDoseLogUiModel -> item.ingredients
-        else -> emptyList()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(Dimens.SpaceS)
-            .border(color = UiColors.Primary(), width = 1.dp)
-            .background(color = MaterialTheme.colorScheme.surface)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                enabled = true,
-                onClick = {
-                    if (isSupplementCard) {
-                        isExpanded = !isExpanded
-                    } else {
-                        onClick(item)
-                    }
-                }
-            )
-            .padding(Dimens.SpaceS)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = item.time.toDisplayText(),
-                    style = MaterialTheme.typography.labelMedium
-                )
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (item.isCompleted) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = "Completed",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Icon(
-                        painter = androidx.compose.ui.res.painterResource(id = item.icon()),
-                        contentDescription = null
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            item.subtitle?.let { subtitle ->
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            if (isExpanded && supplementIngredients.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                supplementIngredients.forEach { ingredient ->
-                    Text(
-                        text = buildAnnotatedString {
-                            withStyle(
-                                style = SpanStyle(fontWeight = FontWeight.Bold)
-                            ) {
-                                append(ingredient.name)
-                            }
-
-                            if (ingredient.amountText.isNotBlank()) {
-                                append(" ")
-                                append(ingredient.amountText)
-                            }
-                        },
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-
-            if (item is SupplementUiModel && isExpanded) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = { onClick(item) }
-                    ) {
-                        Text("Log")
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun SupplementLogChoiceSheetContent(
@@ -1419,7 +1289,7 @@ private fun TodayScreenContract.NutritionInput.isAllNull(): Boolean =
             cholesterolMg == null &&
             fiberGrams == null
 
-private fun LocalTime.toDisplayText(): String {
+internal fun LocalTime.toDisplayText(): String {
     val hourText = hour.toString().padStart(2, '0')
     val minuteText = minute.toString().padStart(2, '0')
     return "$hourText:$minuteText"

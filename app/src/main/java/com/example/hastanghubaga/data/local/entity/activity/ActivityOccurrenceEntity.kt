@@ -93,7 +93,25 @@ data class ActivityOccurrenceEntity(
     val isDeleted: Boolean = false,
 
     @ColumnInfo(defaultValue = "0")
-    val isWorkout: Boolean = false
+    val isWorkout: Boolean = false,
+
+    /**
+     * Optional saved-address override for this specific planned occurrence.
+     *
+     * If null, later resolution should fall back to the ActivityEntity default.
+     */
+    val savedAddressId: Long? = null,
+
+    /**
+     * Optional raw/free-text location override for this specific planned occurrence.
+     *
+     * If null, later resolution should fall back to the ActivityEntity default.
+     *
+     * App logic should later prefer only one active source at a time:
+     * - savedAddressId
+     * - addressAsRawString
+     */
+    val addressAsRawString: String? = null
 )
 
 enum class ActivityOccurrenceSourceType {
