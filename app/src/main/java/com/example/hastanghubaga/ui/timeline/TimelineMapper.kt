@@ -118,7 +118,9 @@ fun TimelineItem.toTimelineItemUiModel(): TimelineItemUiModel =
                 subtitle = subtitle,
                 isCompleted = isCompleted,
                 activityId = activityId,
-                activityType = title.toActivityTypeOrOther(),
+                activityType = activityTypeLabel.toActivityTypeFromDisplayText(),
+                activityTypeLabel = activityTypeLabel,
+                addressText = addressText,
                 startTime = time,
                 endTime = null,
                 intensity = null,
@@ -196,9 +198,15 @@ private fun buildPreviewOccurrenceId(
     ).joinToString(separator = "|")
 }
 
-private fun String.toActivityTypeOrOther(): ActivityType =
-    runCatching {
-        ActivityType.valueOf(
-            uppercase().replace(" ", "_")
-        )
-    }.getOrDefault(ActivityType.OTHER)
+private fun String?.toActivityTypeFromDisplayText(): ActivityType =
+    this?.let { displayText ->
+        ActivityType.entries.firstOrNull { type ->
+            type.name.lowercase()
+                .split("_")
+                .joinToString(" ") { part ->
+                    part.replaceFirstChar { char ->
+                        if (char.isLowerCase()) char.titlecase() else char.toString()
+                    }
+                } == displayText
+        }
+    } ?: ActivityType.OTHER

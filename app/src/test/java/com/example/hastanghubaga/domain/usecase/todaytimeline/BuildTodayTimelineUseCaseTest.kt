@@ -165,7 +165,8 @@ class BuildTodayTimelineUseCaseTest {
     private fun activityOccurrence(
         id: String,
         activityId: Long,
-        time: LocalTime
+        time: LocalTime,
+        title: String = "Workout"
     ): ActivityOccurrenceEntity =
         ActivityOccurrenceEntity(
             id = id,
@@ -174,7 +175,8 @@ class BuildTodayTimelineUseCaseTest {
             date = testDate.toString(),
             plannedTimeSeconds = time.toSecondOfDay(),
             sourceType = com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceSourceType.SCHEDULED,
-            isDeleted = false
+            isDeleted = false,
+            title = title
         )
 
     private fun activityLog(
@@ -182,12 +184,14 @@ class BuildTodayTimelineUseCaseTest {
         activityId: Long?,
         activityType: ActivityType,
         at: LocalDateTime,
-        occurrenceId: String? = null
+        occurrenceId: String? = null,
+        title: String = "Workout"
     ): ActivityLog =
         ActivityLog(
             id = id,
             activityId = activityId,
             occurrenceId = occurrenceId,
+            title = title,
             activityType = activityType,
             start = at,
             end = null,
@@ -342,7 +346,8 @@ class BuildTodayTimelineUseCaseTest {
             activityId = 1L,
             activityType = ActivityType.STRENGTH_TRAINING,
             at = LocalDateTime(2025, 1, 1, 6, 0),
-            occurrenceId = "act-occ-1"
+            occurrenceId = "act-occ-1",
+            title = "Workout"
         )
 
         val result = useCase(
@@ -353,7 +358,8 @@ class BuildTodayTimelineUseCaseTest {
                 activityOccurrence(
                     id = "act-occ-1",
                     activityId = activity.id,
-                    time = LocalTime(6, 0)
+                    time = LocalTime(6, 0),
+                    title = "Workout"
                 )
             ),
             activities = listOf(activity),
@@ -391,7 +397,8 @@ class BuildTodayTimelineUseCaseTest {
             activityId = 2L,
             activityType = ActivityType.RUNNING,
             at = LocalDateTime(2025, 1, 1, 6, 30),
-            occurrenceId = "act-occ-1"
+            occurrenceId = "act-occ-1",
+            title = "Workout"
         )
 
         val result = useCase(
@@ -416,7 +423,8 @@ class BuildTodayTimelineUseCaseTest {
                 activityOccurrence(
                     id = "act-occ-1",
                     activityId = activity.id,
-                    time = LocalTime(6, 30)
+                    time = LocalTime(6, 30),
+                    title = "Workout"
                 )
             ),
             activities = listOf(activity),

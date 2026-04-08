@@ -46,25 +46,33 @@ class ActivityLogRepositoryImpl @Inject constructor(
     override suspend fun insertActivityLog(
         activityId: Long?,
         occurrenceId: String?,
+        title: String,
         activityType: ActivityType,
         startTimestamp: Long,
         endTimestamp: Long?,
         notes: String?,
-        intensity: Int?
+        intensity: Int?,
+        savedAddressId: Long?,
+        addressAsRawString: String?,
+        addressDisplayText: String?
     ): Long {
         Log.d(
             "ACTIVITY_RECON",
-            "repo save activityId=$activityId occurrenceId=$occurrenceId activityType=$activityType"
+            "repo save activityId=$activityId occurrenceId=$occurrenceId title=$title activityType=$activityType savedAddressId=$savedAddressId addressAsRawString=$addressAsRawString addressDisplayText=$addressDisplayText"
         )
 
         val entity = ActivityLogEntity(
             activityId = activityId,
             occurrenceId = occurrenceId,
+            title = title,
             activityType = activityType,
             startTimestamp = startTimestamp,
             endTimestamp = endTimestamp,
             notes = notes,
-            intensity = intensity
+            intensity = intensity,
+            savedAddressId = savedAddressId,
+            addressAsRawString = addressAsRawString,
+            addressDisplayText = addressDisplayText
         )
 
         return if (occurrenceId.isNullOrBlank()) {

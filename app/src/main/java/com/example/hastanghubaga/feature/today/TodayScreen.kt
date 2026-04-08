@@ -262,7 +262,7 @@ fun TodayScreen(
         if (draft != null) {
             activeSheet = Exercise(
                 draft = draft,
-                title = draft.activityType.name.replace('_', ' ')
+                title = draft.title
             )
         } else if (activeSheet is Exercise) {
             activeSheet = null
@@ -425,7 +425,7 @@ fun TodayScreen(
                                 ForceLogActivitySelected(
                                     activityId = activity.id,
                                     activityType = activity.type,
-                                    title = activity.type.name.replace('_', ' ')
+                                    title = activity.title
                                 )
                             )
                             activeSheet = null
@@ -856,8 +856,6 @@ fun TimelineList(
     }
 }
 
-
-
 @Composable
 private fun SupplementLogChoiceSheetContent(
     title: String?,
@@ -989,16 +987,14 @@ private fun ForceLogActivityPickerSheetContent(
                         .padding(vertical = 12.dp)
                 ) {
                     Text(
-                        text = activity.type.name.replace('_', ' '),
+                        text = activity.title,
                         style = MaterialTheme.typography.titleMedium
                     )
 
-                    activity.notes?.takeIf { it.isNotBlank() }?.let { notes ->
-                        Text(
-                            text = notes,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Text(
+                        text = activity.type.name.replace('_', ' '),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

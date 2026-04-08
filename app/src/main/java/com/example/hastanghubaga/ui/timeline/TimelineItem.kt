@@ -94,6 +94,20 @@ sealed interface TimelineItem {
      * - [isCompleted] = false for planned rows
      * - [isCompleted] = true for actual logged rows
      *
+     * Display contract:
+     * - [title] = primary user-facing activity name
+     * - [activityTypeLabel] = collapsed secondary display text for activity category
+     * - [addressText] = expanded address/location text
+     *
+     * Transitional note:
+     * - [subtitle] remains as a compatibility field while older mapper/UI paths
+     *   are being retired
+     * - new activity rendering should prefer [activityTypeLabel] and [addressText]
+     *
+     * DO NOT:
+     * - derive [title] from enum names
+     * - overload a single field to mean both type and address
+     *
      * Important:
      * - [time] is the canonical resolved timeline placement time
      * - [scheduledTime] preserves the original planned or actual source time
@@ -105,6 +119,8 @@ sealed interface TimelineItem {
         val activityId: Long,
         val title: String,
         val subtitle: String? = null,
+        val activityTypeLabel: String? = null,
+        val addressText: String? = null,
         val isWorkout: Boolean = false,
         val scheduledTime: LocalTime = time,
         val isCompleted: Boolean = false

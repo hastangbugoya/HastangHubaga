@@ -43,9 +43,14 @@ import androidx.room.PrimaryKey
  * - the user may later toggle [isWorkout] for a specific occurrence without
  *   mutating the underlying template
  *
- * This keeps the day-level anchor system deterministic:
- * - the planner reads the occurrence snapshot
- * - not the template directly
+ * ## TITLE SNAPSHOT (NEW)
+ * [title] is a snapshot of ActivityEntity.title at the time the occurrence is created.
+ *
+ * This ensures:
+ * - historical planner rows remain stable
+ * - timeline display does not change if the template title is edited later
+ *
+ * DO NOT resolve title from ActivityEntity at read time.
  *
  * ## Notes
  * - [scheduleId] is nullable because ad-hoc occurrences are not backed by a
@@ -96,6 +101,13 @@ data class ActivityOccurrenceEntity(
     val isWorkout: Boolean = false,
 
     /**
+     * Snapshot of the activity display title at occurrence creation time.
+     *
+     * This is the PRIMARY text that should be shown in timeline cards.
+     */
+    val title: String,
+
+    /**
      * Optional saved-address override for this specific planned occurrence.
      *
      * If null, later resolution should fall back to the ActivityEntity default.
@@ -111,7 +123,19 @@ data class ActivityOccurrenceEntity(
      * - savedAddressId
      * - addressAsRawString
      */
-    val addressAsRawString: String? = null
+    val addressAsRawString: String? = null,
+
+    /**
+     * Snapshot display text for this occurrence's planned location.
+     *
+     * This is the UI-ready location text the planner/timeline can show directly
+     * without needing to resolve a savedAddressId through another lookup.
+     *
+     * Typical examples:
+     * - saved address label like "Gold's Gym Long Beach"
+     * - raw location string entered by the user
+     */
+    val addressDisplayText: String? = null
 )
 
 enum class ActivityOccurrenceSourceType {

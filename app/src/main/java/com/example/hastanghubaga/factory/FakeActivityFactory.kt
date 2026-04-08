@@ -9,11 +9,11 @@ object FakeActivityFactory {
         name: String,
         at: LocalDateTime
     ): Activity {
-        val TEST_DATE_TIME = LocalDateTime.parse("2026-01-15T12:00:00")
         val activity = Activity(
             id = 1,
+            title = name,
             type = ActivityType.STRENGTH_TRAINING,
-            start = TEST_DATE_TIME,
+            start = at,
             end = null,
             notes = null
         )

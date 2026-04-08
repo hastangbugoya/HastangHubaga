@@ -11,17 +11,26 @@ import com.example.hastanghubaga.domain.model.activity.ActivityLog
  * - ActivityEntity = template
  * - ActivityOccurrenceEntity = planned occurrence
  * - ActivityLogEntity = actual performed session
+ *
+ * Important:
+ * - title/type/address fields are treated as historical snapshots on the log
+ * - timeline/history should be able to render the actual logged context without
+ *   needing to re-resolve the current template or saved address row
  */
 fun ActivityLogEntity.toDomain(): ActivityLog =
     ActivityLog(
         id = id,
         activityId = activityId,
         occurrenceId = occurrenceId,
+        title = title,
         activityType = activityType,
         start = JavaTimeAdapter.utcMillisToDomainLocalDateTime(startTimestamp),
         end = endTimestamp?.let(JavaTimeAdapter::utcMillisToDomainLocalDateTime),
         notes = notes,
-        intensity = intensity
+        intensity = intensity,
+        savedAddressId = savedAddressId,
+        addressAsRawString = addressAsRawString,
+        addressDisplayText = addressDisplayText
     )
 
 fun ActivityLog.toEntity(): ActivityLogEntity =
@@ -29,10 +38,13 @@ fun ActivityLog.toEntity(): ActivityLogEntity =
         id = id,
         activityId = activityId,
         occurrenceId = occurrenceId,
+        title = title,
         activityType = activityType,
         startTimestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(start),
         endTimestamp = end?.let(JavaTimeAdapter::domainLocalDateTimeToUtcMillis),
         notes = notes,
-        intensity = intensity
+        intensity = intensity,
+        savedAddressId = savedAddressId,
+        addressAsRawString = addressAsRawString,
+        addressDisplayText = addressDisplayText
     )
-

@@ -41,6 +41,17 @@ interface ActivityLogRepository {
      * - if [occurrenceId] is non-null, this must behave as upsert-by-occurrenceId
      * - if [occurrenceId] is null, this behaves as a normal insert for an ad-hoc log
      *
+     * Snapshot rule:
+     * - [title] is the user-facing display name snapshot for the logged activity
+     * - [activityType] remains category-only metadata
+     * - normal planned logging should copy title/location from the occurrence layer
+     *
+     * Location snapshot rule:
+     * - savedAddressId/addressAsRawString represent the actual location snapshot
+     *   for the logged activity
+     * - addressDisplayText is the UI-ready display snapshot
+     * - normal planned logging should copy these from the occurrence layer
+     *
      * Returns:
      * - inserted row id for a new row
      * - existing row id when an existing planned occurrence log is updated
@@ -48,10 +59,14 @@ interface ActivityLogRepository {
     suspend fun insertActivityLog(
         activityId: Long?,
         occurrenceId: String?,
+        title: String,
         activityType: ActivityType,
         startTimestamp: Long,
         endTimestamp: Long?,
         notes: String?,
-        intensity: Int?
+        intensity: Int?,
+        savedAddressId: Long?,
+        addressAsRawString: String?,
+        addressDisplayText: String?
     ): Long
 }

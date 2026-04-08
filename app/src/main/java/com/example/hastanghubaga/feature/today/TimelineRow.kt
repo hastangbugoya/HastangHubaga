@@ -125,13 +125,27 @@ fun TimelineRow(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            if (item !is ActivityUiModel) {
-                item.subtitle?.let { subtitle ->
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+            when (item) {
+                is ActivityUiModel -> {
+                    item.activityTypeLabel
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { activityTypeLabel ->
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = activityTypeLabel,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                }
+
+                else -> {
+                    item.subtitle?.let { subtitle ->
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
 
@@ -171,7 +185,7 @@ fun TimelineRow(
             }
 
             if (item is ActivityUiModel && effectiveExpanded) {
-                val address = item.subtitle?.takeIf { it.isNotBlank() }
+                val address = item.addressText?.takeIf { it.isNotBlank() }
 
                 address?.let {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -230,6 +244,17 @@ private fun TimelineRowPreview_SupplementExpanded() {
         TimelineRow(
             item = previewSupplementItem(),
             previewForceExpanded = true
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimelineRowPreview_ActivityCollapsed() {
+    Surface {
+        TimelineRow(
+            item = previewActivityItem(),
+            previewForceExpanded = false
         )
     }
 }
@@ -297,10 +322,12 @@ private fun previewActivityItem(): ActivityUiModel =
         id = 2L,
         time = LocalTime(hour = 7, minute = 0),
         title = "Strength Training",
-        subtitle = "Gold's Gym Long Beach",
+        subtitle = null,
         isCompleted = false,
         activityId = 1L,
         activityType = ActivityType.STRENGTH_TRAINING,
+        activityTypeLabel = "Strength Training",
+        addressText = "Gold's Gym Long Beach",
         startTime = LocalTime(hour = 7, minute = 0),
         endTime = LocalTime(hour = 7, minute = 45),
         intensity = 7,

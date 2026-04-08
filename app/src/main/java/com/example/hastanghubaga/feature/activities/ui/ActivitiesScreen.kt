@@ -31,6 +31,7 @@ import com.example.hastanghubaga.R
 
 data class ActivityListItemUi(
     val id: Long,
+    val title: String,
     val typeLabel: String,
     val notes: String?,
     val intensityLabel: String?,
@@ -141,10 +142,20 @@ private fun ActivityRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = item.typeLabel,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(
+                        text = item.typeLabel,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

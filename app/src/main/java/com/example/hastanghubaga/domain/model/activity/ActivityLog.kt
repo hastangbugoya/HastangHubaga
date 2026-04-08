@@ -18,8 +18,12 @@ import kotlinx.datetime.LocalDateTime
  * - if [occurrenceId] is null, this is an extra / unplanned activity log
  *
  * Snapshot rule:
+ * - [title] is stored on the log so history remains stable even if the
+ *   template or occurrence title later changes
  * - [activityType] is stored on the log so history remains stable even if the
  *   template later changes
+ * - address fields are stored on the log so expanded timeline/history views
+ *   remain stable even if the template or saved address later changes
  */
 data class ActivityLog(
     val id: Long,
@@ -38,6 +42,11 @@ data class ActivityLog(
      * - null = extra / unplanned activity log
      */
     val occurrenceId: String? = null,
+
+    /**
+     * Snapshot of the user-facing activity title at log time.
+     */
+    val title: String,
 
     /**
      * Snapshot of the activity type at log time.
@@ -69,5 +78,30 @@ data class ActivityLog(
      * - 5 = moderate
      * - 10 = maximal effort
      */
-    val intensity: Int? = null
+    val intensity: Int? = null,
+
+    /**
+     * Optional saved/favorite address referenced at log time.
+     *
+     * Nullable because:
+     * - many activities do not have a location
+     * - the user may log using only raw text
+     * - historical logs should still exist even if the saved address is later deleted
+     */
+    val savedAddressId: Long? = null,
+
+    /**
+     * Optional raw address text snapshot stored on the log.
+     *
+     * This preserves user-entered freeform location text even when there is no
+     * saved address row.
+     */
+    val addressAsRawString: String? = null,
+
+    /**
+     * Optional display-ready address snapshot stored on the log.
+     *
+     * Timeline/history UI should prefer this over [addressAsRawString] when present.
+     */
+    val addressDisplayText: String? = null
 )

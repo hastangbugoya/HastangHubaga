@@ -11,6 +11,7 @@ import kotlinx.datetime.LocalTime
 fun ActivityEntity.toDomain(): Activity =
     Activity(
         id = id,
+        title = title,
         type = type,
         start = JavaTimeAdapter.utcMillisToDomainLocalDateTime(startTimestamp),
         end = endTimestamp?.let(JavaTimeAdapter::utcMillisToDomainLocalDateTime),
@@ -25,6 +26,7 @@ fun ActivityEntity.toDomain(): Activity =
 fun Activity.toEntity(): ActivityEntity =
     ActivityEntity(
         id = id,
+        title = title,
         type = type,
         startTimestamp = JavaTimeAdapter.domainLocalDateTimeToUtcMillis(start),
         endTimestamp = end?.let(JavaTimeAdapter::domainLocalDateTimeToUtcMillis),
@@ -35,7 +37,6 @@ fun Activity.toEntity(): ActivityEntity =
         sendAlert = sendAlert,
         alertOffsetMinutes = alertOffsetMinutes
     )
-
 
 fun ActivityOccurrenceWithActivity.toDomain(): Activity {
     val date = LocalDate.parse(occurrence.date)
@@ -52,10 +53,10 @@ fun ActivityOccurrenceWithActivity.toDomain(): Activity {
 
     return Activity(
         id = activity.id,
+        title = occurrence.title,
         type = activity.type,
         start = start,
         end = null,
-
         notes = activity.notes,
         intensity = activity.intensity,
 

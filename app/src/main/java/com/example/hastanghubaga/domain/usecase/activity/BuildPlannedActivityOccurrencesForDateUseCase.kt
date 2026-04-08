@@ -2,6 +2,7 @@ package com.example.hastanghubaga.domain.usecase.activity
 
 import com.example.hastanghubaga.data.local.dao.activity.ActivityEntityDao
 import com.example.hastanghubaga.data.local.dao.activity.ActivityScheduleDao
+import com.example.hastanghubaga.data.local.dao.location.AddressDao
 import com.example.hastanghubaga.data.local.dao.supplement.EventTimeDao
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceEntity
 import com.example.hastanghubaga.data.local.entity.activity.ActivityOccurrenceSourceType
@@ -58,6 +59,11 @@ import kotlinx.datetime.toLocalDateTime
  * - Per-occurrence user toggles can later override the planned snapshot without
  *   mutating the underlying template
  *
+ * Title snapshot rules:
+ * - ActivityEntity.title is treated as the template/default display name
+ * - Planned occurrences snapshot that value into ActivityOccurrenceEntity.title
+ * - Timeline/history must read the snapshot, not re-derive title from type
+ *
  * Important current limitation:
  * - This first-pass planner does not yet use planned activity occurrences as
  *   anchor providers during the same build pass.
@@ -68,6 +74,7 @@ import kotlinx.datetime.toLocalDateTime
 class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
     private val activityEntityDao: ActivityEntityDao,
     private val activityScheduleDao: ActivityScheduleDao,
+    private val addressDao: AddressDao,
     private val activityRepository: ActivityRepository,
     private val eventTimeDao: EventTimeDao,
     private val resolveAnchorTimeUseCase: ResolveAnchorTimeUseCase,
@@ -126,16 +133,14 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
                         ScheduleTimingType.FIXED ->
                             buildFixedOccurrences(
                                 date = date,
-                                activityId = activity.id,
-                                isWorkout = activity.isWorkout,
+                                activity = activity,
                                 schedule = schedule
                             )
 
                         ScheduleTimingType.ANCHORED ->
                             buildAnchoredOccurrences(
                                 date = date,
-                                activityId = activity.id,
-                                isWorkout = activity.isWorkout,
+                                activity = activity,
                                 schedule = schedule,
                                 anchorContext = anchorContext,
                                 mealAnchorTimes = mealAnchorTimes
@@ -152,8 +157,7 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
 
     private suspend fun buildFixedOccurrences(
         date: LocalDate,
-        activityId: Long,
-        isWorkout: Boolean,
+        activity: com.example.hastanghubaga.data.local.entity.activity.ActivityEntity,
         schedule: ActivityScheduleEntity
     ): List<ActivityOccurrenceEntity> {
         val rows = activityScheduleDao
@@ -171,27 +175,33 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
             ActivityOccurrenceEntity(
                 id = buildOccurrenceId(
                     date = date,
-                    activityId = activityId,
+                    activityId = activity.id,
                     scheduleId = schedule.id,
                     sourceRowId = row.id,
                     time = row.time,
                     sortOrder = row.sortOrder
                 ),
-                activityId = activityId,
+                activityId = activity.id,
                 scheduleId = schedule.id,
                 date = date.toString(),
                 plannedTimeSeconds = row.time.toSecondOfDay(),
                 sourceType = ActivityOccurrenceSourceType.SCHEDULED,
                 isDeleted = false,
-                isWorkout = isWorkout
+                isWorkout = activity.isWorkout,
+                title = activity.title,
+                savedAddressId = activity.savedAddressId,
+                addressAsRawString = activity.addressAsRawString,
+                addressDisplayText = buildAddressDisplayText(
+                    savedAddressId = activity.savedAddressId,
+                    addressAsRawString = activity.addressAsRawString
+                )
             )
         }
     }
 
     private suspend fun buildAnchoredOccurrences(
         date: LocalDate,
-        activityId: Long,
-        isWorkout: Boolean,
+        activity: com.example.hastanghubaga.data.local.entity.activity.ActivityEntity,
         schedule: ActivityScheduleEntity,
         anchorContext: AnchorTimeContext,
         mealAnchorTimes: Map<TimeAnchor, LocalTime>
@@ -216,21 +226,46 @@ class BuildPlannedActivityOccurrencesForDateUseCase @Inject constructor(
             ActivityOccurrenceEntity(
                 id = buildOccurrenceId(
                     date = date,
-                    activityId = activityId,
+                    activityId = activity.id,
                     scheduleId = schedule.id,
                     sourceRowId = row.id,
                     time = resolvedTime,
                     sortOrder = row.sortOrder
                 ),
-                activityId = activityId,
+                activityId = activity.id,
                 scheduleId = schedule.id,
                 date = date.toString(),
                 plannedTimeSeconds = resolvedTime.toSecondOfDay(),
                 sourceType = ActivityOccurrenceSourceType.SCHEDULED,
                 isDeleted = false,
-                isWorkout = isWorkout
+                isWorkout = activity.isWorkout,
+                title = activity.title,
+                savedAddressId = activity.savedAddressId,
+                addressAsRawString = activity.addressAsRawString,
+                addressDisplayText = buildAddressDisplayText(
+                    savedAddressId = activity.savedAddressId,
+                    addressAsRawString = activity.addressAsRawString
+                )
             )
         }
+    }
+
+    private suspend fun buildAddressDisplayText(
+        savedAddressId: Long?,
+        addressAsRawString: String?
+    ): String? {
+        val raw = addressAsRawString?.trim()?.takeIf { it.isNotBlank() }
+        if (raw != null) return raw
+
+        val saved =
+            if (savedAddressId != null) {
+                addressDao.getById(savedAddressId)
+            } else {
+                null
+            } ?: return null
+
+        return saved.label?.takeIf { it.isNotBlank() }
+            ?: saved.fullAddress.takeIf { it.isNotBlank() }
     }
 
     private fun resolveAnchoredTime(

@@ -438,6 +438,7 @@ fun MainScreen() {
             ) {
                 ActivityEditorSheet(
                     state = activityEditor,
+                    onTitleChanged = activitiesViewModel::onTitleChanged,
                     onTypeChanged = activitiesViewModel::onTypeChanged,
                     onNotesChanged = activitiesViewModel::onNotesChanged,
                     onIntensityChanged = activitiesViewModel::onIntensityChanged,

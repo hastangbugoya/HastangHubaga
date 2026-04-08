@@ -341,9 +341,17 @@ object TodayScreenContract {
      * [occurrenceId] preserves the linkage to the planned activity occurrence so
      * the timeline can later treat that occurrence as fulfilled and show only
      * the logged card.
+     *
+     * TITLE VS TYPE:
+     * - [title] = user-facing display name shown in UI
+     * - [activityType] = category only
+     *
+     * The draft must preserve both so logging/history can keep stable display text
+     * without deriving names from enum values.
      */
     data class ExerciseDraft(
         val activityId: Long? = null,
+        val title: String,
         val activityType: ActivityType,
         val logDate: LocalDate,
         val startTime: LocalTime,

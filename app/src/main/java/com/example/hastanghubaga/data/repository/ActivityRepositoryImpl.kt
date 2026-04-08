@@ -62,6 +62,7 @@ class ActivityRepositoryImpl @Inject constructor(
         return dao.insertActivity(
             ActivityEntity(
                 id = 0L,
+                title = type.name, // ✅ TEMP fallback (do NOT rely on this long-term)
                 type = type,
                 startTimestamp = startTimestamp,
                 endTimestamp = endTimestamp,

@@ -53,6 +53,7 @@ data class ActivitiesUiState(
 
 data class ActivityEditorUiState(
     val id: Long? = null,
+    val title: String = "",
     val type: ActivityType = ActivityType.OTHER,
     val notes: String = "",
     val intensity: String = "",
@@ -97,6 +98,7 @@ class ActivitiesViewModel @Inject constructor(
 
                 ActivityListItemUi(
                     id = activity.id,
+                    title = activity.title,
                     typeLabel = activity.type.toDisplayLabel(),
                     notes = activity.notes,
                     intensityLabel = buildIntensityLabel(
@@ -134,6 +136,7 @@ class ActivitiesViewModel @Inject constructor(
         val now = LocalDateTime.now(zoneId)
 
         editorState.value = ActivityEditorUiState(
+            title = "",
             isNew = true,
             isWorkout = false,
             isActive = true,
@@ -176,6 +179,7 @@ class ActivitiesViewModel @Inject constructor(
 
             editorState.value = ActivityEditorUiState(
                 id = activity.id,
+                title = activity.title,
                 type = activity.type,
                 notes = activity.notes.orEmpty(),
                 intensity = activity.intensity?.toString().orEmpty(),
@@ -190,6 +194,10 @@ class ActivitiesViewModel @Inject constructor(
                 scheduleSaveErrors = emptyList()
             )
         }
+    }
+
+    fun onTitleChanged(value: String) {
+        editorState.update { current -> current?.copy(title = value) }
     }
 
     fun onTypeChanged(value: ActivityType) {
@@ -311,9 +319,12 @@ class ActivitiesViewModel @Inject constructor(
 
             val endTimestamp = startTimestamp + (durationMinutes * 60_000L)
 
+            val normalizedTitle = editor.title.trim()
+
             val activityId = if (editor.isNew) {
                 activityEntityDao.insertActivity(
                     ActivityEntity(
+                        title = normalizedTitle.ifBlank { editor.type.toDisplayLabel() },
                         type = editor.type,
                         startTimestamp = startTimestamp,
                         endTimestamp = endTimestamp,
@@ -329,6 +340,7 @@ class ActivitiesViewModel @Inject constructor(
 
                 activityEntityDao.updateActivity(
                     existing.copy(
+                        title = normalizedTitle.ifBlank { existing.title },
                         type = editor.type,
                         startTimestamp = startTimestamp,
                         endTimestamp = endTimestamp,

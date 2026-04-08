@@ -9,6 +9,7 @@ import com.example.hastanghubaga.data.local.entity.supplement.toDisplayCase
 import com.example.hastanghubaga.data.local.mappers.toUpcomingSchedule
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.ActivityLog
+import com.example.hastanghubaga.domain.model.activity.ActivityType
 import com.example.hastanghubaga.domain.model.meal.Meal
 import com.example.hastanghubaga.domain.model.meal.MealLog
 import com.example.hastanghubaga.domain.model.supplement.Supplement
@@ -133,9 +134,9 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         val mergedActivityItems =
             buildMergedActivityTimelineItems(
-                activityOccurrences,
-                activityLookup,
-                activityLogs
+                occurrences = activityOccurrences,
+                lookup = activityLookup,
+                logs = activityLogs
             )
 
         val merged = (
@@ -264,7 +265,10 @@ class BuildTodayTimelineUseCase @Inject constructor(
                     time = plannedTime,
                     occurrenceId = occurrence.id,
                     activityId = activity.id,
-                    title = activity.type.name,
+                    title = occurrence.title,
+                    activityTypeLabel = activity.type.toDisplayText(),
+                    addressText = occurrence.addressDisplayText ?: occurrence.addressAsRawString,
+                    isWorkout = activity.isWorkout,
                     scheduledTime = plannedTime,
                     isCompleted = false
                 )
@@ -283,16 +287,19 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 if (log == null) {
                     plannedItem
                 } else {
-                    val activity =
-                        log.activityId?.let(lookup::get)
-
+                    val activity = log.activityId?.let(lookup::get)
                     val actualTime = log.start.time
 
                     TimelineItem.ActivityTimelineItem(
                         time = actualTime,
                         occurrenceId = plannedItem.occurrenceId,
                         activityId = activity?.id ?: plannedItem.activityId,
-                        title = activity?.type?.name ?: plannedItem.title,
+                        title = log.title,
+                        activityTypeLabel = (activity?.type ?: log.activityType).toDisplayText(),
+                        addressText = log.addressDisplayText
+                            ?: log.addressAsRawString
+                            ?: plannedItem.addressText,
+                        isWorkout = activity?.isWorkout ?: plannedItem.isWorkout,
                         scheduledTime = plannedItem.scheduledTime,
                         isCompleted = true
                     )
@@ -301,15 +308,18 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         val adHocLogs =
             logs.filter { it.occurrenceId == null }
-                .mapNotNull { log ->
-                    val activity = log.activityId?.let(lookup::get) ?: return@mapNotNull null
+                .map { log ->
+                    val activity = log.activityId?.let(lookup::get)
                     val actualTime = log.start.time
 
                     TimelineItem.ActivityTimelineItem(
                         time = actualTime,
                         occurrenceId = "adhoc_${log.id}",
-                        activityId = activity.id,
-                        title = activity.type.name,
+                        activityId = activity?.id ?: -1L,
+                        title = log.title,
+                        activityTypeLabel = (activity?.type ?: log.activityType).toDisplayText(),
+                        addressText = log.addressDisplayText ?: log.addressAsRawString,
+                        isWorkout = activity?.isWorkout ?: false,
                         scheduledTime = actualTime,
                         isCompleted = true
                     )
@@ -317,6 +327,15 @@ class BuildTodayTimelineUseCase @Inject constructor(
 
         return mergedPlanned + adHocLogs
     }
+
+    private fun ActivityType.toDisplayText(): String =
+        name.lowercase()
+            .split("_")
+            .joinToString(" ") { part ->
+                part.replaceFirstChar { char ->
+                    if (char.isLowerCase()) char.titlecase() else char.toString()
+                }
+            }
 
     private fun itemTypeSortOrder(item: TimelineItem): Int =
         when (item) {
@@ -354,7 +373,7 @@ class BuildTodayTimelineUseCase @Inject constructor(
                 "${item.title}|${item.time.toSecondOfDay()}|${item.defaultUnit}|${item.suggestedDose}"
 
             is TimelineItem.ActivityTimelineItem ->
-                "${item.title}|${item.time.toSecondOfDay()}|${if (item.isCompleted) "C" else "P"}"
+                "${item.title}|${item.subtitle.orEmpty()}|${item.time.toSecondOfDay()}|${if (item.isCompleted) "C" else "P"}"
 
             is TimelineItem.ImportedMealTimelineItem ->
                 "${item.meal.type}|${item.meal.timestamp}"

@@ -21,6 +21,11 @@ import javax.inject.Inject
  *   existing persisted log row rather than create a duplicate
  * - if [occurrenceId] is null, this is treated as an ad-hoc / force-logged activity
  *   and may insert as a new independent row
+ *
+ * Snapshot contract:
+ * - [title] is the user-facing display name and must be persisted into the log
+ * - [type] remains category-only metadata
+ * - history/timeline must not derive title from enum names
  */
 class SaveExerciseActivityUseCase @Inject constructor(
     private val repo: ActivityLogRepository
@@ -28,20 +33,28 @@ class SaveExerciseActivityUseCase @Inject constructor(
     suspend operator fun invoke(
         activityId: Long?,
         occurrenceId: String?,
+        title: String,
         type: ActivityType,
         startTimestamp: Long,
         endTimestamp: Long,
         notes: String?,
-        intensity: Int?
+        intensity: Int?,
+        savedAddressId: Long?,
+        addressAsRawString: String?,
+        addressDisplayText: String?
     ): Long {
         return repo.insertActivityLog(
             activityId = activityId,
             occurrenceId = occurrenceId,
+            title = title,
             activityType = type,
             startTimestamp = startTimestamp,
             endTimestamp = endTimestamp,
             notes = notes,
-            intensity = intensity
+            intensity = intensity,
+            savedAddressId = savedAddressId,
+            addressAsRawString = addressAsRawString,
+            addressDisplayText = addressDisplayText
         )
     }
 }

@@ -14,6 +14,14 @@ import kotlinx.serialization.Serializable
  * - ActivityOccurrenceEntity = scheduled instance (when)
  * - ActivityLogEntity = actual execution (what actually happened)
  *
+ * TITLE VS TYPE:
+ * - title = user-facing display name (for example: "Push Day")
+ * - type = category only (for example: STRENGTH_TRAINING)
+ *
+ * The title is what should be shown in UI as the primary label.
+ * The type exists for categorization, grouping, filtering, defaults,
+ * and future analytics. UI must not treat type as the display name.
+ *
  * LOCATION MODEL (NEW):
  * This entity provides the DEFAULT location for the activity.
  *
@@ -51,6 +59,19 @@ import kotlinx.serialization.Serializable
 data class ActivityEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0L,
+
+    /**
+     * User-facing activity display name.
+     *
+     * Examples:
+     * - "Push Day"
+     * - "Evening Walk"
+     * - "Leg Day"
+     *
+     * This is the primary label that should appear in cards and timeline UI.
+     * It is intentionally separate from [type], which is category-only.
+     */
+    val title: String,
 
     val type: ActivityType,
 

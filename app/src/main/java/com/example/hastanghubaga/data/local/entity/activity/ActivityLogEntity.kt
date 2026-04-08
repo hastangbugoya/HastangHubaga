@@ -20,6 +20,8 @@ import com.example.hastanghubaga.domain.model.activity.ActivityType
  * - if [occurrenceId] is null, this is an extra / unplanned activity log
  *
  * Snapshot rule:
+ * - [title] is copied into the log so history remains stable even if the
+ *   template or occurrence title later changes
  * - [activityType] is copied into the log so history remains stable even if the
  *   template later changes
  *
@@ -76,6 +78,14 @@ data class ActivityLogEntity(
     val occurrenceId: String? = null,
 
     /**
+     * Snapshot of the activity display title at log time.
+     *
+     * This is the PRIMARY text that should be shown in timeline cards for the log.
+     * History must remain stable even if the template title changes later.
+     */
+    val title: String,
+
+    /**
      * Snapshot of the activity type at log time.
      *
      * This preserves historical correctness even if the template changes later.
@@ -127,4 +137,12 @@ data class ActivityLogEntity(
      * - addressAsRawString
      */
     val addressAsRawString: String? = null,
+
+    /**
+     * Snapshot display text for the actual performed activity location.
+     *
+     * This gives history/timeline UI a stable user-facing address string without
+     * requiring a saved-address lookup at render time.
+     */
+    val addressDisplayText: String? = null,
 )

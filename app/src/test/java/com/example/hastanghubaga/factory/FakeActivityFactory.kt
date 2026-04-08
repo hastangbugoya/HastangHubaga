@@ -20,6 +20,7 @@ object FakeActivityFactory {
             start = at,          // ✅ critical mapping
             end = null,
             type = type,
-            notes = notes
+            notes = notes,
+            title = "test"
         )
 }

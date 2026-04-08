@@ -79,8 +79,21 @@ sealed interface TimelineItemUiModel {
     val rowType: TodayUiRowType
     val key: String
 
+    /**
+     * Primary display text for the row.
+     */
     val title: String
+
+    /**
+     * Secondary display text for the row.
+     *
+     * This remains as a general-purpose legacy secondary text slot used by
+     * non-activity rows and transitional activity mapping paths. For activity
+     * cards, prefer dedicated fields such as [ActivityUiModel.activityTypeLabel]
+     * and [ActivityUiModel.addressText] instead of overloading this field.
+     */
     val subtitle: String?
+
     val isCompleted: Boolean
 
     val sendAlert: Boolean
@@ -162,6 +175,19 @@ data class SupplementUiModel(
  *
  * This allows tap → log flows to preserve occurrence-aware reconciliation so a
  * planned row can later be replaced by the linked actual log row.
+ *
+ * Display contract:
+ * - [title] = user-facing activity display name
+ * - [activityTypeLabel] = collapsed secondary line for category/type
+ * - [addressText] = expanded address/location line
+ *
+ * Transitional note:
+ * - [subtitle] remains for compatibility while older mapper paths are being
+ *   retired, but new activity UI should not rely on it for address/type meaning
+ *
+ * DO NOT:
+ * - derive [title] from ActivityType
+ * - fallback to enum names for the primary label
  */
 data class ActivityUiModel(
     override val id: Long,
@@ -174,6 +200,8 @@ data class ActivityUiModel(
 
     val activityId: Long,
     val activityType: ActivityType,
+    val activityTypeLabel: String? = null,
+    val addressText: String? = null,
     val startTime: LocalTime,
     val endTime: LocalTime?,
     val intensity: Int?,
@@ -201,8 +229,16 @@ data class ActivityUiModel(
             }
             append("-")
             append(occurrenceId ?: "NO_OCCURRENCE")
+            activityTypeLabel?.takeIf { it.isNotBlank() }?.let {
+                append("-TYPE:")
+                append(it)
+            }
+            addressText?.takeIf { it.isNotBlank() }?.let {
+                append("-ADDR:")
+                append(it)
+            }
             if (!subtitle.isNullOrBlank()) {
-                append("-")
+                append("-SUB:")
                 append(subtitle)
             }
         }

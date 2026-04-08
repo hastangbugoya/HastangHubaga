@@ -122,6 +122,7 @@ private fun StartTimeDurationSection(
 @Composable
 fun ActivityEditorSheet(
     state: ActivityEditorUiState,
+    onTitleChanged: (String) -> Unit,
     onTypeChanged: (ActivityType) -> Unit,
     onNotesChanged: (String) -> Unit,
     onIntensityChanged: (String) -> Unit,
@@ -232,6 +233,14 @@ fun ActivityEditorSheet(
         )
 
         Spacer(Modifier.height(4.dp))
+
+        OutlinedTextField(
+            value = state.title,
+            onValueChange = onTitleChanged,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Activity title") },
+            singleLine = true
+        )
 
         ExposedDropdownMenuBox(
             expanded = typeMenuExpanded,

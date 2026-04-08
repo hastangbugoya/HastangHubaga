@@ -392,13 +392,13 @@ VALUES
             db.execSQL(
                 """
 INSERT INTO activities
-(id, type, startTimestamp, endTimestamp, notes, intensity, isWorkout, isActive, sendAlert, alertOffsetMinutes, savedAddressId, addressAsRawString)
+(id, title, type, startTimestamp, endTimestamp, notes, intensity, isWorkout, isActive, sendAlert, alertOffsetMinutes, savedAddressId, addressAsRawString)
 VALUES
-    (1, 'STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 7, 1, 1, 0, 0, 1, NULL),
-    (2, 'WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 3, 1, 1, 0, 0, NULL, NULL),
-    (3, 'WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', NULL, 0, 1, 0, 0, NULL, NULL),
-    (4, 'RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', NULL, 0, 1, 0, 0, NULL, NULL),
-    (5, 'SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', NULL, 0, 0, 0, 0, NULL, NULL);
+    (1, 'Morning Strength Training', 'STRENGTH_TRAINING', ${millisAt(7, 0)}, ${millisAt(7, 45)}, 'Morning strength training', 7, 1, 1, 0, 0, 1, NULL),
+    (2, 'Post-Breakfast Walk', 'WALKING', ${millisAt(8, 15)}, ${millisAt(8, 35)}, 'Post-breakfast walk', 3, 1, 1, 0, 0, NULL, NULL),
+    (3, 'Deep Work Session', 'WORK', ${millisAt(10, 0)}, ${millisAt(11, 30)}, 'Deep work session', NULL, 0, 1, 0, 0, NULL, NULL),
+    (4, 'Evening Relaxation', 'RELAX', ${millisAt(20, 0)}, NULL, 'Evening relaxation', NULL, 0, 1, 0, 0, NULL, NULL),
+    (5, 'Sleep', 'SLEEP', ${millisAt(21, 0)}, NULL, 'Sleep', NULL, 0, 0, 0, 0, NULL, NULL);
         """.trimIndent()
             )
             Log.d("SeedDebug", "Inserted activities for date=$today")

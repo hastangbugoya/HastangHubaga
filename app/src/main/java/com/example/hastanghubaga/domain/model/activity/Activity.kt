@@ -29,9 +29,28 @@ import kotlinx.datetime.LocalDateTime
  *
  * 🔒 Non-negotiable:
  * This model must never be used as a storage or transport model for actual logs.
+ *
+ * TITLE VS TYPE:
+ * - title = user-facing display name (PRIMARY UI text)
+ * - type = category only (grouping, filtering, analytics)
+ *
+ * UI MUST use title as the main label.
+ * type must never be used as a fallback display name.
  */
 data class Activity(
     val id: Long,
+
+    /**
+     * User-facing activity display name.
+     *
+     * For occurrences:
+     * - this should come from ActivityOccurrenceEntity.title (snapshot)
+     *
+     * For templates:
+     * - this comes from ActivityEntity.title
+     */
+    val title: String,
+
     val type: ActivityType,
 
     /**
