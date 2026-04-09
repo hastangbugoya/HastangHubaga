@@ -2,6 +2,9 @@ package com.example.hastanghubaga.feature.today
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -92,6 +95,8 @@ import com.example.hastanghubaga.ui.tokens.UiColors
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.math.roundToInt
 import com.example.hastanghubaga.domain.model.meal.Meal as MealTemplate
 
@@ -709,6 +714,39 @@ private fun ExerciseBottomSheetContent(
         }
 
         Spacer(Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = {
+                    launchSmsInvite(
+                        context = context,
+                        title = title,
+                        draft = draft
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Send SMS invite")
+            }
+
+            Button(
+                onClick = {
+                    launchEmailInvite(
+                        context = context,
+                        title = title,
+                        draft = draft
+                    )
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Send email invite")
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
 
         Button(
             onClick = onPrimaryAction,
@@ -1413,9 +1451,70 @@ private fun buildTodayHeaderTitle(
 ): String {
     return when (selectedDate) {
         currentDate -> "Today"
-        currentDate.minus(days = 1) -> "Yesterday"
-        currentDate.plus(days = 1) -> "Tomorrow"
+        currentDate.minus(1, kotlinx.datetime.DateTimeUnit.DAY) -> "Yesterday"
+        currentDate.plus(1, kotlinx.datetime.DateTimeUnit.DAY) -> "Tomorrow"
         else -> selectedDate.toString()
+    }
+}
+
+private fun buildActivityInviteSubject(
+    title: String,
+    draft: TodayScreenContract.ExerciseDraft
+): String {
+    return "Invite: $title on ${draft.logDate}"
+}
+
+private fun buildActivityInviteBody(
+    title: String,
+    draft: TodayScreenContract.ExerciseDraft
+): String {
+    val notesLine = draft.notes.takeIf { it.isNotBlank() }?.let { "\nNotes: $it" }.orEmpty()
+
+    return buildString {
+        append("You're invited to:\n")
+        append(title)
+        append("\n\n")
+        append("Date: ${draft.logDate}\n")
+        append("Start: ${draft.startTime.toDisplayText()}\n")
+        append("End: ${draft.endTime.toDisplayText()}\n")
+        append("Type: ${draft.activityType.name.replace('_', ' ')}")
+        append(notesLine)
+    }
+}
+
+private fun launchSmsInvite(
+    context: Context,
+    title: String,
+    draft: TodayScreenContract.ExerciseDraft
+) {
+    val body = buildActivityInviteBody(title, draft)
+
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("smsto:")
+        putExtra("sms_body", body)
+    }
+
+    runCatching {
+        context.startActivity(intent)
+    }
+}
+
+private fun launchEmailInvite(
+    context: Context,
+    title: String,
+    draft: TodayScreenContract.ExerciseDraft
+) {
+    val subject = buildActivityInviteSubject(title, draft)
+    val body = buildActivityInviteBody(title, draft)
+
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = Uri.parse("mailto:")
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, body)
+    }
+
+    runCatching {
+        context.startActivity(intent)
     }
 }
 
