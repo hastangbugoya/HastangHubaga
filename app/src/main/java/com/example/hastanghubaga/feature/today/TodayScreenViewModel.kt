@@ -146,6 +146,12 @@ class TodayScreenViewModel @Inject constructor(
         super.onCleared()
     }
 
+    fun onScreenResumed() {
+        _state.update { current ->
+            current.copy(currentDate = DomainTimePolicy.todayLocal())
+        }
+    }
+
     fun onIntent(intent: TodayScreenContract.Intent) {
         val clock = Clock.System
 

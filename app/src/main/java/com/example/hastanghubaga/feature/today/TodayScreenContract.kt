@@ -24,7 +24,26 @@ object TodayScreenContract {
      * UI State – single source of truth
      */
     data class State(
+        /**
+         * The date the user is currently viewing.
+         *
+         * This must remain stable unless the user explicitly navigates dates.
+         * It must NOT auto-shift on resume just because real-world "today" changed.
+         */
         val selectedDate: LocalDate = DomainTimePolicy.todayLocal(),
+
+        /**
+         * The app's current reference for "today".
+         *
+         * This should be refreshed on resume so relative labels such as:
+         * - Today
+         * - Yesterday
+         * - Tomorrow
+         *
+         * can update without changing [selectedDate].
+         */
+        val currentDate: LocalDate = DomainTimePolicy.todayLocal(),
+
         val isLoading: Boolean = false,
         val uiTimelineItems: List<TimelineItemUiModel> = emptyList(),
         val domainTimelineItems: List<TimelineItem> = emptyList(),
@@ -96,8 +115,8 @@ object TodayScreenContract {
         /**
          * Result from the temporary force-log activity picker.
          *
-         * The selected activity should then flow into the existing exercise/activity
-         * logging draft path with:
+         * The selected activity should then flow into the existing activity logging draft path
+         * with:
          * - occurrenceId = null
          *
          * This preserves the distinction between:

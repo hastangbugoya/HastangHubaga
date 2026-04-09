@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.hastanghubaga.domain.model.activity.Activity
 import com.example.hastanghubaga.domain.model.activity.isExercise
@@ -139,9 +143,23 @@ fun TodayScreen(
     viewModel: TodayScreenViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var activeSheet by remember { mutableStateOf<ActiveLocalSheet?>(null) }
     val localSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.onScreenResumed()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(state.isLoading, state.uiTimelineItems.size, state.selectedDate) {
         if (!state.isLoading && state.uiTimelineItems.isNotEmpty()) {
@@ -750,7 +768,10 @@ fun TodayScreenContent(
                 modifier = Modifier.fillMaxSize()
             ) {
                 BasicScreenTopBar(
-                    title = state.selectedDate.toString(),
+                    title = buildTodayHeaderTitle(
+                        selectedDate = state.selectedDate,
+                        currentDate = state.currentDate
+                    ),
                     overflowActions = topBarActions
                 )
 
@@ -1383,6 +1404,18 @@ private fun formatImportedMealNumber(value: Double): String {
         value.toInt().toString()
     } else {
         value.toString()
+    }
+}
+
+private fun buildTodayHeaderTitle(
+    selectedDate: LocalDate,
+    currentDate: LocalDate
+): String {
+    return when (selectedDate) {
+        currentDate -> "Today"
+        currentDate.minus(days = 1) -> "Yesterday"
+        currentDate.plus(days = 1) -> "Tomorrow"
+        else -> selectedDate.toString()
     }
 }
 
